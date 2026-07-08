@@ -1,0 +1,36 @@
+import axios from 'axios';
+import { GetMerchantApiResponse } from '../app/api/ikas/get-merchant/route';
+import { GetOrderApiResponse } from '../app/api/ikas/get-order/route';
+import { ApiResponseType } from '../globals/constants';
+import { ListProductsApiResponse } from '../app/api/ikas/list-products/route';
+
+export async function makePostRequest<T>({ url, data, token }: { url: string; data?: any; token?: string }) {
+  return axios.post<ApiResponseType<T>>(url, data, {
+    headers: token
+      ? {
+          Authorization: `JWT ${token}`,
+        }
+      : undefined,
+  });
+}
+
+export async function makeGetRequest<T>({ url, data, token }: { url: string; data?: any; token?: string }) {
+  return axios.get<ApiResponseType<T>>(url, {
+    params: data,
+    headers: token
+      ? {
+          Authorization: `JWT ${token}`,
+        }
+      : undefined,
+  });
+}
+
+// API requests object - frontend-backend bridge
+export const ApiRequests = {
+  ikas: {
+    getMerchant: (token: string) => makeGetRequest<GetMerchantApiResponse>({ url: '/api/ikas/get-merchant', token }),
+    getOrder: (token: string, orderId: string) => makeGetRequest<GetOrderApiResponse>({ url: '/api/ikas/get-order', token, data: { orderId } }),
+    listProducts: (token: string) => makeGetRequest<ListProductsApiResponse>({ url: '/api/ikas/list-products', token }),
+  },
+  
+};
