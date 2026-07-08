@@ -1,5 +1,28 @@
 import { BaseGraphQLAPIClient, BaseGraphQLAPIClientOptions, APIResult } from '@ikas/admin-api-client';
 
+export type DateFilterInput = {
+  eq?: number;
+  gt?: number;
+  gte?: number;
+  in?: Array<number>;
+  lt?: number;
+  lte?: number;
+  ne?: number;
+  nin?: Array<number>;
+}
+
+export type SaveVariantStockInput = {
+  deleted?: boolean;
+  productId: string;
+  stockCount: number;
+  stockLocationId: string;
+  variantId: string;
+}
+
+export type SaveVariantStocksInput = {
+  stockInputs?: Array<SaveVariantStockInput>;
+}
+
 export type StringFilterInput = {
   eq?: string;
   in?: Array<string>;
@@ -109,9 +132,20 @@ export type ListProductQueryData = {
   data: Array<{
   id: string;
   name: string;
+  categories?: Array<{
+  id: string;
+  name: string;
+}>;
   variants: Array<{
   id: string;
   sku?: string;
+  images?: Array<{
+  imageId?: string;
+  fileName?: string;
+  isMain: boolean;
+  order: number;
+  isVideo?: boolean;
+}>;
   variantValues?: Array<{
   variantTypeName: string;
   variantValueName: string;
@@ -129,6 +163,51 @@ export type ListProductQueryData = {
 
 export interface ListProductQuery {
   listProduct: ListProductQueryData;
+}
+
+export type SaveVariantStocksMutationVariables = {
+  input: SaveVariantStocksInput;
+}
+
+export type SaveVariantStocksMutationData = {
+  errors?: Array<{
+  errorCode: string;
+  inputArrayIndex: number;
+  inputData: {
+  productId: string;
+  variantId: string;
+};
+}>;
+}
+
+export interface SaveVariantStocksMutation {
+  saveVariantStocks: SaveVariantStocksMutationData;
+}
+
+export type ListOrderForAnalyticsQueryVariables = {
+  orderedAt?: DateFilterInput;
+}
+
+export type ListOrderForAnalyticsQueryData = {
+  data: Array<{
+  id: string;
+  orderedAt?: number;
+  status: OrderStatusEnum;
+  totalFinalPrice: number;
+  currencyCode: string;
+  orderLineItems: Array<{
+  quantity: number;
+  finalPrice?: number;
+  variant: {
+  id?: string;
+  sku?: string;
+};
+}>;
+}>;
+}
+
+export interface ListOrderForAnalyticsQuery {
+  listOrder: ListOrderForAnalyticsQueryData;
 }
 
 export class GeneratedQueries {
@@ -242,9 +321,20 @@ export class GeneratedQueries {
       data {
         id
         name
+        categories {
+          id
+          name
+        }
         variants {
           id
           sku
+          images {
+            imageId
+            fileName
+            isMain
+            order
+            isVideo
+          }
           variantValues {
             variantTypeName
             variantValueName
@@ -263,13 +353,66 @@ export class GeneratedQueries {
 `;
     return this.client.query<Partial<ListProductQuery>>({ query });
   }
+
+  async listOrderForAnalytics(variables: ListOrderForAnalyticsQueryVariables): Promise<APIResult<Partial<ListOrderForAnalyticsQuery>>> {
+    const query = `
+  query listOrderForAnalytics($orderedAt: DateFilterInput) {
+    listOrder(orderedAt: $orderedAt) {
+      data {
+        id
+        orderedAt
+        status
+        totalFinalPrice
+        currencyCode
+        orderLineItems {
+          quantity
+          finalPrice
+          variant {
+            id
+            sku
+          }
+        }
+      }
+    }
+  }
+`;
+    return this.client.query<Partial<ListOrderForAnalyticsQuery>>({ query, variables });
+  }
+}
+
+export class GeneratedMutations {
+  client: BaseGraphQLAPIClient<any>;
+
+  constructor(client: BaseGraphQLAPIClient<any>) {
+    this.client = client;
+  }
+
+  async saveVariantStocks(variables: SaveVariantStocksMutationVariables): Promise<APIResult<Partial<SaveVariantStocksMutation>>> {
+    const mutation = `
+  mutation saveVariantStocks($input: SaveVariantStocksInput!) {
+    saveVariantStocks(input: $input) {
+      errors {
+        errorCode
+        inputArrayIndex
+        inputData {
+          productId
+          variantId
+        }
+      }
+    }
+  }
+`;
+    return this.client.mutate<Partial<SaveVariantStocksMutation>>({ mutation, variables });
+  }
 }
 
 export class ikasAdminGraphQLAPIClient<TokenData> extends BaseGraphQLAPIClient<TokenData> {
   queries: GeneratedQueries;
+  mutations: GeneratedMutations;
 
   constructor(options: BaseGraphQLAPIClientOptions<TokenData>) {
     super(options);
     this.queries = new GeneratedQueries(this);
+    this.mutations = new GeneratedMutations(this);
   }
 }

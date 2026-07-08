@@ -3,13 +3,32 @@ import { getUserFromRequest } from '@/lib/auth-helpers';
 import { AuthTokenManager } from '@/models/auth-token/manager';
 import { NextRequest, NextResponse } from 'next/server';
 
+/**
+ * ikas ürün görselinin CDN URL'sini üretir.
+ * Format @ikas/app-helpers `getImageSrc` ile aynıdır:
+ *   https://cdn.myikas.com/images/{merchantId}/{imageId}/image_{size}.webp
+ */
+function buildImageUrl(merchantId: string, imageId: string, size = 360): string {
+  return `https://cdn.myikas.com/images/${merchantId}/${imageId}/image_${size}.webp`;
+}
+
 export type ListProductsApiResponse = {
   products?: Array<{
     id: string;
     name: string;
+    categories?: Array<{ id: string; name: string }>;
     variants: Array<{
       id: string;
       sku: string | null;
+      /** Hazır ikas CDN görsel URL'si (merchantId + imageId'den üretilir). */
+      imageUrl?: string;
+      images?: Array<{
+        imageId?: string;
+        fileName?: string;
+        isMain: boolean;
+        order: number;
+        isVideo?: boolean;
+      }>;
       variantValues: Array<{
         variantTypeName: string | null;
         variantValueName: string | null;
@@ -50,9 +69,24 @@ export async function GET(request: NextRequest) {
     const ikasClient = getIkas(authToken);
     const productResponse = await ikasClient.queries.listProduct();
 
-    // 4. Veriyi kontrol et ve döndür
+    // 4. Veriyi kontrol et, görsel URL'lerini üret ve döndür
     if (productResponse.isSuccess && productResponse.data?.listProduct) {
-      const products = productResponse.data.listProduct.data;
+      const rawProducts = productResponse.data.listProduct.data;
+      const products = rawProducts.map(product => ({
+        ...product,
+        variants: product.variants.map(variant => {
+          const images = variant.images ?? [];
+          // Ana görsel; yoksa videonun olmadığı ilk görsel (order'a göre).
+          const main =
+            images.find(img => img.isMain && !img.isVideo) ??
+            images
+              .filter(img => !img.isVideo && img.imageId)
+              .sort((a, b) => a.order - b.order)[0];
+          const imageUrl =
+            main?.imageId ? buildImageUrl(user.merchantId, main.imageId) : undefined;
+          return { ...variant, imageUrl };
+        }),
+      }));
       return NextResponse.json({ data: { products } });
     } else {
       return NextResponse.json({ error: 'Failed to fetch products' }, { status: 500 });

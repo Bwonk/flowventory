@@ -3,6 +3,7 @@ import { GetMerchantApiResponse } from '../app/api/ikas/get-merchant/route';
 import { GetOrderApiResponse } from '../app/api/ikas/get-order/route';
 import { ApiResponseType } from '../globals/constants';
 import { ListProductsApiResponse } from '../app/api/ikas/list-products/route';
+import { AnalyticsApiResponse } from '../app/api/ikas/analytics/route';
 
 export async function makePostRequest<T>({ url, data, token }: { url: string; data?: any; token?: string }) {
   return axios.post<ApiResponseType<T>>(url, data, {
@@ -31,6 +32,7 @@ export const ApiRequests = {
     getMerchant: (token: string) => makeGetRequest<GetMerchantApiResponse>({ url: '/api/ikas/get-merchant', token }),
     getOrder: (token: string, orderId: string) => makeGetRequest<GetOrderApiResponse>({ url: '/api/ikas/get-order', token, data: { orderId } }),
     listProducts: (token: string) => makeGetRequest<ListProductsApiResponse>({ url: '/api/ikas/list-products', token }),
+    getAnalytics: (token: string) => makeGetRequest<AnalyticsApiResponse>({ url: '/api/ikas/analytics', token }),
   },
   
 };

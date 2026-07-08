@@ -94,9 +94,20 @@ export const LIST_PRODUCT = gql`
       data {
         id
         name
+        categories {
+          id
+          name
+        }
         variants {
           id
           sku
+          images {
+            imageId
+            fileName
+            isMain
+            order
+            isVideo
+          }
           variantValues {
             variantTypeName
             variantValueName
@@ -107,6 +118,43 @@ export const LIST_PRODUCT = gql`
           }
           prices {
             sellPrice
+          }
+        }
+      }
+    }
+  }
+`;
+
+export const SAVE_VARIANT_STOCKS = gql`
+  mutation saveVariantStocks($input: SaveVariantStocksInput!) {
+    saveVariantStocks(input: $input) {
+      errors {
+        errorCode
+        inputArrayIndex
+        inputData {
+          productId
+          variantId
+        }
+      }
+    }
+  }
+`;
+
+export const LIST_ORDER_FOR_ANALYTICS = gql`
+  query listOrderForAnalytics($orderedAt: DateFilterInput) {
+    listOrder(orderedAt: $orderedAt) {
+      data {
+        id
+        orderedAt
+        status
+        totalFinalPrice
+        currencyCode
+        orderLineItems {
+          quantity
+          finalPrice
+          variant {
+            id
+            sku
           }
         }
       }
