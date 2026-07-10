@@ -4,8 +4,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Download,
   Search,
-  TrendingUp,
-  TrendingDown,
   Package,
   X,
   ChevronDown,
@@ -17,23 +15,24 @@ import { ListProductsApiResponse } from '@/app/api/ikas/list-products/route';
 import { AnalyticsApiResponse } from '@/app/api/ikas/analytics/route';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { useStockThreshold } from '@/lib/stock-threshold';
 
 type Product = NonNullable<ListProductsApiResponse['products']>[0];
 type Variant = Product['variants'][number];
+type ProductStatus = 'critical' | 'warning' | 'healthy';
 
-interface VariantRow {
+interface ProductRow {
   productId: string;
   productName: string;
-  variantId: string;
-  variantName: string;
-  stock: number;
-  price?: number;
-  thumbnail?: string;
   category?: string;
+  thumbnail?: string;
+  status: ProductStatus;
+  totalStock: number;
+  variantCount: number;
 }
 
 interface HomePageProps {
@@ -97,12 +96,12 @@ const SORT_LABELS: Record<SortBy, string> = {
   'isim-az': 'Ürün Adı (A-Z)',
 };
 
-function getProductStatus(product: Product): 'critical' | 'warning' | 'healthy' {
+function getProductStatus(product: Product, lowThreshold = 10): 'critical' | 'warning' | 'healthy' {
   let hasWarning = false;
   for (const variant of product.variants) {
     const stock = variant.stocks?.[0]?.stockCount ?? 0;
     if (stock === 0) return 'critical';
-    if (stock <= 10) hasWarning = true;
+    if (stock <= lowThreshold) hasWarning = true;
   }
   return hasWarning ? 'warning' : 'healthy';
 }
@@ -112,44 +111,46 @@ function getProductCategory(product: Product): string | undefined {
   return product.categories?.find(c => !!c.name)?.name ?? undefined;
 }
 
-/** Backend'de üretilmiş ikas CDN görsel URL'si; yoksa undefined (placeholder). */
-function getVariantThumbnail(variant: Variant): string | undefined {
-  return variant.imageUrl ?? undefined;
+/** Ürünün gösterilecek ana görseli: ilk görseli olan varyant. */
+function getProductThumbnail(product: Product): string | undefined {
+  return product.variants.find(v => v.imageUrl)?.imageUrl ?? undefined;
 }
 
-function flattenProducts(products: Product[]): VariantRow[] {
-  const rows: VariantRow[] = [];
-  for (const product of products) {
-    const category = getProductCategory(product);
-    if (product.variants.length === 0) {
-      rows.push({
-        productId: product.id,
-        productName: product.name,
-        variantId: product.id,
-        variantName: '—',
-        stock: 0,
-        category,
-      });
-    } else {
-      for (const variant of product.variants) {
-        const variantName =
-          variant.variantValues && variant.variantValues.length > 0
-            ? variant.variantValues.map(v => v.variantValueName).join(' / ')
-            : variant.sku || 'Varyant';
-        rows.push({
-          productId: product.id,
-          productName: product.name,
-          variantId: variant.id,
-          variantName,
-          stock: variant.stocks?.[0]?.stockCount ?? 0,
-          price: variant.prices?.[0]?.sellPrice,
-          thumbnail: getVariantThumbnail(variant),
-          category,
-        });
-      }
-    }
+/** Bir varyantın okunabilir adı (variantValues → SKU → fallback). */
+function getVariantName(variant: Variant): string {
+  if (variant.variantValues && variant.variantValues.length > 0) {
+    return variant.variantValues.map(v => v.variantValueName).join(' / ');
   }
-  return rows;
+  return variant.sku || 'Varsayılan';
+}
+
+function getVariantStock(variant: Variant): number {
+  return variant.stocks?.[0]?.stockCount ?? 0;
+}
+
+/** Ürünün toplam stok adedi (tüm varyantların toplamı). */
+function getTotalStock(product: Product): number {
+  return product.variants.reduce((sum, v) => sum + getVariantStock(v), 0);
+}
+
+/** Tek bir stok değerinden durum türetir. */
+function stockToStatus(stock: number, lowThreshold = 10): ProductStatus {
+  if (stock === 0) return 'critical';
+  if (stock <= lowThreshold) return 'warning';
+  return 'healthy';
+}
+
+/** Ürünü tek satıra indirger: en kötü varyant durumu + toplam stok. */
+function flattenToProducts(products: Product[], lowThreshold = 10): ProductRow[] {
+  return products.map(product => ({
+    productId: product.id,
+    productName: product.name,
+    category: getProductCategory(product),
+    thumbnail: getProductThumbnail(product),
+    status: getProductStatus(product, lowThreshold),
+    totalStock: getTotalStock(product),
+    variantCount: product.variants.length,
+  }));
 }
 
 function matchesStockRange(stock: number, range: StockRange): boolean {
@@ -169,64 +170,65 @@ function matchesStockRange(stock: number, range: StockRange): boolean {
   }
 }
 
-function sortRows(rows: VariantRow[], sortBy: SortBy): VariantRow[] {
+const STATUS_SEVERITY: Record<ProductStatus, number> = { critical: 0, warning: 1, healthy: 2 };
+
+function sortRows(rows: ProductRow[], sortBy: SortBy): ProductRow[] {
   const copy = [...rows];
   switch (sortBy) {
     case 'stok-azalan':
-      return copy.sort((a, b) => b.stock - a.stock);
+      return copy.sort((a, b) => b.totalStock - a.totalStock);
     case 'stok-artan':
-      return copy.sort((a, b) => a.stock - b.stock);
+      return copy.sort((a, b) => a.totalStock - b.totalStock);
     case 'isim-az':
       return copy.sort((a, b) => a.productName.localeCompare(b.productName, 'tr'));
     case 'aciliyet':
     default:
-      // En düşük stok (en acil) en üstte.
-      return copy.sort((a, b) => a.stock - b.stock);
+      // En acil (kritik) önce; eşitse en düşük toplam stok üstte.
+      return copy.sort(
+        (a, b) => STATUS_SEVERITY[a.status] - STATUS_SEVERITY[b.status] || a.totalStock - b.totalStock,
+      );
   }
 }
 
 function filterRows(
-  rows: VariantRow[],
+  rows: ProductRow[],
   statusFilter: StatusFilter,
   query: string,
   stockRange: StockRange,
   sortBy: SortBy,
-): VariantRow[] {
+): ProductRow[] {
   const q = query.toLowerCase().trim();
   let filtered = rows;
 
-  // Birincil filtre: stok durumu.
-  if (statusFilter === 'tukendi') filtered = filtered.filter(r => r.stock === 0);
-  else if (statusFilter === 'az-kalan') filtered = filtered.filter(r => r.stock >= 1 && r.stock <= 10);
-  else if (statusFilter === 'saglikli') filtered = filtered.filter(r => r.stock >= 11);
+  // Birincil filtre: en kötü varyant durumuna göre.
+  if (statusFilter === 'tukendi') filtered = filtered.filter(r => r.status === 'critical');
+  else if (statusFilter === 'az-kalan') filtered = filtered.filter(r => r.status === 'warning');
+  else if (statusFilter === 'saglikli') filtered = filtered.filter(r => r.status === 'healthy');
 
-  // İkincil filtre: stok aralığı.
+  // İkincil filtre: toplam stok aralığı.
   if (stockRange !== 'all') {
-    filtered = filtered.filter(r => matchesStockRange(r.stock, stockRange));
+    filtered = filtered.filter(r => matchesStockRange(r.totalStock, stockRange));
   }
 
-  // Arama filtresi.
+  // Arama filtresi (ürün adı).
   if (q) {
-    filtered = filtered.filter(
-      r => r.productName.toLowerCase().includes(q) || r.variantName.toLowerCase().includes(q),
-    );
+    filtered = filtered.filter(r => r.productName.toLowerCase().includes(q));
   }
 
   // Sıralama.
   return sortRows(filtered, sortBy);
 }
 
-function downloadCSV(rows: VariantRow[]) {
-  const headers = ['Ürün Adı', 'Varyant Adı', 'Kategori', 'Stok Adedi', 'Durum'];
+function downloadCSV(rows: ProductRow[]) {
+  const headers = ['Ürün Adı', 'Kategori', 'Durum', 'Toplam Stok', 'Varyant Sayısı'];
   const csvRows = [headers.join(',')];
   for (const row of rows) {
-    const status = row.stock === 0 ? 'Tükendi' : row.stock <= 10 ? 'Az Kalan' : 'Sağlıklı';
     const cells = [
       `"${row.productName.replace(/"/g, '""')}"`,
-      `"${row.variantName.replace(/"/g, '""')}"`,
       `"${(row.category ?? '').replace(/"/g, '""')}"`,
-      row.stock,
-      status,
+      STATUS_META[row.status].label,
+      row.totalStock,
+      row.variantCount,
     ];
     csvRows.push(cells.join(','));
   }
@@ -240,25 +242,34 @@ function downloadCSV(rows: VariantRow[]) {
   URL.revokeObjectURL(url);
 }
 
-/** Cohere-token status treatment for a single stock value. */
-function stockStatus(stock: number): { label: string; className: string } {
-  if (stock === 0) {
-    return { label: 'Tükendi', className: 'border border-[#b30000] text-[#b30000] bg-transparent' };
-  }
-  if (stock <= 10) {
-    return { label: 'Az Kalan', className: 'border border-[#ff7759] text-[#ff7759] bg-transparent' };
-  }
-  return { label: 'Sağlıklı', className: 'border-transparent bg-[#edfce9] text-[#003c33]' };
-}
+/** Cohere-token status treatment per durum. */
+const STATUS_META: Record<ProductStatus, { label: string; className: string }> = {
+  critical: { label: 'Tükendi', className: 'border border-[#b30000] text-[#b30000] bg-transparent' },
+  warning: { label: 'Az Kalan', className: 'border border-[#ff7759] text-[#ff7759] bg-transparent' },
+  healthy: { label: 'Sağlıklı', className: 'border-transparent bg-[#edfce9] text-[#003c33]' },
+};
 
-const StatusBadge: React.FC<{ stock: number }> = ({ stock }) => {
-  const { label, className } = stockStatus(stock);
+const StatusBadge: React.FC<{ status: ProductStatus }> = ({ status }) => {
+  const { label, className } = STATUS_META[status];
   return (
     <Badge className={`rounded-full px-3 py-1 text-[12px] font-medium shadow-none ${className}`}>
       {label}
     </Badge>
   );
 };
+
+function formatPrice(value: number): string {
+  return `₺${value.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}`;
+}
+
+/** 'YYYY-MM-DD' → 'DD.MM'. */
+function formatDayMonth(dateStr: string): string {
+  const parts = dateStr.split('-');
+  if (parts.length === 3) return `${parts[2]}.${parts[1]}`;
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return dateStr;
+  return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
 
 const MonoLabel: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className }) => (
   <p className={`font-mono text-[12px] uppercase tracking-[0.08em] text-[#75758a] ${className ?? ''}`}>
@@ -367,30 +378,517 @@ const FilterChip: React.FC<{ label: string; onRemove: () => void }> = ({ label, 
   </button>
 );
 
-const HomePage: React.FC<HomePageProps> = ({ token, storeName, products = [], analytics, loading }) => {
+/** Stok eşiği için etiketli sayı girişi (min ≤ max normalize üst katmanda yapılır). */
+const ThresholdInput: React.FC<{
+  label: string;
+  value: number;
+  max?: number;
+  onChange: (value: number) => void;
+}> = ({ label, value, max, onChange }) => (
+  <label className="inline-flex items-center gap-1.5 rounded-[8px] border border-[#e5e7eb] bg-[#ffffff] py-1 pl-2.5 pr-1 text-[13px] text-[#616161] transition-colors focus-within:border-[#4c6ee6] focus-within:ring-2 focus-within:ring-[#4c6ee6]/15">
+    <span className="whitespace-nowrap">{label}</span>
+    <input
+      type="number"
+      inputMode="numeric"
+      min={0}
+      max={max}
+      value={value}
+      onChange={e => onChange(e.target.value === '' ? 0 : Number(e.target.value))}
+      className="h-6 w-12 rounded-[6px] bg-[#f8f9fa] text-center text-[13px] font-medium tabular-nums text-[#212121] outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+    />
+  </label>
+);
+
+type ChartRange = 'daily' | 'weekly' | 'monthly' | 'yearly';
+type ChartMetric = 'revenue' | 'quantity';
+
+const RANGE_OPTIONS: ReadonlyArray<{ value: ChartRange; label: string }> = [
+  { value: 'daily', label: 'Günlük' },
+  { value: 'weekly', label: 'Haftalık' },
+  { value: 'monthly', label: 'Aylık' },
+  { value: 'yearly', label: 'Yıllık' },
+];
+
+const METRIC_OPTIONS: ReadonlyArray<{ value: ChartMetric; label: string }> = [
+  { value: 'revenue', label: 'Ciro' },
+  { value: 'quantity', label: 'Satış Adedi' },
+];
+
+const TR_MONTHS = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'] as const;
+
+/** Modal rozetleri — ana tablo ile aynı yumuşak pill dili. */
+const MODAL_STATUS_META: Record<ProductStatus, { label: string; className: string }> = {
+  critical: { label: 'Tükendi', className: 'bg-[#fef2f2] text-[#b30000]' },
+  warning: { label: 'Az Kalan', className: 'bg-[#fffbeb] text-[#d97706]' },
+  healthy: { label: 'Sağlıklı', className: 'bg-[#edfce9] text-[#003c33]' },
+};
+
+const ModalStatusBadge: React.FC<{ status: ProductStatus }> = ({ status }) => {
+  const meta = MODAL_STATUS_META[status];
+  return (
+    <span className={`inline-flex items-center rounded-full px-3 py-1 text-[12px] font-medium ${meta.className}`}>
+      {meta.label}
+    </span>
+  );
+};
+
+/** Progress bar dolgu rengi (duruma göre). */
+function statusFillColor(status: ProductStatus): string {
+  if (status === 'critical') return '#b30000';
+  if (status === 'warning') return '#d97706';
+  return '#003c33';
+}
+
+interface DaySeriesPoint {
+  date: string;
+  revenue: number;
+  units: number;
+}
+
+/** Günlük seriyi seçili zaman aralığına göre gruplar (kronolojik sırayla). */
+function groupSeries(
+  series: DaySeriesPoint[],
+  range: ChartRange,
+): Array<{ label: string; revenue: number; units: number }> {
+  if (range === 'daily') {
+    return series.map(s => ({ label: formatDayMonth(s.date), revenue: s.revenue, units: s.units }));
+  }
+  const map = new Map<string, { label: string; revenue: number; units: number; order: number }>();
+  for (const s of series) {
+    const d = new Date(s.date);
+    if (Number.isNaN(d.getTime())) continue;
+    let key: string;
+    let label: string;
+    let order: number;
+    if (range === 'weekly') {
+      const weekday = (d.getDay() + 6) % 7; // Pazartesi = 0
+      const start = new Date(d);
+      start.setDate(d.getDate() - weekday);
+      key = start.toISOString().slice(0, 10);
+      label = formatDayMonth(key);
+      order = start.getTime();
+    } else if (range === 'monthly') {
+      key = `${d.getFullYear()}-${d.getMonth()}`;
+      label = `${TR_MONTHS[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`;
+      order = d.getFullYear() * 12 + d.getMonth();
+    } else {
+      key = `${d.getFullYear()}`;
+      label = key;
+      order = d.getFullYear();
+    }
+    const existing = map.get(key) ?? { label, revenue: 0, units: 0, order };
+    existing.revenue += s.revenue;
+    existing.units += s.units;
+    map.set(key, existing);
+  }
+  return Array.from(map.values())
+    .sort((a, b) => a.order - b.order)
+    .map(({ label, revenue, units }) => ({ label, revenue, units }));
+}
+
+/** Aydınlık temalı özel tooltip. */
+const ChartTooltip: React.FC<{
+  active?: boolean;
+  payload?: Array<{ value: number }>;
+  label?: string;
+  metric: ChartMetric;
+}> = ({ active, payload, label, metric }) => {
+  if (!active || !payload || payload.length === 0) return null;
+  const value = payload[0].value;
+  return (
+    <div className="rounded-lg border border-[#e5e7eb] bg-[#ffffff] px-3 py-2 shadow-sm">
+      <p className="text-[12px] text-[#75758a]">{label}</p>
+      <p className="text-[14px] font-medium text-[#17171c]">
+        {metric === 'revenue' ? formatPrice(value) : `${value} adet`}
+      </p>
+    </div>
+  );
+};
+
+/** Görsele (ilk varyant görseli) sahip aydınlık modal başlık görseli. */
+const ModalProductImage: React.FC<{ src?: string; alt: string }> = ({ src, alt }) => {
+  const [errored, setErrored] = useState(false);
+  if (!src || errored) {
+    return (
+      <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-xl border border-[#e5e7eb] bg-[#f8f9fa]">
+        <Package className="h-7 w-7 text-[#93939f]" />
+      </div>
+    );
+  }
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt={alt}
+      loading="lazy"
+      onError={() => setErrored(true)}
+      className="h-24 w-24 shrink-0 rounded-xl border border-[#e5e7eb] object-cover"
+    />
+  );
+};
+
+/** Kompakt varyant kartı: ad + durum noktası, büyük stok, ince bar, fiyat. */
+const VariantCard: React.FC<{
+  label: string;
+  stock: number;
+  priceLabel: string;
+  status: ProductStatus;
+  selected: boolean;
+  fillPercent: number;
+  onClick: () => void;
+}> = ({ label, stock, priceLabel, status, selected, fillPercent, onClick }) => {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+
+  let stateClass: string;
+  if (selected) stateClass = 'border-[#17171c] bg-[#f8f9fa]';
+  else if (status === 'critical') stateClass = 'border-[#fca5a5] bg-[#fef2f2] hover:opacity-90';
+  else if (status === 'warning') stateClass = 'border-[#fcd34d] bg-[#fffbeb] hover:opacity-90';
+  else stateClass = 'border-[#e5e7eb] bg-[#ffffff] hover:bg-[#f8f9fa]';
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={selected}
+      className={`flex flex-col rounded-xl border-2 p-4 text-left transition-all duration-150 ease-in-out focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#4c6ee6] ${stateClass}`}
+    >
+      <div className="flex items-center gap-2">
+        <span className="truncate text-[14px] font-medium text-[#17171c]">{label}</span>
+        <span
+          className="ml-auto h-2 w-2 shrink-0 rounded-full"
+          style={{ backgroundColor: statusFillColor(status) }}
+        />
+      </div>
+      <div className="mt-2 flex items-baseline gap-1.5">
+        <span className="text-[20px] font-semibold leading-none text-[#17171c]">{stock}</span>
+        <span className="text-[13px] text-[#75758a]">adet</span>
+      </div>
+      <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-[#e5e7eb]">
+        <div
+          className="h-full rounded-full transition-all duration-300 ease-out"
+          style={{ width: `${mounted ? fillPercent : 0}%`, backgroundColor: statusFillColor(status) }}
+        />
+      </div>
+      <span className="mt-2 text-[13px] text-[#75758a]">{priceLabel}</span>
+    </button>
+  );
+};
+
+/** Sol kolon hero kartı: ürün-seviyesi toplam stok + 30 günlük ciro. */
+const TumuCard: React.FC<{
+  totalStock: number;
+  productRevenue: number;
+  variantCount: number;
+  status: ProductStatus;
+  selected: boolean;
+  onClick: () => void;
+}> = ({ totalStock, productRevenue, variantCount, status, selected, onClick }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    aria-pressed={selected}
+    className={`flex w-full flex-col rounded-xl p-4 text-left transition-colors duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#4c6ee6] ${
+      selected ? 'border-2 border-[#17171c] bg-[#ffffff]' : 'border border-[#e5e7eb] bg-[#ffffff] hover:bg-[#f8f9fa]'
+    }`}
+  >
+    <div className="grid grid-cols-2 gap-4">
+      <div className="flex flex-col">
+        <span className="font-mono text-[10px] uppercase tracking-wider text-[#75758a]">Toplam Stok</span>
+        <span className="text-[24px] font-semibold leading-tight tracking-tight text-[#17171c]">{totalStock}</span>
+        <span className="text-[13px] text-[#75758a]">adet</span>
+      </div>
+      <div className="flex flex-col">
+        <span className="font-mono text-[10px] uppercase tracking-wider text-[#75758a]">30 Günlük Ciro</span>
+        <span className="text-[20px] font-semibold leading-tight tracking-tight text-[#17171c]">
+          {formatPrice(productRevenue)}
+        </span>
+      </div>
+    </div>
+    <div className="mt-4 flex items-center justify-between gap-2 border-t border-[#e5e7eb] pt-3">
+      <ModalStatusBadge status={status} />
+      <span className="text-[13px] text-[#75758a]">{variantCount} varyant</span>
+    </div>
+  </button>
+);
+
+type TopProduct = AnalyticsApiResponse['topProducts'][number];
+
+/** Bu ürüne ait varyantların 30 günlük toplam cirosu. */
+function getProductRevenue(product: Product, topProducts: TopProduct[]): number {
+  return topProducts
+    .filter(p => product.variants.some(v => v.id === p.variantId))
+    .reduce((sum, p) => sum + p.revenue, 0);
+}
+
+/** Bu ürüne ait varyantların 30 günlük toplam satış adedi. */
+function getProductQuantity(product: Product, topProducts: TopProduct[]): number {
+  return topProducts
+    .filter(p => product.variants.some(v => v.id === p.variantId))
+    .reduce((sum, p) => sum + p.quantity, 0);
+}
+
+function getVariantRevenue(variantId: string, topProducts: TopProduct[]): number {
+  return topProducts.find(p => p.variantId === variantId)?.revenue ?? 0;
+}
+
+function getVariantQuantity(variantId: string, topProducts: TopProduct[]): number {
+  return topProducts.find(p => p.variantId === variantId)?.quantity ?? 0;
+}
+
+/** Ürün detay modalı içeriği: başlık, varyant kartları, aydınlık satış grafiği. */
+const ProductDetailContent: React.FC<{
+  product: Product;
+  analytics: AnalyticsApiResponse | null;
+  lowThreshold?: number;
+}> = ({ product, analytics, lowThreshold = 10 }) => {
+  const [selectedVariantId, setSelectedVariantId] = useState<string>('all');
+  const [range, setRange] = useState<ChartRange>('daily');
+  const [metric, setMetric] = useState<ChartMetric>('revenue');
+
+  const variants = product.variants;
+  const totalStock = getTotalStock(product);
+  const overallStatus = getProductStatus(product, lowThreshold);
+  const category = getProductCategory(product);
+  const productImage = getProductThumbnail(product);
+
+  const totalRevenue = analytics?.totalRevenue ?? 0;
+  const dailyRevenue = analytics?.dailyRevenue ?? [];
+  const topProducts = useMemo(() => analytics?.topProducts ?? [], [analytics]);
+  const sumDaily = useMemo(() => dailyRevenue.reduce((s, d) => s + d.revenue, 0), [dailyRevenue]);
+
+  // Ürün-seviyesi agregatlar (mağaza toplamı DEĞİL).
+  const productRevenue = useMemo(() => getProductRevenue(product, topProducts), [product, topProducts]);
+  const productQuantity = useMemo(() => getProductQuantity(product, topProducts), [product, topProducts]);
+
+  const selectedVariant =
+    selectedVariantId === 'all' ? null : variants.find(v => v.id === selectedVariantId) ?? null;
+
+  // Grafik kapsamına (Tümü / seçili varyant) göre hedef ciro, adet ve pay.
+  const targetRevenue = selectedVariant ? getVariantRevenue(selectedVariant.id, topProducts) : productRevenue;
+  const soldCount = selectedVariant ? getVariantQuantity(selectedVariant.id, topProducts) : productQuantity;
+  const share = totalRevenue > 0 ? targetRevenue / totalRevenue : 0;
+
+  // Günlük seri: ciro = pay × günlük mağaza cirosu; adet = hedef adet günlük ciroya orantılı dağıtılır.
+  const dailySeries = useMemo<DaySeriesPoint[]>(
+    () =>
+      dailyRevenue.map(d => ({
+        date: d.date,
+        revenue: Math.round(d.revenue * share * 100) / 100,
+        units: sumDaily > 0 ? soldCount * (d.revenue / sumDaily) : 0,
+      })),
+    [dailyRevenue, share, soldCount, sumDaily],
+  );
+
+  const grouped = useMemo(() => groupSeries(dailySeries, range), [dailySeries, range]);
+  const chartData = useMemo(
+    () =>
+      grouped.map(g => ({ label: g.label, value: metric === 'revenue' ? Math.round(g.revenue) : Math.round(g.units) })),
+    [grouped, metric],
+  );
+  const periodRevenue = useMemo(() => dailySeries.reduce((s, d) => s + d.revenue, 0), [dailySeries]);
+  const hasData = targetRevenue > 0 && dailyRevenue.length > 0 && periodRevenue > 0;
+
+  const maxStock = useMemo(() => variants.reduce((m, v) => Math.max(m, getVariantStock(v)), 0), [variants]);
+
+  // Kartları önem sırasına diz: tükenen → az kalan → sağlıklı.
+  const variantsSorted = useMemo(
+    () =>
+      [...variants].sort((a, b) => {
+        const sa = STATUS_SEVERITY[stockToStatus(getVariantStock(a), lowThreshold)];
+        const sb = STATUS_SEVERITY[stockToStatus(getVariantStock(b), lowThreshold)];
+        return sa - sb || getVariantStock(a) - getVariantStock(b);
+      }),
+    [variants, lowThreshold],
+  );
+
+  return (
+    <div className="flex max-h-[85vh] flex-col max-sm:max-h-full">
+      {/* Başlık — tam genişlik, yatay */}
+      <div className="flex items-start gap-4 border-b border-[#e5e7eb] p-6 pb-4 pr-12">
+        <ModalProductImage src={productImage} alt={product.name} />
+        <div className="flex min-w-0 flex-col gap-2">
+          <DialogTitle className="text-[24px] font-semibold leading-[1.2] tracking-tight text-[#17171c]">
+            {product.name}
+          </DialogTitle>
+          <DialogDescription className="sr-only">
+            {product.name} ürününün varyant ve satış detayları
+          </DialogDescription>
+          <div className="flex flex-wrap items-center gap-2">
+            {category && (
+              <span className="inline-flex rounded-full bg-[#f1f5ff] px-2.5 py-0.5 text-[12px] font-medium text-[#1863dc]">
+                {category}
+              </span>
+            )}
+            <ModalStatusBadge status={overallStatus} />
+          </div>
+          <span className="text-[14px] text-[#75758a]">
+            {variants.length} varyant • Toplam {totalStock} adet stok
+          </span>
+        </div>
+      </div>
+
+      {/* Gövde — iki kolon: sol sabit 380px, sağ esner (grafik) */}
+      <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-5 md:flex-row md:gap-0">
+        {/* Sol panel */}
+        <div className="flex flex-col gap-4 md:w-[380px] md:flex-shrink-0 md:pr-5">
+          <TumuCard
+            totalStock={totalStock}
+            productRevenue={productRevenue}
+            variantCount={variants.length}
+            status={overallStatus}
+            selected={selectedVariantId === 'all'}
+            onClick={() => setSelectedVariantId('all')}
+          />
+          {variantsSorted.length > 0 && (
+            <div>
+              <MonoLabel className="mb-2">Varyantlar</MonoLabel>
+              <div className="grid max-h-64 grid-cols-2 gap-2 overflow-y-auto pr-1">
+                {variantsSorted.map(v => {
+                  const stock = getVariantStock(v);
+                  const price = v.prices?.[0]?.sellPrice ?? 0;
+                  return (
+                    <VariantCard
+                      key={v.id}
+                      label={getVariantName(v)}
+                      stock={stock}
+                      priceLabel={price > 0 ? formatPrice(price) : '—'}
+                      status={stockToStatus(stock, lowThreshold)}
+                      selected={selectedVariantId === v.id}
+                      fillPercent={maxStock > 0 ? Math.min((stock / maxStock) * 100, 100) : 0}
+                      onClick={() => setSelectedVariantId(v.id)}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Sağ panel — grafik (mobilde Tümü/varyantlardan önce) */}
+        <div className="order-first flex min-w-0 flex-1 md:order-none">
+          <div className="flex w-full flex-1 flex-col rounded-xl border border-[#e5e7eb] bg-[#f8f9fa] p-5">
+            {/* Üst satır: başlık + dönem sekmeleri */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex flex-col">
+                <p className="text-[14px] font-medium text-[#17171c]">Satış Grafiği</p>
+                <p className="font-mono text-[11px] uppercase tracking-wider text-[#75758a]">
+                  {selectedVariant ? getVariantName(selectedVariant) : 'Tüm Varyantlar'} · Son 30 Gün
+                </p>
+              </div>
+              <div className="inline-flex flex-wrap rounded-full border border-[#e5e7eb] bg-[#ffffff] p-0.5">
+                {RANGE_OPTIONS.map(o => (
+                  <button
+                    key={o.value}
+                    type="button"
+                    onClick={() => setRange(o.value)}
+                    className={`rounded-full px-3 py-1 text-[12px] transition-colors duration-100 ${
+                      range === o.value ? 'bg-[#17171c] text-[#ffffff]' : 'text-[#75758a] hover:text-[#17171c]'
+                    }`}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Metrik anahtarı */}
+            <div className="mt-3 inline-flex items-center gap-2">
+              {METRIC_OPTIONS.map(m => (
+                <button
+                  key={m.value}
+                  type="button"
+                  onClick={() => setMetric(m.value)}
+                  className={`rounded-full px-3 py-1 text-[12px] transition-colors duration-100 ${
+                    metric === m.value
+                      ? 'bg-[#17171c] text-[#ffffff]'
+                      : 'border border-[#e5e7eb] text-[#75758a] hover:text-[#17171c]'
+                  }`}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+
+            {hasData ? (
+              <>
+                <div className="mt-4 min-h-[200px] w-full flex-1">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={chartData} margin={{ top: 8, right: 4, bottom: 0, left: 4 }}>
+                      <defs>
+                        <linearGradient id="lightGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#17171c" stopOpacity={0.06} />
+                          <stop offset="100%" stopColor="#17171c" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <XAxis
+                        dataKey="label"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: '#75758a', fontSize: 10 }}
+                        interval="preserveStartEnd"
+                        minTickGap={16}
+                      />
+                      <Tooltip
+                        content={<ChartTooltip metric={metric} />}
+                        cursor={{ stroke: '#e5e7eb', strokeWidth: 1 }}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="value"
+                        stroke="#17171c"
+                        strokeWidth={1.5}
+                        fill="url(#lightGradient)"
+                        dot={false}
+                        activeDot={{ r: 3, fill: '#17171c', strokeWidth: 0 }}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+                <p className="mt-3 border-t border-[#e5e7eb] pt-3 text-[12px] text-[#75758a]">
+                  Seçili dönemde toplam{' '}
+                  <span className="font-medium text-[#17171c]">{formatPrice(periodRevenue)}</span> ciro ·{' '}
+                  <span className="font-medium text-[#17171c]">{soldCount}</span> adet satış
+                </p>
+              </>
+            ) : (
+              <div className="mt-4 flex min-h-[200px] flex-1 items-center justify-center rounded-xl border border-dashed border-[#e5e7eb] text-center">
+                <p className="text-[14px] text-[#75758a]">Bu ürün için henüz satış verisi yok</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const HomePage: React.FC<HomePageProps> = ({ token, products = [], analytics, loading }) => {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [query, setQuery] = useState('');
   const [stockRange, setStockRange] = useState<StockRange>('all');
   const [sortBy, setSortBy] = useState<SortBy>(DEFAULT_SORT);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const { threshold, setThreshold } = useStockThreshold();
 
-  const variantRows = useMemo(() => flattenProducts(products), [products]);
-
-  const filteredRows = useMemo(
-    () => filterRows(variantRows, statusFilter, query, stockRange, sortBy),
-    [variantRows, statusFilter, query, stockRange, sortBy],
+  const productRows = useMemo(
+    () => flattenToProducts(products, threshold.max),
+    [products, threshold.max],
   );
 
-  // Herhangi bir filtre değişince ilk sayfaya dön.
+  const filteredRows = useMemo(
+    () => filterRows(productRows, statusFilter, query, stockRange, sortBy),
+    [productRows, statusFilter, query, stockRange, sortBy],
+  );
+
+  // Herhangi bir filtre veya eşik değişince ilk sayfaya dön.
   useEffect(() => {
     setCurrentPage(1);
-  }, [statusFilter, query, stockRange, sortBy]);
-
-  const totalProducts = products.length;
-  const criticalCount = products.filter(p => getProductStatus(p) === 'critical').length;
-  const warningCount = products.filter(p => getProductStatus(p) === 'warning').length;
-  const healthyCount = products.filter(p => getProductStatus(p) === 'healthy').length;
+  }, [statusFilter, query, stockRange, sortBy, threshold.max]);
 
   // Pagination (client-side).
   const totalResults = filteredRows.length;
@@ -450,84 +948,27 @@ const HomePage: React.FC<HomePageProps> = ({ token, storeName, products = [], an
     );
   }
 
-  const revenueChange = analytics?.revenueChange ?? 0;
-  const isPositive = revenueChange >= 0;
   const topProducts = analytics?.topProducts ?? [];
 
   return (
     <div className="min-h-screen bg-[#ffffff] font-sans text-[#212121]">
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-6 py-8">
         {/* Başlık */}
-        <header className="mb-10 flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-          <div className="flex flex-col gap-2">
-            <MonoLabel>Stok Yönetimi</MonoLabel>
-            <h1 className="text-5xl font-normal leading-none tracking-[-0.04em] text-[#17171c] sm:text-6xl">
-              Stok Takibi
-            </h1>
-            {storeName && <p className="text-[18px] leading-[1.4] text-[#75758a]">{storeName}</p>}
+        <header className="mb-6 flex items-center justify-between">
+          <div>
+            <p className="mb-1 font-mono text-[10px] uppercase tracking-wider text-[#75758a]">
+              STOK YÖNETİMİ
+            </p>
+            <h1 className="text-3xl font-normal tracking-[-0.03em] text-[#17171c]">Stok Takibi</h1>
           </div>
           <Button
             onClick={() => downloadCSV(pagedRows)}
-            className="h-auto gap-2 self-start rounded-full bg-[#17171c] px-6 py-3 text-[14px] font-medium text-[#ffffff] shadow-none transition-colors hover:bg-[#000000] sm:self-auto"
+            className="h-auto gap-2 rounded-full bg-[#17171c] px-6 py-3 text-[14px] font-medium text-[#ffffff] shadow-none transition-colors hover:bg-[#000000]"
           >
             <Download className="h-4 w-4" />
             CSV İndir
           </Button>
         </header>
-
-        {/* Ciro bandı — deep-green dark-feature-band */}
-        <section className="mb-6 overflow-hidden rounded-[22px] bg-[#003c33] p-8 sm:p-10">
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-            <div className="flex flex-col gap-3">
-              <MonoLabel className="text-[#edfce9]">30 Günlük Ciro</MonoLabel>
-              <p className="text-5xl font-normal leading-none tracking-[-0.03em] text-[#ffffff] sm:text-6xl">
-                ₺{analytics?.totalRevenue?.toLocaleString('tr-TR', { minimumFractionDigits: 2 }) ?? '—'}
-              </p>
-            </div>
-            {analytics && (
-              <div className="flex items-center gap-2">
-                <span
-                  className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-[14px] font-medium ${
-                    isPositive ? 'bg-[#edfce9] text-[#003c33]' : 'border border-[#ffad9b] text-[#ffad9b]'
-                  }`}
-                >
-                  {isPositive ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
-                  {isPositive ? '+' : ''}
-                  {revenueChange}%
-                </span>
-                <span className="text-[14px] leading-[1.4] text-[#d9d9dd]">geçen aya göre</span>
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* Metrik kartları */}
-        <div className="mb-10 grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <Card className="rounded-[16px] border-[#e5e7eb] bg-[#ffffff] shadow-none">
-            <CardContent className="p-6">
-              <MonoLabel className="mb-3">Toplam Ürün</MonoLabel>
-              <p className="text-4xl font-normal tracking-[-0.03em] text-[#17171c]">{totalProducts}</p>
-            </CardContent>
-          </Card>
-          <Card className="rounded-[16px] border-[#e5e7eb] bg-[#ffffff] shadow-none">
-            <CardContent className="p-6">
-              <MonoLabel className="mb-3">Kritik</MonoLabel>
-              <p className="text-4xl font-normal tracking-[-0.03em] text-[#b30000]">{criticalCount}</p>
-            </CardContent>
-          </Card>
-          <Card className="rounded-[16px] border-[#e5e7eb] bg-[#ffffff] shadow-none">
-            <CardContent className="p-6">
-              <MonoLabel className="mb-3">Dikkat</MonoLabel>
-              <p className="text-4xl font-normal tracking-[-0.03em] text-[#ff7759]">{warningCount}</p>
-            </CardContent>
-          </Card>
-          <Card className="rounded-[16px] border-[#e5e7eb] bg-[#ffffff] shadow-none">
-            <CardContent className="p-6">
-              <MonoLabel className="mb-3">Sağlıklı</MonoLabel>
-              <p className="text-4xl font-normal tracking-[-0.03em] text-[#003c33]">{healthyCount}</p>
-            </CardContent>
-          </Card>
-        </div>
 
         {/* Birleşik filtre konteyneri — tek kart, iki satır (arama+filtreler / çipler) */}
         <div className="mb-8 rounded-[12px] border border-[#e5e7eb] bg-[#ffffff]">
@@ -600,7 +1041,33 @@ const HomePage: React.FC<HomePageProps> = ({ token, storeName, products = [], an
             </div>
           </div>
 
-          {/* Satır 2: aktif filtre çipleri — yalnızca en az bir filtre etkinse görünür */}
+          {/* Satır 2: stok eşiği ayarı — mağaza geneli, dashboard ile paylaşılır */}
+          <div className="flex flex-col gap-2.5 border-t border-[#e5e7eb] px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+            <div className="flex items-center gap-3">
+              <span className="font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-[#75758a]">
+                Stok Eşiği
+              </span>
+              <div className="flex items-center gap-2">
+                <ThresholdInput
+                  label="Kritik ≤"
+                  value={threshold.min}
+                  max={threshold.max}
+                  onChange={min => setThreshold({ min })}
+                />
+                <ThresholdInput
+                  label="Az kalan ≤"
+                  value={threshold.max}
+                  onChange={max => setThreshold({ max })}
+                />
+              </div>
+            </div>
+            <p className="text-[12px] leading-[1.4] text-[#93939f]">
+              {threshold.max} adet ve altındaki ürünler dashboard’da{' '}
+              <span className="text-[#616161]">Az Kalan Ürünler</span> olarak listelenir.
+            </p>
+          </div>
+
+          {/* Satır 3: aktif filtre çipleri — yalnızca en az bir filtre etkinse görünür */}
           {hasActiveFilters && (
             <>
               <div className="h-px w-full bg-[#e5e7eb]" />
@@ -668,16 +1135,16 @@ const HomePage: React.FC<HomePageProps> = ({ token, storeName, products = [], an
                       Durum
                     </TableHead>
                     <TableHead className="px-6 py-5 font-mono text-[12px] uppercase tracking-[0.08em] text-[#75758a]">
-                      Güncel Stok
+                      Toplam Stok
                     </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {pagedRows.map((row, index) => {
-                    const isZero = row.stock === 0;
+                  {pagedRows.map(row => {
+                    const isZero = row.totalStock === 0;
                     return (
                       <TableRow
-                        key={`${row.variantId}-${startIndex + index}`}
+                        key={row.productId}
                         className="group cursor-pointer border-b border-[#e5e7eb] transition-colors hover:bg-[#f2f2f2]"
                         onClick={() => {
                           const product = products.find(p => p.id === row.productId);
@@ -694,7 +1161,7 @@ const HomePage: React.FC<HomePageProps> = ({ token, storeName, products = [], an
                             </span>
                             <span className="flex items-center gap-2 text-[14px] text-[#75758a]">
                               <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#d9d9dd]" />
-                              {row.variantName}
+                              {row.variantCount} varyant
                             </span>
                             {row.category && (
                               <span className="mt-1 inline-flex w-fit rounded-full bg-[#f1f5ff] px-2.5 py-0.5 text-[12px] font-medium text-[#1863dc]">
@@ -704,14 +1171,14 @@ const HomePage: React.FC<HomePageProps> = ({ token, storeName, products = [], an
                           </div>
                         </TableCell>
                         <TableCell className="px-6 py-5 align-top">
-                          <StatusBadge stock={row.stock} />
+                          <StatusBadge status={row.status} />
                         </TableCell>
                         <TableCell className="px-6 py-5 align-top">
                           <div className="flex items-baseline gap-2">
                             <span
                               className={`text-[24px] font-medium tracking-[-0.02em] ${isZero ? 'text-[#b30000]' : 'text-[#17171c]'}`}
                             >
-                              {row.stock}
+                              {row.totalStock}
                             </span>
                             <span className="text-[14px] text-[#75758a]">Adet</span>
                           </div>
@@ -784,77 +1251,17 @@ const HomePage: React.FC<HomePageProps> = ({ token, storeName, products = [], an
         )}
       </div>
 
-      {/* Ürün detay dialog */}
+      {/* Ürün detay modalı */}
       <Dialog open={!!selectedProduct} onOpenChange={open => !open && setSelectedProduct(null)}>
-        <DialogContent className="max-w-3xl overflow-hidden rounded-[16px] border-[#e5e7eb] bg-[#ffffff] p-0">
-          <DialogHeader className="border-b border-[#e5e7eb] p-6">
-            <MonoLabel className="mb-2">Ürün Detayı</MonoLabel>
-            <DialogTitle className="text-[32px] font-normal leading-[1.2] tracking-[-0.03em] text-[#17171c]">
-              {selectedProduct?.name}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="max-h-[60vh] overflow-y-auto p-6">
-            {selectedProduct?.variants && selectedProduct.variants.length > 0 ? (
-              <div className="overflow-hidden rounded-[8px] border border-[#e5e7eb]">
-                <Table>
-                  <TableHeader className="bg-[#eeece7]">
-                    <TableRow className="border-b border-[#e5e7eb] hover:bg-transparent">
-                      <TableHead className="w-[64px] px-5 py-4 font-mono text-[12px] uppercase tracking-[0.08em] text-[#75758a]">
-                        Görsel
-                      </TableHead>
-                      <TableHead className="px-5 py-4 font-mono text-[12px] uppercase tracking-[0.08em] text-[#75758a]">
-                        Varyant
-                      </TableHead>
-                      <TableHead className="px-5 py-4 text-right font-mono text-[12px] uppercase tracking-[0.08em] text-[#75758a]">
-                        Fiyat
-                      </TableHead>
-                      <TableHead className="px-5 py-4 text-right font-mono text-[12px] uppercase tracking-[0.08em] text-[#75758a]">
-                        Stok
-                      </TableHead>
-                      <TableHead className="px-5 py-4 text-right font-mono text-[12px] uppercase tracking-[0.08em] text-[#75758a]">
-                        Durum
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {selectedProduct.variants.map((v, i) => {
-                      const vName = v.variantValues?.length
-                        ? v.variantValues.map(val => val.variantValueName).join(' / ')
-                        : v.sku || 'Varsayılan';
-                      const stockCount = v.stocks?.[0]?.stockCount ?? 0;
-                      const price = v.prices?.[0]?.sellPrice ?? 0;
-                      const isZero = stockCount === 0;
-
-                      return (
-                        <TableRow
-                          key={v.id || i}
-                          className="border-b border-[#e5e7eb] transition-colors last:border-b-0 hover:bg-[#f2f2f2]"
-                        >
-                          <TableCell className="px-5 py-4 align-middle">
-                            <ProductThumb src={getVariantThumbnail(v)} alt={vName} />
-                          </TableCell>
-                          <TableCell className="px-5 py-4 font-medium text-[#17171c]">{vName}</TableCell>
-                          <TableCell className="px-5 py-4 text-right text-[#75758a]">
-                            ₺{price.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
-                          </TableCell>
-                          <TableCell
-                            className={`px-5 py-4 text-right font-medium ${isZero ? 'text-[#b30000]' : 'text-[#17171c]'}`}
-                          >
-                            {stockCount}
-                          </TableCell>
-                          <TableCell className="px-5 py-4 text-right">
-                            <StatusBadge stock={stockCount} />
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            ) : (
-              <p className="text-[16px] leading-[1.5] text-[#75758a]">Bu ürünün varyantı bulunmamaktadır.</p>
-            )}
-          </div>
+        <DialogContent className="w-[90vw] max-w-5xl gap-0 overflow-hidden rounded-2xl border border-[#e5e7eb] bg-[#ffffff] p-0 shadow-sm sm:max-w-5xl max-sm:left-0 max-sm:top-0 max-sm:h-full max-sm:max-h-full max-sm:w-full max-sm:max-w-full max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-none">
+          {selectedProduct && (
+            <ProductDetailContent
+              key={selectedProduct.id}
+              product={selectedProduct}
+              analytics={analytics}
+              lowThreshold={threshold.max}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>
