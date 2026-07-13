@@ -1,11 +1,14 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import type { AnalyticsApiResponse } from '@/app/api/ikas/analytics/route';
+import type { SingleProductViewStats } from '@/app/api/product-view/stats/route';
+import { ApiRequests } from '@/lib/api-requests';
 import type { DaySeriesPoint, Product } from '../types';
 import { STATUS_SEVERITY } from '../constants';
 import {
+  getDaysRemaining,
   getProductCategory,
   getProductStatus,
   getProductThumbnail,
@@ -31,10 +34,14 @@ import { SalesChart } from './SalesChart';
 export const ProductDetailContent: React.FC<{
   product: Product;
   analytics: AnalyticsApiResponse | null;
+  token: string | null;
+  viewStats?: Record<string, number> | null;
   criticalThreshold?: number;
   warningThreshold?: number;
-}> = ({ product, analytics, criticalThreshold = 5, warningThreshold = 10 }) => {
+}> = ({ product, analytics, token, criticalThreshold = 5, warningThreshold = 10 }) => {
   const [selectedVariantId, setSelectedVariantId] = useState<string>('all');
+  const [viewDetail, setViewDetail] = useState<SingleProductViewStats | null>(null);
+  const [viewLoading, setViewLoading] = useState(false);
 
   const variants = product.variants;
   const totalStock = getTotalStock(product);
@@ -59,6 +66,31 @@ export const ProductDetailContent: React.FC<{
   const soldCount = selectedVariant ? getVariantQuantity(selectedVariant.id, topProducts) : productQuantity;
   const share = totalRevenue > 0 ? targetRevenue / totalRevenue : 0;
 
+  // Lazy fetch: modal açılınca bu ürünün günlük görüntülenme verisini getir.
+  useEffect(() => {
+    if (!token) return;
+    setViewLoading(true);
+    setViewDetail(null);
+    ApiRequests.productView.getViewStats(token, product.id)
+      .then(res => {
+        if (res.status === 200 && res.data?.data && 'totalViews' in res.data.data) {
+          setViewDetail(res.data.data as SingleProductViewStats);
+        }
+      })
+      .catch(() => setViewDetail(null))
+      .finally(() => setViewLoading(false));
+  }, [token, product.id]);
+
+  const viewMap = useMemo(() => {
+    const map = new Map<string, number>();
+    if (viewDetail) {
+      for (const d of viewDetail.dailyViews) {
+        map.set(d.date, d.viewCount);
+      }
+    }
+    return map;
+  }, [viewDetail]);
+
   // Günlük seri: ciro = pay × günlük mağaza cirosu; adet = hedef adet günlük ciroya orantılı dağıtılır.
   const dailySeries = useMemo<DaySeriesPoint[]>(
     () =>
@@ -66,12 +98,15 @@ export const ProductDetailContent: React.FC<{
         date: d.date,
         revenue: Math.round(d.revenue * share * 100) / 100,
         units: sumDaily > 0 ? soldCount * (d.revenue / sumDaily) : 0,
+        views: viewMap.get(d.date) ?? 0,
       })),
-    [dailyRevenue, share, soldCount, sumDaily],
+    [dailyRevenue, share, soldCount, sumDaily, viewMap],
   );
 
   const periodRevenue = useMemo(() => dailySeries.reduce((s, d) => s + d.revenue, 0), [dailySeries]);
   const hasData = targetRevenue > 0 && dailyRevenue.length > 0 && periodRevenue > 0;
+  const hasViews = viewDetail != null && viewDetail.dailyViews.length > 0;
+  const daysRemaining = useMemo(() => getDaysRemaining(product, topProducts), [product, topProducts]);
 
   const maxStock = useMemo(() => variants.reduce((m, v) => Math.max(m, getVariantStock(v)), 0), [variants]);
 
@@ -119,6 +154,8 @@ export const ProductDetailContent: React.FC<{
           <TumuCard
             totalStock={totalStock}
             productRevenue={productRevenue}
+            totalViews={viewDetail?.totalViews}
+            daysRemaining={daysRemaining}
             variantCount={variants.length}
             status={overallStatus}
             selected={selectedVariantId === 'all'}
@@ -155,6 +192,7 @@ export const ProductDetailContent: React.FC<{
             dailySeries={dailySeries}
             soldCount={soldCount}
             hasData={hasData}
+            hasViews={hasViews}
             variantLabel={selectedVariant ? getVariantName(selectedVariant) : 'Tüm Varyantlar'}
           />
         </div>

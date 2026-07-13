@@ -10,11 +10,13 @@ import { ProductDetailContent } from './ProductDetailContent';
 interface ProductDetailModalProps {
   product: Product | null;
   analytics: AnalyticsApiResponse | null;
+  token: string | null;
+  viewStats?: Record<string, number> | null;
   onClose: () => void;
 }
 
 /** Ürün detay modalı: Dialog kabuğu + eşik okuma (prop taşımadan). */
-export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product, analytics, onClose }) => {
+export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product, analytics, token, viewStats, onClose }) => {
   const { threshold } = useStockThreshold();
 
   return (
@@ -24,6 +26,8 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
           <ProductDetailContent
             key={product.id}
             product={product}
+            token={token}
+            viewStats={viewStats}
             analytics={analytics}
             criticalThreshold={threshold.min}
             warningThreshold={threshold.max}

@@ -28,6 +28,7 @@ export const STOCK_RANGE_OPTIONS: ReadonlyArray<{ value: StockRange; label: stri
 
 export const SORT_OPTIONS: ReadonlyArray<{ value: SortBy; label: string }> = [
   { value: 'aciliyet', label: 'Aciliyet' },
+  { value: 'stok-omru', label: 'Stok Ömrü (Azalan)' },
   { value: 'stok-azalan', label: 'Stok (Azalan)' },
   { value: 'stok-artan', label: 'Stok (Artan)' },
   { value: 'isim-az', label: 'Ürün Adı (A-Z)' },
@@ -51,6 +52,7 @@ export const STOCK_RANGE_LABELS: Record<StockRange, string> = {
 
 export const SORT_LABELS: Record<SortBy, string> = {
   aciliyet: 'Aciliyet',
+  'stok-omru': 'Stok Ömrü (Azalan)',
   'stok-azalan': 'Stok (Azalan)',
   'stok-artan': 'Stok (Artan)',
   'isim-az': 'Ürün Adı (A-Z)',
@@ -75,6 +77,7 @@ export const RANGE_OPTIONS: ReadonlyArray<{ value: ChartRange; label: string }> 
 export const METRIC_OPTIONS: ReadonlyArray<{ value: ChartMetric; label: string }> = [
   { value: 'revenue', label: 'Ciro' },
   { value: 'quantity', label: 'Satış Adedi' },
+  { value: 'views', label: 'Görüntülenme' },
 ];
 
 export const TR_MONTHS = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'] as const;

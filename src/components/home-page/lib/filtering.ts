@@ -1,12 +1,14 @@
-import type { Product, ProductRow, StatusFilter, StockRange, SortBy } from '../types';
+import type { Product, ProductRow, StatusFilter, StockRange, SortBy, TopProduct } from '../types';
 import { STATUS_SEVERITY } from '../constants';
-import { getProductCategory, getProductStatus, getProductThumbnail, getTotalStock } from './product';
+import { getDaysRemaining, getProductCategory, getProductStatus, getProductThumbnail, getTotalStock } from './product';
 
 /** Ürünü tek satıra indirger: en kötü varyant durumu + toplam stok. */
 export function flattenToProducts(
   products: Product[],
   criticalThreshold: number,
   warningThreshold: number,
+  viewStats?: Record<string, number> | null,
+  topProducts?: TopProduct[],
 ): ProductRow[] {
   return products.map(product => ({
     productId: product.id,
@@ -16,6 +18,8 @@ export function flattenToProducts(
     status: getProductStatus(product, criticalThreshold, warningThreshold),
     totalStock: getTotalStock(product),
     variantCount: product.variants.length,
+    viewCount: viewStats?.[product.id],
+    daysRemaining: getDaysRemaining(product, topProducts ?? []),
   }));
 }
 
@@ -39,6 +43,12 @@ export function matchesStockRange(stock: number, range: StockRange): boolean {
 export function sortRows(rows: ProductRow[], sortBy: SortBy): ProductRow[] {
   const copy = [...rows];
   switch (sortBy) {
+    case 'stok-omru':
+      return copy.sort((a, b) => {
+        const aVal = a.daysRemaining ?? Infinity;
+        const bVal = b.daysRemaining ?? Infinity;
+        return aVal - bVal;
+      });
     case 'stok-azalan':
       return copy.sort((a, b) => b.totalStock - a.totalStock);
     case 'stok-artan':

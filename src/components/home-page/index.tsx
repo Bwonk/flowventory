@@ -13,9 +13,10 @@ import { TopSellers } from './components/TopSellers';
 import { ProductDetailModal } from './product-detail/ProductDetailModal';
 import { downloadCSV } from './lib/csv';
 
-const HomePage: React.FC<HomePageProps> = ({ token, products = [], analytics, loading }) => {
+const HomePage: React.FC<HomePageProps> = ({ token, products = [], analytics, viewStats, loading }) => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const filters = useProductFilters(products);
+  const topProducts = analytics?.topProducts ?? [];
+  const filters = useProductFilters(products, viewStats, topProducts);
 
   if (!token) {
     return (
@@ -52,8 +53,6 @@ const HomePage: React.FC<HomePageProps> = ({ token, products = [], analytics, lo
       </div>
     );
   }
-
-  const topProducts = analytics?.topProducts ?? [];
 
   return (
     <div className="min-h-screen bg-[#ffffff] font-sans text-[#212121]">
@@ -120,6 +119,8 @@ const HomePage: React.FC<HomePageProps> = ({ token, products = [], analytics, lo
       <ProductDetailModal
         product={selectedProduct}
         analytics={analytics}
+        token={token}
+        viewStats={viewStats}
         onClose={() => setSelectedProduct(null)}
       />
     </div>

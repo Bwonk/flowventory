@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useStockThreshold } from '@/lib/stock-threshold';
-import type { Product, ProductRow, SortBy, StatusFilter, StockRange } from '../types';
+import type { Product, ProductRow, SortBy, StatusFilter, StockRange, TopProduct } from '../types';
 import { DEFAULT_SORT, ITEMS_PER_PAGE } from '../constants';
 import { flattenToProducts, filterRows } from '../lib/filtering';
 
@@ -30,7 +30,7 @@ export interface UseProductFilters {
  * Eşik (min/max) doğrudan useStockThreshold'dan okunur; böylece tüketici bileşenler
  * eşik prop'u taşımak zorunda kalmaz.
  */
-export function useProductFilters(products: Product[]): UseProductFilters {
+export function useProductFilters(products: Product[], viewStats?: Record<string, number> | null, topProducts?: TopProduct[]): UseProductFilters {
   const { threshold } = useStockThreshold();
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -40,8 +40,8 @@ export function useProductFilters(products: Product[]): UseProductFilters {
   const [currentPage, setCurrentPage] = useState(1);
 
   const productRows = useMemo(
-    () => flattenToProducts(products, threshold.min, threshold.max),
-    [products, threshold.min, threshold.max],
+    () => flattenToProducts(products, threshold.min, threshold.max, viewStats, topProducts),
+    [products, threshold.min, threshold.max, viewStats, topProducts],
   );
 
   const filteredRows = useMemo(

@@ -140,6 +140,31 @@ export const SAVE_VARIANT_STOCKS = gql`
   }
 `;
 
+export const LIST_STOREFRONT = gql`
+  query listStorefront($salesChannelId: StringFilterInput) {
+    listStorefront(salesChannelId: $salesChannelId) {
+      id
+      name
+      type
+      salesChannelId
+    }
+  }
+`;
+
+export const CREATE_STOREFRONT_JS_SCRIPT = gql`
+  mutation createStorefrontJSScript($input: CreateStorefrontJSScriptInput!) {
+    createStorefrontJSScript(input: $input) {
+      id
+      name
+      contentType
+      scriptContent
+      isActive
+      isHighPriority
+      storefrontId
+    }
+  }
+`;
+
 export const LIST_ORDER_FOR_ANALYTICS = gql`
   query listOrderForAnalytics($orderedAt: DateFilterInput) {
     listOrder(orderedAt: $orderedAt) {

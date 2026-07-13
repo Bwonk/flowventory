@@ -1,4 +1,4 @@
-import type { Product, Variant, ProductStatus } from '../types';
+import type { Product, Variant, ProductStatus, TopProduct } from '../types';
 
 export function getProductStatus(
   product: Product,
@@ -50,6 +50,21 @@ export function stockToStatus(
   if (stock <= criticalThreshold) return 'critical';
   if (stock <= warningThreshold) return 'warning';
   return 'healthy';
+}
+
+/** Satış hızına göre stoğun kaç gün yeteceğini hesaplar. */
+export function getDaysRemaining(product: Product, topProducts: TopProduct[]): number | null {
+  const totalStock = getTotalStock(product);
+  if (totalStock === 0) return 0;
+
+  const soldQuantity = topProducts
+    .filter(tp => product.variants.some(v => v.id === tp.variantId))
+    .reduce((sum, tp) => sum + tp.quantity, 0);
+
+  if (soldQuantity === 0) return null;
+
+  const dailyRate = soldQuantity / 30;
+  return Math.round(totalStock / dailyRate);
 }
 
 /** Progress bar dolgu rengi (duruma göre). */

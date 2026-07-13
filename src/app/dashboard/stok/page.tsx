@@ -14,6 +14,7 @@ export default function StokPage() {
   const [storeName, setStoreName] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
   const [analytics, setAnalytics] = useState<AnalyticsApiResponse | null>(null);
+  const [viewStats, setViewStats] = useState<Record<string, number> | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchStoreName = useCallback(async (currentToken: string) => {
@@ -49,6 +50,17 @@ export default function StokPage() {
     }
   }, []);
 
+  const fetchViewStats = useCallback(async (currentToken: string) => {
+    try {
+      const res = await ApiRequests.productView.getViewStats(currentToken);
+      if (res.status === 200 && res.data?.data) {
+        setViewStats(res.data.data as Record<string, number>);
+      }
+    } catch (error) {
+      console.error('Error fetching view stats:', error);
+    }
+  }, []);
+
   const initializeDashboard = useCallback(async () => {
     try {
       const fetchedToken = await TokenHelpers.getTokenForIframeApp();
@@ -59,6 +71,7 @@ export default function StokPage() {
           fetchStoreName(fetchedToken),
           fetchProducts(fetchedToken),
           fetchAnalytics(fetchedToken),
+          fetchViewStats(fetchedToken),
         ]);
       }
     } catch (error) {
@@ -66,7 +79,7 @@ export default function StokPage() {
     } finally {
       setLoading(false);
     }
-  }, [fetchStoreName, fetchProducts, fetchAnalytics]);
+  }, [fetchStoreName, fetchProducts, fetchAnalytics, fetchViewStats]);
 
   useEffect(() => {
     initializeDashboard();
@@ -78,6 +91,7 @@ export default function StokPage() {
       storeName={storeName}
       products={products}
       analytics={analytics}
+      viewStats={viewStats}
       loading={loading}
     />
   );

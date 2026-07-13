@@ -6,11 +6,11 @@ import { formatDayMonth } from './format';
 export function groupSeries(
   series: DaySeriesPoint[],
   range: ChartRange,
-): Array<{ label: string; revenue: number; units: number }> {
+): Array<{ label: string; revenue: number; units: number; views: number }> {
   if (range === 'daily') {
-    return series.map(s => ({ label: formatDayMonth(s.date), revenue: s.revenue, units: s.units }));
+    return series.map(s => ({ label: formatDayMonth(s.date), revenue: s.revenue, units: s.units, views: s.views }));
   }
-  const map = new Map<string, { label: string; revenue: number; units: number; order: number }>();
+  const map = new Map<string, { label: string; revenue: number; units: number; views: number; order: number }>();
   for (const s of series) {
     const d = new Date(s.date);
     if (Number.isNaN(d.getTime())) continue;
@@ -18,7 +18,7 @@ export function groupSeries(
     let label: string;
     let order: number;
     if (range === 'weekly') {
-      const weekday = (d.getDay() + 6) % 7; // Pazartesi = 0
+      const weekday = (d.getDay() + 6) % 7;
       const start = new Date(d);
       start.setDate(d.getDate() - weekday);
       key = start.toISOString().slice(0, 10);
@@ -33,14 +33,15 @@ export function groupSeries(
       label = key;
       order = d.getFullYear();
     }
-    const existing = map.get(key) ?? { label, revenue: 0, units: 0, order };
+    const existing = map.get(key) ?? { label, revenue: 0, units: 0, views: 0, order };
     existing.revenue += s.revenue;
     existing.units += s.units;
+    existing.views += s.views;
     map.set(key, existing);
   }
   return Array.from(map.values())
     .sort((a, b) => a.order - b.order)
-    .map(({ label, revenue, units }) => ({ label, revenue, units }));
+    .map(({ label, revenue, units, views }) => ({ label, revenue, units, views }));
 }
 
 /** Bu ürüne ait varyantların 30 günlük toplam cirosu. */

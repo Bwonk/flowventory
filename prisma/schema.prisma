@@ -27,3 +27,19 @@ model AuthToken {
   refreshToken    String
   scope           String?
 }
+
+// ürün görüntülenmelerini gün bazlı tutuyoruz.
+// her view için ayrı satır açmak yerine productId + date için tek satır
+// upsert edip viewCount'u artırıyoruz böylece günlük özet direkt oluşuyor.
+
+model ProductView {
+  id         String   @id @default(cuid())
+  productId  String
+  date       String   // "2026-07-16" formatında, gün bazlı özet
+  viewCount  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([productId, date])
+  @@index([productId])
+}

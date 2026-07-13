@@ -13,6 +13,8 @@ export interface ProductRow {
   status: ProductStatus;
   totalStock: number;
   variantCount: number;
+  viewCount?: number;
+  daysRemaining?: number | null;
 }
 
 export interface HomePageProps {
@@ -20,20 +22,22 @@ export interface HomePageProps {
   storeName?: string;
   products: Product[];
   analytics: AnalyticsApiResponse | null;
+  viewStats?: Record<string, number> | null;
   loading: boolean;
 }
 
 export type StatusFilter = 'all' | 'tukendi' | 'az-kalan' | 'saglikli';
 export type StockRange = 'all' | '0' | '1-10' | '11-50' | '51-100' | '100+';
-export type SortBy = 'aciliyet' | 'stok-azalan' | 'stok-artan' | 'isim-az';
+export type SortBy = 'aciliyet' | 'stok-omru' | 'stok-azalan' | 'stok-artan' | 'isim-az';
 
 export type ChartRange = 'daily' | 'weekly' | 'monthly' | 'yearly';
-export type ChartMetric = 'revenue' | 'quantity';
+export type ChartMetric = 'revenue' | 'quantity' | 'views';
 
 export interface DaySeriesPoint {
   date: string;
   revenue: number;
   units: number;
+  views: number;
 }
 
 export type TopProduct = AnalyticsApiResponse['topProducts'][number];

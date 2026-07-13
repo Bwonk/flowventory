@@ -52,6 +52,12 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                 Durum
               </TableHead>
               <TableHead className="px-6 py-5 font-mono text-[12px] uppercase tracking-[0.08em] text-[#75758a]">
+                Görüntülenme
+              </TableHead>
+              <TableHead className="px-6 py-5 font-mono text-[12px] uppercase tracking-[0.08em] text-[#75758a]">
+                Stok Ömrü
+              </TableHead>
+              <TableHead className="px-6 py-5 font-mono text-[12px] uppercase tracking-[0.08em] text-[#75758a]">
                 Toplam Stok
               </TableHead>
             </TableRow>
@@ -86,6 +92,62 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                   </TableCell>
                   <TableCell className="px-6 py-5 align-top">
                     <StatusBadge status={row.status} />
+                  </TableCell>
+                  <TableCell className="px-6 py-5 align-top">
+                    {row.viewCount != null ? (
+                      <div>
+                        <p className="text-lg font-semibold text-[#17171c]">{row.viewCount}</p>
+                        <p className="mt-0.5 text-xs text-[#75758a]">Son 30 gün</p>
+                      </div>
+                    ) : (
+                      <p className="text-lg text-[#d1d5db]">—</p>
+                    )}
+                  </TableCell>
+                  <TableCell className="px-6 py-5 align-top">
+                    {(() => {
+                      const d = row.daysRemaining;
+                      if (d === 0) {
+                        return <p className="text-sm font-medium text-[#b30000]">Tükendi</p>;
+                      }
+                      if (d == null) {
+                        return (
+                          <div>
+                            <p className="text-lg text-[#d1d5db]">—</p>
+                            <p className="mt-0.5 text-xs text-[#75758a]">Satış yok</p>
+                          </div>
+                        );
+                      }
+                      if (d <= 7) {
+                        return (
+                          <div>
+                            <p className="text-lg font-semibold text-[#b30000]">{d} gün</p>
+                            <p className="mt-0.5 text-xs text-[#b30000]">Kritik</p>
+                          </div>
+                        );
+                      }
+                      if (d <= 30) {
+                        return (
+                          <div>
+                            <p className="text-lg font-semibold text-[#d97706]">{d} gün</p>
+                            <p className="mt-0.5 text-xs text-[#d97706]">Yakında biter</p>
+                          </div>
+                        );
+                      }
+                      if (d > 365) {
+                        return (
+                          <div>
+                            <p className="text-lg font-semibold text-[#17171c]">365+ gün</p>
+                            <p className="mt-0.5 text-xs text-[#75758a]">Fazla stok</p>
+                          </div>
+                        );
+                      }
+                      return (
+                        <div>
+                          <p className="text-lg font-semibold text-[#17171c]">{d} gün</p>
+                          <p className="mt-0.5 text-xs text-[#75758a]">Yeterli</p>
+                        </div>
+                      );
+                    })()}
                   </TableCell>
                   <TableCell className="px-6 py-5 align-top">
                     <div className="flex items-baseline gap-2">

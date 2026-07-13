@@ -28,14 +28,14 @@ export async function GET(request: NextRequest) {
     sixtyDaysAgo.setDate(now.getDate() - 60);
 
     const recentOrders = await ikasClient.queries.listOrderForAnalytics({
-      orderedAt: { gte: thirtyDaysAgo.toISOString() },
+      orderedAt: { gte: thirtyDaysAgo.toISOString() } as any,
     });
 
     const previousOrders = await ikasClient.queries.listOrderForAnalytics({
-      orderedAt: {
+        orderedAt: {
         gte: sixtyDaysAgo.toISOString(),
         lte: thirtyDaysAgo.toISOString(),
-      },
+      } as any,
     });
 
     const recentData = recentOrders.data?.listOrder?.data || [];
