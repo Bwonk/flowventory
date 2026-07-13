@@ -3,8 +3,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
+  AlertCircle,
+  Archive,
+  ArrowUpRight,
   BarChart2,
   CheckCircle,
+  Clock,
+  Eye,
   Package,
   TrendingDown,
   TrendingUp,
@@ -30,6 +35,7 @@ import { ApiRequests } from '@/lib/api-requests';
 import { ListProductsApiResponse } from '../api/ikas/list-products/route';
 import { AnalyticsApiResponse } from '../api/ikas/analytics/route';
 import { useStockThreshold } from '@/lib/stock-threshold';
+import { getTotalStock, getDaysRemaining } from '@/components/home-page/lib/product';
 
 type Product = NonNullable<ListProductsApiResponse['products']>[0];
 type Variant = Product['variants'][number];
@@ -138,31 +144,7 @@ function getProductThumbnail(product: Product): string | undefined {
   return product.variants.find(v => v.imageUrl)?.imageUrl;
 }
 
-const StatCell: React.FC<{
-  label: string;
-  subtitle: string;
-  value: string;
-  badge: React.ReactNode;
-  footer: string;
-  showDivider?: boolean;
-}> = ({ label, subtitle, value, badge, footer, showDivider = true }) => (
-  <>
-    {showDivider && (
-      <div className="hidden w-px self-stretch bg-[#e5e7eb] lg:mx-2 lg:block" aria-hidden="true" />
-    )}
-    <div className="flex flex-1 flex-col gap-3 px-4 py-5 sm:px-5 lg:py-6">
-      <div>
-        <p className="font-mono text-[10px] uppercase tracking-wider text-[#75758a]">{label}</p>
-        <p className="mt-0.5 text-[12px] text-[#9ca3af]">{subtitle}</p>
-      </div>
-      <p className="text-3xl font-semibold tracking-tight text-[#17171c]">{value}</p>
-      <div className="flex flex-col gap-2">
-        {badge}
-        <p className="text-[12px] text-[#75758a]">{footer}</p>
-      </div>
-    </div>
-  </>
-);
+
 
 const ProductThumb: React.FC<{ product: Product }> = ({ product }) => {
   const [failed, setFailed] = useState(false);
@@ -332,8 +314,6 @@ export default function DashboardPage() {
     [products, maxThreshold],
   );
 
-  const healthyCount = products.length - criticalCount - warningCount;
-
   // Eşik altındaki (biten + azalan) tüm ürünler; en kritikten (0 stok) başlayarak sıralı.
   const lowStockProducts = useMemo(
     () =>
@@ -352,6 +332,31 @@ export default function DashboardPage() {
   const revenueChange = analytics?.revenueChange ?? 0;
   const isPositive = revenueChange >= 0;
   const topProducts = analytics?.topProducts ?? [];
+
+  // Ölü stok: satışı olmayan veya stok ömrü >180 gün olan ürünler.
+  const deadStock = useMemo(() => {
+    return products.filter(p => {
+      const total = getTotalStock(p);
+      if (total === 0) return false;
+      const soldQty = topProducts
+        .filter(tp => p.variants.some(v => v.id === tp.variantId))
+        .reduce((s, tp) => s + tp.quantity, 0);
+      if (soldQty === 0) return true;
+      return Math.round(total / (soldQty / 30)) > 180;
+    });
+  }, [products, topProducts]);
+
+  const deadStockCount = deadStock.length;
+
+  const lockedCapital = useMemo(() => {
+    return deadStock.reduce((sum, p) => {
+      return sum + p.variants.reduce((s, v) => {
+        const stock = v.stocks?.[0]?.stockCount ?? 0;
+        const price = v.prices?.[0]?.sellPrice ?? 0;
+        return s + stock * price;
+      }, 0);
+    }, 0);
+  }, [deadStock]);
 
   // Varyant id -> ürün/varyant eşlemesi (isim, görsel, varyant değerleri için).
   const variantIndex = useMemo(() => {
@@ -424,24 +429,14 @@ export default function DashboardPage() {
       .slice(0, 10);
   }, [topProducts, variantIndex]);
 
-  const previousRevenue = useMemo(() => {
-    if (totalRevenue === 0) return 0;
-    if (revenueChange === 0) return totalRevenue;
-    return Math.round((totalRevenue / (1 + revenueChange / 100)) * 100) / 100;
-  }, [totalRevenue, revenueChange]);
-
-  const previousWarning = useMemo(() => {
-    if (warningCount === 0) return 0;
-    if (revenueChange === 0) return warningCount;
-    return Math.max(0, Math.round(warningCount / (1 + Math.abs(revenueChange) / 100)));
-  }, [warningCount, revenueChange]);
-
   const avgDaysRemaining = useMemo(() => {
-    if (!analytics || analytics.totalRevenue <= 0) return 0;
-    const dailyAvg = analytics.totalRevenue / 30 / 100;
-    if (dailyAvg <= 0) return 0;
-    return Math.round(totalStock / dailyAvg);
-  }, [analytics, totalStock]);
+    const validDays = products
+      .map(p => getDaysRemaining(p, topProducts))
+      .filter((d): d is number => d !== null && d > 0 && d < 3650);
+    return validDays.length > 0
+      ? Math.round(validDays.reduce((a, b) => a + b, 0) / validDays.length)
+      : null;
+  }, [products, topProducts]);
 
   const skuHealth = useMemo(() => {
     let critical = 0;
@@ -480,70 +475,111 @@ export default function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-7xl p-6">
-      {/* SECTION 1 — Hero Stats Bar */}
-      <section className="mb-4 overflow-hidden rounded-2xl border border-[#e5e7eb] bg-[#ffffff]">
-        <div className="grid grid-cols-1 divide-y divide-[#e5e7eb] lg:grid-cols-[1fr_auto_1fr_auto_1fr_auto_1fr] lg:divide-y-0">
-          <StatCell
-            showDivider={false}
-            label="30 GÜNLÜK CİRO"
-            subtitle="Toplam gelir"
-            value={formatPrice(totalRevenue)}
-            badge={
-              <span
-                className={`inline-flex w-fit items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium ${
-                  isPositive ? 'bg-[#dcfce7] text-[#166534]' : 'bg-[#fef2f2] text-[#991b1b]'
-                }`}
-              >
-                {isPositive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                {isPositive ? '+' : ''}
-                {revenueChange}%
-              </span>
-            }
-            footer={`Geçen ay: ${formatPrice(previousRevenue)}`}
-          />
-          <StatCell
-            label="TOPLAM ÜRÜN"
-            subtitle="Aktif katalog"
-            value={String(products.length)}
-            badge={
-              <span className="inline-flex w-fit rounded-full bg-[#f3f4f6] px-2.5 py-0.5 text-[11px] font-medium text-[#374151]">
-                Varyant bazlı
-              </span>
-            }
-            footer="Varyant bazlı takip"
-          />
-          <StatCell
-            label="AZ KALAN"
-            subtitle="Eşik altında"
-            value={String(warningCount)}
-            badge={
-              <span className="inline-flex w-fit rounded-full bg-[#fffbeb] px-2.5 py-0.5 text-[11px] font-medium text-[#92400e]">
-                Eşik: {maxThreshold} adet
-              </span>
-            }
-            footer={`Geçen ay: ${previousWarning}`}
-          />
-          <StatCell
-            label="ORTALAMA STOK GÜNÜ"
-            subtitle="Tahmini ömür"
-            value={String(avgDaysRemaining)}
-            badge={
-              <span className="inline-flex w-fit rounded-full bg-[#e0f2fe] px-2.5 py-0.5 text-[11px] font-medium text-[#0369a1]">
-                Satış hızına göre
-              </span>
-            }
-            footer="Satış hızına göre"
-          />
-        </div>
+      {/* SECTION 1 — KPI Kartları */}
+      <section className="mb-4 grid grid-cols-2 gap-4 lg:grid-cols-5">
+        {/* Kart 1 — 30 Günlük Ciro */}
+        <section className="flex flex-col rounded-2xl border border-[#e5e7eb] bg-[#ffffff] p-5">
+          <div className="flex items-center justify-between">
+            <span className="font-mono text-[10px] uppercase tracking-wider text-[#75758a]">30 GÜNLÜK CİRO</span>
+            <TrendingUp className="h-4 w-4 text-[#75758a]" />
+          </div>
+          <p className="mt-2 text-3xl font-semibold tracking-[-0.02em] text-[#17171c]">{formatPrice(totalRevenue)}</p>
+          <span
+            className={`mt-3 inline-flex w-fit items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${
+              isPositive ? 'bg-[#dcfce7] text-[#166534]' : 'bg-[#fef2f2] text-[#991b1b]'
+            }`}
+          >
+            {isPositive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+            {isPositive ? '+' : ''}
+            {revenueChange}%
+          </span>
+        </section>
+
+        {/* Kart 2 — Aktif Ürün */}
+        <section className="flex flex-col rounded-2xl border border-[#e5e7eb] bg-[#ffffff] p-5">
+          <div className="flex items-center justify-between">
+            <span className="font-mono text-[10px] uppercase tracking-wider text-[#75758a]">AKTİF ÜRÜN</span>
+            <Package className="h-4 w-4 text-[#75758a]" />
+          </div>
+          <p className="mt-2 text-3xl font-semibold tracking-[-0.02em] text-[#17171c]">{products.length}</p>
+          <p className="mt-3 text-xs text-[#75758a]">{skuHealth.total} SKU · varyant bazlı</p>
+        </section>
+
+        {/* Kart 3 — Kritik Stok (tıklanabilir) */}
+        <Link
+          href="/dashboard/stok?filter=tukendi"
+          className="flex flex-col rounded-2xl border border-[#e5e7eb] bg-[#ffffff] p-5 transition-colors hover:bg-[#f8f9fa] cursor-pointer"
+        >
+          <div className="flex items-center justify-between">
+            <span className="font-mono text-[10px] uppercase tracking-wider text-[#75758a]">KRİTİK STOK</span>
+            <div className="flex items-center gap-1">
+              <AlertCircle className="h-4 w-4 text-[#b30000]" />
+              <ArrowUpRight className="h-3.5 w-3.5 text-[#d1d5db]" />
+            </div>
+          </div>
+          <p className="mt-2 text-3xl font-semibold tracking-[-0.02em] text-[#b30000]">{criticalCount + warningCount}</p>
+          <div className="mt-3 flex flex-col gap-0.5">
+            <div className="flex items-center gap-1.5 text-[11px] text-[#75758a]">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#b30000]" />
+              <span>{criticalCount} ürün tükendi</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-[11px] text-[#75758a]">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#d97706]" />
+              <span>{warningCount} ürün eşik altında</span>
+            </div>
+          </div>
+        </Link>
+
+        {/* Kart 4 — Ölü Stok (tıklanabilir) */}
+        <Link
+          href="/dashboard/stok?view=dead"
+          className="flex flex-col rounded-2xl border border-[#e5e7eb] bg-[#ffffff] p-5 transition-colors hover:bg-[#f8f9fa] cursor-pointer"
+        >
+          <div className="flex items-center justify-between">
+            <span className="font-mono text-[10px] uppercase tracking-wider text-[#75758a]">ÖLÜ STOK</span>
+            <div className="flex items-center gap-1">
+              <Archive className="h-4 w-4 text-[#4338ca]" />
+              <ArrowUpRight className="h-3.5 w-3.5 text-[#d1d5db]" />
+            </div>
+          </div>
+          <p className="mt-2 text-3xl font-semibold tracking-[-0.02em] text-[#4338ca]">{deadStockCount}</p>
+          <div className="mt-3 flex flex-col gap-0.5">
+            <p className="text-xs font-medium text-[#4338ca]">{formatPrice(lockedCapital)}</p>
+            <p className="text-[11px] text-[#75758a]">bağlı sermaye · 180+ gün</p>
+          </div>
+        </Link>
+
+        {/* Kart 5 — Ortalama Stok Ömrü */}
+        <section className="flex flex-col rounded-2xl border border-[#e5e7eb] bg-[#ffffff] p-5">
+          <div className="flex items-center justify-between">
+            <span className="font-mono text-[10px] uppercase tracking-wider text-[#75758a]">ORT. STOK ÖMRÜ</span>
+            <Clock className="h-4 w-4 text-[#75758a]" />
+          </div>
+          <p className="mt-2 text-3xl font-semibold tracking-[-0.02em] text-[#17171c]">
+            {avgDaysRemaining !== null ? `${avgDaysRemaining} gün` : '—'}
+          </p>
+          <p className="mt-3 text-xs text-[#75758a]">
+            {avgDaysRemaining !== null ? 'satış hızına göre tahmini' : 'yeterli satış verisi yok'}
+          </p>
+        </section>
       </section>
 
       {/* SECTION 2 — Stok Sağlığı */}
       <section className="mb-4 rounded-2xl border border-[#e5e7eb] bg-[#ffffff] p-6">
-        <div className="mb-4">
-          <h2 className="text-[14px] font-medium text-[#17171c]">Stok Sağlığı</h2>
-          <p className="mt-0.5 text-[12px] text-[#75758a]">
-            Toplam {skuHealth.total} SKU&apos;nun stok durumuna göre dağılımı
-          </p>
+        <div className="mb-5 flex items-center justify-between">
+          <div>
+            <h2 className="text-sm font-medium text-[#17171c]">Stok Sağlığı</h2>
+            <p className="mt-0.5 text-xs text-[#75758a]">
+              Toplam {skuHealth.total} SKU&apos;nun stok durumu dağılımı
+            </p>
+          </div>
+          <Link
+            href="/dashboard/stok"
+            className="text-[#9ca3af] hover:text-[#17171c] transition-colors"
+            aria-label="Stok listesini görüntüle"
+          >
+            <Eye className="h-4 w-4" />
+          </Link>
         </div>
 
         <div
@@ -562,207 +598,206 @@ export default function DashboardPage() {
           )}
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2">
+        <div className="mt-5 grid grid-cols-3 gap-4">
           {[
             { dot: '#10b981', label: 'Sağlıklı', count: skuHealth.healthy },
             { dot: '#f59e0b', label: 'Az Kalan', count: skuHealth.warning },
             { dot: '#ef4444', label: 'Tükendi', count: skuHealth.critical },
-            { dot: '#9ca3af', label: 'Toplam', count: skuHealth.total },
           ].map(item => (
-            <div key={item.label} className="flex items-center gap-2 text-[13px]">
-              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: item.dot }} />
-              <span className="text-[#75758a]">{item.label}</span>
-              <span className="font-semibold text-[#17171c]">{item.count}</span>
+            <div key={item.label} className="flex flex-col gap-1.5">
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: item.dot }} />
+                <span className="text-xs text-[#75758a]">{item.label}</span>
+              </div>
+              <p>
+                <span className="text-2xl font-semibold tracking-tight text-[#17171c]">{item.count}</span>
+                <span className="ml-1 text-xs text-[#75758a]">SKU</span>
+              </p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* SECTION 3 — Stok Trendi + Az Kalan Ürünler */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_380px]">
-        {/* Sol — Stok Trendi */}
-        <section className="rounded-2xl border border-[#e5e7eb] bg-[#ffffff] p-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <h2 className="text-[14px] font-medium text-[#17171c]">Stok Trendi</h2>
-              <p className="mt-0.5 text-[12px] text-[#75758a]">Ciro ve stok hareketleri</p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Dönem segmented control (G/H/A/Y) */}
-              <div
-                role="group"
-                aria-label="Dönem seçimi"
-                className="grid grid-cols-4 gap-0.5 rounded-full bg-[#f3f4f6] p-0.5"
-              >
-                {TREND_PERIOD_OPTIONS.map(o => {
-                  const active = trendPeriod === o.value;
-                  return (
-                    <button
-                      key={o.value}
-                      type="button"
-                      aria-label={o.label}
-                      title={o.label}
-                      aria-pressed={active}
-                      onClick={() => setTrendPeriod(o.value)}
-                      className={`w-9 rounded-full py-1 text-center text-[12px] transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4c6ee6] focus-visible:ring-offset-1 ${
-                        active
-                          ? 'bg-[#ffffff] font-medium text-[#17171c] shadow-sm'
-                          : 'text-[#75758a] hover:text-[#17171c]'
-                      }`}
-                    >
-                      {o.short}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Metrik segmented control (Ciro/Stok) */}
-              <div
-                role="group"
-                aria-label="Metrik seçimi"
-                className="inline-flex gap-0.5 rounded-full bg-[#f3f4f6] p-0.5"
-              >
-                {METRIC_OPTIONS.map(o => {
-                  const active = metric === o.value;
-                  return (
-                    <button
-                      key={o.value}
-                      type="button"
-                      aria-label={o.label}
-                      title={o.label}
-                      aria-pressed={active}
-                      onClick={() => setMetric(o.value)}
-                      className={`rounded-full px-3 py-1 text-[12px] transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4c6ee6] focus-visible:ring-offset-1 ${
-                        active
-                          ? 'bg-[#ffffff] font-medium text-[#17171c] shadow-sm'
-                          : 'text-[#75758a] hover:text-[#17171c]'
-                      }`}
-                    >
-                      {o.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+      {/* SECTION 3 — Stok Trendi (tam genişlik) */}
+      <section className="mb-4 rounded-2xl border border-[#e5e7eb] bg-[#ffffff] p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 className="text-[14px] font-medium text-[#17171c]">Stok Trendi</h2>
+            <p className="mt-0.5 text-[12px] text-[#75758a]">Ciro ve stok hareketleri</p>
           </div>
-
-          <div className="mt-4">
-            {!analytics ? (
-              <div className="flex h-[260px] items-center justify-center text-center">
-                <p className="text-[13px] text-[#75758a]">
-                  Trend verileri yüklenirken bir hata oluştu.
-                </p>
-              </div>
-            ) : trendData.length === 0 ? (
-              <div className="flex h-[260px] items-center justify-center text-center">
-                <p className="text-[13px] text-[#75758a]">
-                  Seçili dönem için trend verisi bulunamadı.
-                </p>
-              </div>
-            ) : (
-              <ChartContainer
-                config={TREND_CHART_CONFIG}
-                className="aspect-auto h-[260px] w-full"
-              >
-                <AreaChart data={trendData} margin={{ top: 8, right: 8, bottom: 0, left: 8 }}>
-                  <CartesianGrid vertical={false} />
-                  <XAxis
-                    dataKey="label"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                    minTickGap={16}
-                    interval="preserveStartEnd"
-                    tick={{ fontSize: 11 }}
-                  />
-                  <ChartTooltip
-                    cursor={{ stroke: '#e5e7eb', strokeWidth: 1 }}
-                    content={
-                      <ChartTooltipContent
-                        className="rounded-lg shadow-sm"
-                        formatter={(value, name) => (
-                          <div className="flex w-full items-center justify-between gap-4">
-                            <span className="flex items-center gap-1.5 text-muted-foreground">
-                              <span
-                                className="h-2 w-2 rounded-[2px]"
-                                style={{ backgroundColor: `var(--color-${name})` }}
-                              />
-                              {TREND_CHART_CONFIG[name as Metric]?.label ?? name}
-                            </span>
-                            <span className="font-mono font-medium tabular-nums text-foreground">
-                              {metric === 'revenue'
-                                ? formatTrendCurrency(Number(value))
-                                : `${Number(value).toLocaleString('tr-TR')} adet`}
-                            </span>
-                          </div>
-                        )}
-                      />
-                    }
-                  />
-                  <Area
-                    dataKey={metric}
-                    type="monotone"
-                    stroke={`var(--color-${metric})`}
-                    strokeWidth={2}
-                    fill={`var(--color-${metric})`}
-                    fillOpacity={0.1}
-                    dot={false}
-                    activeDot={{ r: 3 }}
-                  />
-                </AreaChart>
-              </ChartContainer>
-            )}
-          </div>
-        </section>
-
-        {/* Sağ — En Çok Satanlar (Stok Trendi kartıyla eşit yükseklik, iç scroll) */}
-        <div className="lg:relative">
-          <section className="flex flex-col rounded-2xl border border-[#e5e7eb] bg-[#ffffff] p-5 lg:absolute lg:inset-0">
-            <div className="flex items-center justify-between">
-              <h2 className="text-[14px] font-medium text-[#17171c]">En Çok Satanlar</h2>
-              <p className="text-[12px] text-[#75758a]">Son 30 gün</p>
-            </div>
-
-            {topSellers.length === 0 ? (
-              <div className="flex flex-1 flex-col items-center justify-center py-10">
-                <BarChart2 className="mb-3 h-8 w-8 text-[#75758a]" />
-                <p className="text-[14px] font-medium text-[#17171c]">Henüz satış verisi yok</p>
-                <p className="mt-1 text-[12px] text-[#75758a]">
-                  Satış gerçekleşince burada görünecek.
-                </p>
-              </div>
-            ) : (
-              <div className="mt-3 min-h-0 flex-1 overflow-y-auto [scrollbar-color:#e5e7eb_transparent] [scrollbar-width:thin] max-lg:max-h-[360px]">
-                {topSellers.map((s, i) => (
-                  <div
-                    key={s.key}
-                    className="flex items-center gap-3 border-b border-[#f3f4f6] py-2.5 last:border-0"
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Dönem segmented control (G/H/A/Y) */}
+            <div
+              role="group"
+              aria-label="Dönem seçimi"
+              className="grid grid-cols-4 gap-0.5 rounded-full bg-[#f3f4f6] p-0.5"
+            >
+              {TREND_PERIOD_OPTIONS.map(o => {
+                const active = trendPeriod === o.value;
+                return (
+                  <button
+                    key={o.value}
+                    type="button"
+                    aria-label={o.label}
+                    title={o.label}
+                    aria-pressed={active}
+                    onClick={() => setTrendPeriod(o.value)}
+                    className={`w-9 rounded-full py-1 text-center text-[12px] transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4c6ee6] focus-visible:ring-offset-1 ${
+                      active
+                        ? 'bg-[#ffffff] font-medium text-[#17171c] shadow-sm'
+                        : 'text-[#75758a] hover:text-[#17171c]'
+                    }`}
                   >
-                    <span className="w-5 shrink-0 text-center font-mono text-[12px] tabular-nums text-[#93939f]">
-                      {String(i + 1).padStart(2, '0')}
-                    </span>
-                    <Thumbnail src={s.imageUrl} />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[14px] font-medium text-[#17171c]">
-                        {s.productName}
-                      </p>
-                      <p className="mt-0.5 truncate text-[12px] text-[#75758a]">
-                        {s.variantName ? `${s.variantName} • ` : ''}
-                        {s.quantity} adet satıldı
-                      </p>
-                    </div>
-                    <p className="shrink-0 text-[14px] font-semibold text-[#17171c]">
-                      {formatPrice(s.revenue)}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-        </div>
-      </div>
+                    {o.short}
+                  </button>
+                );
+              })}
+            </div>
 
-      {/* SECTION 4 — Az Kalan Ürünler (tablo) */}
+            {/* Metrik segmented control (Ciro/Stok) */}
+            <div
+              role="group"
+              aria-label="Metrik seçimi"
+              className="inline-flex gap-0.5 rounded-full bg-[#f3f4f6] p-0.5"
+            >
+              {METRIC_OPTIONS.map(o => {
+                const active = metric === o.value;
+                return (
+                  <button
+                    key={o.value}
+                    type="button"
+                    aria-label={o.label}
+                    title={o.label}
+                    aria-pressed={active}
+                    onClick={() => setMetric(o.value)}
+                    className={`rounded-full px-3 py-1 text-[12px] transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4c6ee6] focus-visible:ring-offset-1 ${
+                      active
+                        ? 'bg-[#ffffff] font-medium text-[#17171c] shadow-sm'
+                        : 'text-[#75758a] hover:text-[#17171c]'
+                    }`}
+                  >
+                    {o.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4">
+          {!analytics ? (
+            <div className="flex h-[260px] items-center justify-center text-center">
+              <p className="text-[13px] text-[#75758a]">
+                Trend verileri yüklenirken bir hata oluştu.
+              </p>
+            </div>
+          ) : trendData.length === 0 ? (
+            <div className="flex h-[260px] items-center justify-center text-center">
+              <p className="text-[13px] text-[#75758a]">
+                Seçili dönem için trend verisi bulunamadı.
+              </p>
+            </div>
+          ) : (
+            <ChartContainer
+              config={TREND_CHART_CONFIG}
+              className="aspect-auto h-[260px] w-full"
+            >
+              <AreaChart data={trendData} margin={{ top: 8, right: 8, bottom: 0, left: 8 }}>
+                <CartesianGrid vertical={false} />
+                <XAxis
+                  dataKey="label"
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  minTickGap={16}
+                  interval="preserveStartEnd"
+                  tick={{ fontSize: 11 }}
+                />
+                <ChartTooltip
+                  cursor={{ stroke: '#e5e7eb', strokeWidth: 1 }}
+                  content={
+                    <ChartTooltipContent
+                      className="rounded-lg shadow-sm"
+                      formatter={(value, name) => (
+                        <div className="flex w-full items-center justify-between gap-4">
+                          <span className="flex items-center gap-1.5 text-muted-foreground">
+                            <span
+                              className="h-2 w-2 rounded-[2px]"
+                              style={{ backgroundColor: `var(--color-${name})` }}
+                            />
+                            {TREND_CHART_CONFIG[name as Metric]?.label ?? name}
+                          </span>
+                          <span className="font-mono font-medium tabular-nums text-foreground">
+                            {metric === 'revenue'
+                              ? formatTrendCurrency(Number(value))
+                              : `${Number(value).toLocaleString('tr-TR')} adet`}
+                          </span>
+                        </div>
+                      )}
+                    />
+                  }
+                />
+                <Area
+                  dataKey={metric}
+                  type="monotone"
+                  stroke={`var(--color-${metric})`}
+                  strokeWidth={2}
+                  fill={`var(--color-${metric})`}
+                  fillOpacity={0.1}
+                  dot={false}
+                  activeDot={{ r: 3 }}
+                />
+              </AreaChart>
+            </ChartContainer>
+          )}
+        </div>
+      </section>
+
+      {/* SECTION 4 — En Çok Satanlar */}
+      <section className="mb-4 rounded-2xl border border-[#e5e7eb] bg-[#ffffff] p-5">
+        <div className="flex items-center justify-between">
+          <h2 className="text-[14px] font-medium text-[#17171c]">En Çok Satanlar</h2>
+          <p className="text-[12px] text-[#75758a]">Son 30 gün</p>
+        </div>
+
+        {topSellers.length === 0 ? (
+          <div className="flex flex-1 flex-col items-center justify-center py-10">
+            <BarChart2 className="mb-3 h-8 w-8 text-[#75758a]" />
+            <p className="text-[14px] font-medium text-[#17171c]">Henüz satış verisi yok</p>
+            <p className="mt-1 text-[12px] text-[#75758a]">
+              Satış gerçekleşince burada görünecek.
+            </p>
+          </div>
+        ) : (
+          <div className="mt-3 min-h-0 overflow-y-auto [scrollbar-color:#e5e7eb_transparent] [scrollbar-width:thin] max-lg:max-h-[360px]">
+            {topSellers.map((s, i) => (
+              <div
+                key={s.key}
+                className="flex items-center gap-3 border-b border-[#f3f4f6] py-2.5 last:border-0"
+              >
+                <span className="w-5 shrink-0 text-center font-mono text-[12px] tabular-nums text-[#93939f]">
+                  {String(i + 1).padStart(2, '0')}
+                </span>
+                <Thumbnail src={s.imageUrl} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[14px] font-medium text-[#17171c]">
+                    {s.productName}
+                  </p>
+                  <p className="mt-0.5 truncate text-[12px] text-[#75758a]">
+                    {s.variantName ? `${s.variantName} • ` : ''}
+                    {s.quantity} adet satıldı
+                  </p>
+                </div>
+                <p className="shrink-0 text-[14px] font-semibold text-[#17171c]">
+                  {formatPrice(s.revenue)}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* SECTION 5 — Az Kalan Ürünler (tablo) */}
       <section className="mt-4 rounded-2xl border border-[#e5e7eb] bg-[#ffffff] p-5 sm:p-6">
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
@@ -840,9 +875,10 @@ export default function DashboardPage() {
                     <TableCell className="text-right">
                       <Link
                         href="/dashboard/stok"
-                        className="text-[12px] text-[#1863dc] hover:underline"
+                        className="text-[#9ca3af] hover:text-[#17171c] transition-colors"
+                        aria-label="Görüntüle"
                       >
-                        Görüntüle
+                        <Eye className="h-4 w-4" />
                       </Link>
                     </TableCell>
                   </TableRow>

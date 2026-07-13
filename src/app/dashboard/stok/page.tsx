@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { Suspense, useEffect, useState, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { TokenHelpers } from '@/helpers/token-helpers';
 import { ApiRequests } from '@/lib/api-requests';
 import HomePage from '../../../components/home-page';
@@ -9,7 +10,17 @@ import { AnalyticsApiResponse } from '../../api/ikas/analytics/route';
 
 type Product = NonNullable<ListProductsApiResponse['products']>[0];
 
-export default function StokPage() {
+function StokPageContent() {
+  const searchParams = useSearchParams();
+  const filterParam = searchParams.get('filter');
+  const viewParam = searchParams.get('view');
+
+  const initialStatusFilter = filterParam === 'tukendi' ? 'tukendi' as const
+    : filterParam === 'az-kalan' ? 'az-kalan' as const
+    : undefined;
+
+  const initialViewMode = viewParam === 'dead' ? 'dead' as const : undefined;
+
   const [token, setToken] = useState<string | null>(null);
   const [storeName, setStoreName] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
@@ -93,6 +104,16 @@ export default function StokPage() {
       analytics={analytics}
       viewStats={viewStats}
       loading={loading}
+      initialStatusFilter={initialStatusFilter}
+      initialViewMode={initialViewMode}
     />
+  );
+}
+
+export default function StokPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-[400px] items-center justify-center"><p className="text-[14px] text-[#75758a]">Yükleniyor...</p></div>}>
+      <StokPageContent />
+    </Suspense>
   );
 }

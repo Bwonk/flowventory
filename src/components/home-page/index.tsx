@@ -13,10 +13,10 @@ import { TopSellers } from './components/TopSellers';
 import { ProductDetailModal } from './product-detail/ProductDetailModal';
 import { downloadCSV } from './lib/csv';
 
-const HomePage: React.FC<HomePageProps> = ({ token, products = [], analytics, viewStats, loading }) => {
+const HomePage: React.FC<HomePageProps> = ({ token, products = [], analytics, viewStats, loading, initialStatusFilter, initialViewMode }) => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const topProducts = analytics?.topProducts ?? [];
-  const filters = useProductFilters(products, viewStats, topProducts);
+  const filters = useProductFilters(products, viewStats, topProducts, initialStatusFilter, initialViewMode);
 
   if (!token) {
     return (

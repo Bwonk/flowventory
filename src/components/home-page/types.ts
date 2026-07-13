@@ -17,6 +17,8 @@ export interface ProductRow {
   daysRemaining?: number | null;
 }
 
+export type ViewMode = 'normal' | 'dead';
+
 export interface HomePageProps {
   token: string | null;
   storeName?: string;
@@ -24,6 +26,8 @@ export interface HomePageProps {
   analytics: AnalyticsApiResponse | null;
   viewStats?: Record<string, number> | null;
   loading: boolean;
+  initialStatusFilter?: StatusFilter;
+  initialViewMode?: ViewMode;
 }
 
 export type StatusFilter = 'all' | 'tukendi' | 'az-kalan' | 'saglikli';
