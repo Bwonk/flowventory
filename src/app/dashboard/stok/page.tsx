@@ -14,6 +14,7 @@ function StokPageContent() {
   const searchParams = useSearchParams();
   const filterParam = searchParams.get('filter');
   const viewParam = searchParams.get('view');
+  const productParam = searchParams.get('product');
 
   const initialStatusFilter = filterParam === 'tukendi' ? 'tukendi' as const
     : filterParam === 'az-kalan' ? 'az-kalan' as const
@@ -106,6 +107,7 @@ function StokPageContent() {
       loading={loading}
       initialStatusFilter={initialStatusFilter}
       initialViewMode={initialViewMode}
+      initialSelectedProductId={productParam || undefined}
     />
   );
 }

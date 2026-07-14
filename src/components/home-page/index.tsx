@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { HomePageProps, Product } from './types';
@@ -13,10 +13,17 @@ import { TopSellers } from './components/TopSellers';
 import { ProductDetailModal } from './product-detail/ProductDetailModal';
 import { downloadCSV } from './lib/csv';
 
-const HomePage: React.FC<HomePageProps> = ({ token, products = [], analytics, viewStats, loading, initialStatusFilter, initialViewMode }) => {
+const HomePage: React.FC<HomePageProps> = ({ token, products = [], analytics, viewStats, loading, initialStatusFilter, initialViewMode, initialSelectedProductId }) => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const topProducts = analytics?.topProducts ?? [];
   const filters = useProductFilters(products, viewStats, topProducts, initialStatusFilter, initialViewMode);
+
+  useEffect(() => {
+    if (initialSelectedProductId && products.length > 0) {
+      const found = products.find(p => p.id === initialSelectedProductId);
+      if (found) setSelectedProduct(found);
+    }
+  }, [initialSelectedProductId, products]);
 
   if (!token) {
     return (

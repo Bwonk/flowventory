@@ -28,6 +28,7 @@ export interface HomePageProps {
   loading: boolean;
   initialStatusFilter?: StatusFilter;
   initialViewMode?: ViewMode;
+  initialSelectedProductId?: string;
 }
 
 export type StatusFilter = 'all' | 'tukendi' | 'az-kalan' | 'saglikli';

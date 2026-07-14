@@ -4,7 +4,7 @@ import { GetOrderApiResponse } from '../app/api/ikas/get-order/route';
 import { ApiResponseType } from '../globals/constants';
 import { ListProductsApiResponse } from '../app/api/ikas/list-products/route';
 import { AnalyticsApiResponse } from '../app/api/ikas/analytics/route';
-import { ViewStatsApiResponse } from '../app/api/product-view/stats/route';
+import { DailyViewStatsResponse, ViewStatsApiResponse } from '../app/api/product-view/stats/route';
 
 export async function makePostRequest<T>({ url, data, token }: { url: string; data?: any; token?: string }) {
   return axios.post<ApiResponseType<T>>(url, data, {
@@ -41,6 +41,12 @@ export const ApiRequests = {
         url: '/api/product-view/stats',
         token,
         data: { productId },
+      }),
+    getDailyViewStats: (token: string) =>
+      makeGetRequest<DailyViewStatsResponse>({
+        url: '/api/product-view/stats',
+        token,
+        data: { daily: 'true' },
       }),
   },
 };

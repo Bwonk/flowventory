@@ -28,7 +28,7 @@ import { MonoLabel } from '../components/atoms';
 import { ModalProductImage, ModalStatusBadge } from './atoms';
 import { TumuCard } from './TumuCard';
 import { VariantCard } from './VariantCard';
-import { SalesChart } from './SalesChart';
+import { TrendChart, type TrendDataPoint } from '@/components/shared/TrendChart';
 
 /** Ürün detay modalı içeriği: başlık, varyant kartları, aydınlık satış grafiği. */
 export const ProductDetailContent: React.FC<{
@@ -103,9 +103,15 @@ export const ProductDetailContent: React.FC<{
     [dailyRevenue, share, soldCount, sumDaily, viewMap],
   );
 
-  const periodRevenue = useMemo(() => dailySeries.reduce((s, d) => s + d.revenue, 0), [dailySeries]);
-  const hasData = targetRevenue > 0 && dailyRevenue.length > 0 && periodRevenue > 0;
-  const hasViews = viewDetail != null && viewDetail.dailyViews.length > 0;
+  const productTrendData: TrendDataPoint[] = useMemo(
+    () => dailySeries.map(d => ({
+      date: d.date,
+      revenue: d.revenue,
+      quantity: Math.round(d.units),
+      views: d.views,
+    })),
+    [dailySeries],
+  );
   const daysRemaining = useMemo(() => getDaysRemaining(product, topProducts), [product, topProducts]);
 
   const maxStock = useMemo(() => variants.reduce((m, v) => Math.max(m, getVariantStock(v)), 0), [variants]);
@@ -188,12 +194,15 @@ export const ProductDetailContent: React.FC<{
 
         {/* Sağ panel — grafik (mobilde Tümü/varyantlardan önce) */}
         <div className="order-first flex min-w-0 flex-1 md:order-none">
-          <SalesChart
-            dailySeries={dailySeries}
-            soldCount={soldCount}
-            hasData={hasData}
-            hasViews={hasViews}
-            variantLabel={selectedVariant ? getVariantName(selectedVariant) : 'Tüm Varyantlar'}
+          <TrendChart
+            title="Satış Grafiği"
+            subtitle={selectedVariant ? getVariantName(selectedVariant) : 'Tüm Varyantlar'}
+            data={productTrendData}
+            metrics={['revenue', 'quantity', 'views']}
+            defaultMetric="revenue"
+            defaultPeriod="daily"
+            height={240}
+            emptyMessage="Bu ürün için henüz veri yok"
           />
         </div>
       </div>
