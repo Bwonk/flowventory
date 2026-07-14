@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { Bar, BarChart, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { Bar, BarChart, CartesianGrid, XAxis, Tooltip } from 'recharts';
 import type { ChartConfig } from '@/components/evilcharts/ui/chart';
 import { ChartContainer } from '@/components/evilcharts/ui/chart';
 import { TR_MONTHS } from '@/components/home-page/constants';
@@ -40,12 +40,6 @@ const PERIOD_OPTIONS: { value: ChartPeriod; label: string }[] = [
   { value: 'yearly', label: 'Yıllık' },
 ];
 
-const CHART_COLORS: Record<ChartMetric, string> = {
-  revenue: '#17171c',
-  quantity: '#6366f1',
-  views: '#10b981',
-};
-
 const chartConfig = {
   revenue: { label: 'Ciro', colors: { light: ['#17171c'] as string[] } },
   quantity: { label: 'Satış Adedi', colors: { light: ['#6366f1'] as string[] } },
@@ -75,25 +69,47 @@ function getISOWeek(date: Date): number {
   return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
 }
 
-function fillEmptyPeriods(
-  grouped: Map<string, GroupedPoint>,
-  period: ChartPeriod,
-  now: Date,
-): GroupedPoint[] {
-  const result: GroupedPoint[] = [];
+function getPeriodKey(dateStr: string, period: ChartPeriod): string {
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return '';
+
+  if (period === 'daily') return dateStr;
+  if (period === 'weekly') {
+    const weekday = (d.getDay() + 6) % 7;
+    const start = new Date(d);
+    start.setDate(d.getDate() - weekday);
+    return start.toISOString().split('T')[0];
+  }
+  if (period === 'monthly') return `${d.getFullYear()}-${d.getMonth()}`;
+  return `${d.getFullYear()}`;
+}
+
+function groupByPeriod(data: TrendDataPoint[], period: ChartPeriod): GroupedPoint[] {
+  const now = new Date();
+  const dataMap = new Map<string, Pick<GroupedPoint, 'revenue' | 'quantity' | 'views'>>();
+
+  for (const point of data) {
+    const key = getPeriodKey(point.date, period);
+    if (!key) continue;
+    const existing = dataMap.get(key) ?? { revenue: 0, quantity: 0, views: 0 };
+    existing.revenue += point.revenue;
+    existing.quantity += point.quantity;
+    existing.views += point.views;
+    dataMap.set(key, existing);
+  }
+
+  const keysAndLabels: { key: string; label: string }[] = [];
 
   if (period === 'daily') {
     for (let i = 29; i >= 0; i--) {
       const d = new Date(now);
       d.setDate(d.getDate() - i);
       const key = d.toISOString().split('T')[0];
-      const label = formatDayLabel(key);
-      const existing = grouped.get(key);
-      result.push(existing ?? { label, revenue: 0, quantity: 0, views: 0 });
+      keysAndLabels.push({ key, label: formatDayLabel(key) });
     }
   } else if (period === 'weekly') {
-    const currentWeekStart = new Date(now);
     const day = (now.getDay() + 6) % 7;
+    const currentWeekStart = new Date(now);
     currentWeekStart.setDate(now.getDate() - day);
     currentWeekStart.setHours(0, 0, 0, 0);
 
@@ -102,76 +118,31 @@ function fillEmptyPeriods(
       start.setDate(start.getDate() - i * 7);
       const key = start.toISOString().split('T')[0];
       const weekNum = getISOWeek(start);
-      const label = `H${weekNum}`;
-      const existing = grouped.get(key);
-      result.push(existing ?? { label, revenue: 0, quantity: 0, views: 0 });
+      keysAndLabels.push({ key, label: `H${weekNum}` });
     }
   } else if (period === 'monthly') {
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
-
     for (let i = 11; i >= 0; i--) {
       let m = currentMonth - i;
       let y = currentYear;
       while (m < 0) { m += 12; y--; }
       const key = `${y}-${m}`;
-      const label = `${TR_MONTHS[m]} ${String(y).slice(2)}`;
-      const existing = grouped.get(key);
-      result.push(existing ?? { label, revenue: 0, quantity: 0, views: 0 });
+      keysAndLabels.push({ key, label: `${TR_MONTHS[m]} ${String(y).slice(2)}` });
     }
   } else {
     const currentYear = now.getFullYear();
     for (let i = 4; i >= 0; i--) {
       const y = currentYear - i;
       const key = String(y);
-      const label = key;
-      const existing = grouped.get(key);
-      result.push(existing ?? { label, revenue: 0, quantity: 0, views: 0 });
+      keysAndLabels.push({ key, label: key });
     }
   }
 
-  return result;
-}
-
-function groupByPeriod(data: TrendDataPoint[], period: ChartPeriod): GroupedPoint[] {
-  if (data.length === 0) return [];
-
-  const now = new Date();
-  const map = new Map<string, GroupedPoint>();
-
-  for (const point of data) {
-    const d = new Date(point.date);
-    if (Number.isNaN(d.getTime())) continue;
-
-    let key: string;
-    let label: string;
-
-    if (period === 'daily') {
-      key = point.date;
-      label = formatDayLabel(key);
-    } else if (period === 'weekly') {
-      const weekday = (d.getDay() + 6) % 7;
-      const start = new Date(d);
-      start.setDate(d.getDate() - weekday);
-      key = start.toISOString().split('T')[0];
-      const weekNum = getISOWeek(start);
-      label = `H${weekNum}`;
-    } else if (period === 'monthly') {
-      key = `${d.getFullYear()}-${d.getMonth()}`;
-      label = `${TR_MONTHS[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`;
-    } else {
-      key = `${d.getFullYear()}`;
-      label = key;
-    }
-
-    const existing = map.get(key) ?? { label, revenue: 0, quantity: 0, views: 0 };
-    existing.revenue += point.revenue;
-    existing.quantity += point.quantity;
-    existing.views += point.views;
-    map.set(key, existing);
-  }
-
-  return fillEmptyPeriods(map, period, now);
+  return keysAndLabels.map(({ key, label }) => {
+    const vals = dataMap.get(key) ?? { revenue: 0, quantity: 0, views: 0 };
+    return { label, revenue: vals.revenue, quantity: vals.quantity, views: vals.views };
+  });
 }
 
 function formatChartValue(value: number, metric: ChartMetric): string {
@@ -243,14 +214,14 @@ export const TrendChart: React.FC<TrendChartProps> = ({
 
   return (
     <div className="rounded-2xl border border-[#e5e7eb] bg-[#ffffff] p-6">
-      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h2 className="text-sm font-medium text-[#17171c]">{title}</h2>
-          <p className="mt-0.5 text-xs text-[#75758a]">{subtitle}</p>
+      <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
+          <h2 className="truncate text-sm font-medium text-[#17171c]">{title}</h2>
+          <p className="mt-0.5 truncate text-xs text-[#75758a]">{subtitle}</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-col gap-2">
           {metrics.length > 1 && (
-            <div className="inline-flex gap-0.5 rounded-full bg-[#f3f4f6] p-0.5">
+            <div className="inline-flex gap-0.5 self-start rounded-full bg-[#f3f4f6] p-0.5">
               {metrics.map(m => {
                 const active = selectedMetric === m;
                 return (
@@ -258,7 +229,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({
                     key={m}
                     type="button"
                     onClick={() => setSelectedMetric(m)}
-                    className={`rounded-full px-3 py-1.5 text-xs transition-all duration-200 ${
+                    className={`rounded-full px-2.5 py-1.5 text-xs transition-all duration-200 ${
                       active
                         ? 'bg-[#ffffff] font-medium text-[#17171c] shadow-sm'
                         : 'text-[#75758a] hover:text-[#17171c]'
@@ -270,7 +241,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({
               })}
             </div>
           )}
-          <div className="inline-flex gap-0.5 rounded-full bg-[#f3f4f6] p-0.5">
+          <div className="inline-flex gap-0.5 self-start rounded-full bg-[#f3f4f6] p-0.5">
             {PERIOD_OPTIONS.map(o => {
               const active = selectedPeriod === o.value;
               return (
@@ -278,7 +249,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({
                   key={o.value}
                   type="button"
                   onClick={() => setSelectedPeriod(o.value)}
-                  className={`rounded-full px-3 py-1.5 text-xs transition-all duration-200 ${
+                  className={`rounded-full px-2.5 py-1.5 text-xs transition-all duration-200 ${
                     active
                       ? 'bg-[#ffffff] font-medium text-[#17171c] shadow-sm'
                       : 'text-[#75758a] hover:text-[#17171c]'
@@ -298,15 +269,15 @@ export const TrendChart: React.FC<TrendChartProps> = ({
         </div>
       ) : (
         <ChartContainer config={chartConfig} className="w-full" style={{ height: chartHeight }}>
-          <BarChart data={chartData} margin={{ top: 8, right: 4, bottom: 0, left: 4 }}>
+          <BarChart data={chartData} margin={{ top: 8, right: 8, bottom: 0, left: 8 }} barCategoryGap="10%">
+            <CartesianGrid vertical={false} stroke="#f3f4f6" strokeDasharray="0" />
             <XAxis
               dataKey="label"
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              minTickGap={16}
-              interval="preserveStartEnd"
-              tick={{ fontSize: 11, fill: '#75758a' }}
+              interval={Math.max(0, Math.floor(chartData.length / 6) - 1)}
+              tick={{ fill: '#9ca3af', fontSize: 10 }}
             />
             <Tooltip
               cursor={{ fill: '#f3f4f6' }}
@@ -316,7 +287,8 @@ export const TrendChart: React.FC<TrendChartProps> = ({
               dataKey="value"
               fill={`var(--color-${selectedMetric}-0)`}
               radius={[2, 2, 0, 0]}
-              maxBarSize={32}
+              maxBarSize={40}
+              minPointSize={2}
             />
           </BarChart>
         </ChartContainer>

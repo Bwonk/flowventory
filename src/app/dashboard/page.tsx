@@ -3,9 +3,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
+  AlertTriangle,
+  Archive,
   BarChart2,
   CheckCircle,
-  Eye,
+  Clock,
+  DollarSign,
+  Package,
   TrendingDown,
   TrendingUp,
 } from 'lucide-react';
@@ -24,6 +28,20 @@ type Product = NonNullable<ListProductsApiResponse['products']>[0];
 type Variant = Product['variants'][number];
 function formatPrice(value: number): string {
   return `₺${value.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}`;
+}
+
+function formatStockAge(days: number): { primary: string; secondary: string } {
+  const years = days / 365;
+  if (years >= 1) {
+    return {
+      primary: `${years.toFixed(1).replace('.', ',')} yıl`,
+      secondary: `${days.toLocaleString('tr-TR')} gün ortalama`,
+    };
+  }
+  return {
+    primary: `${days} gün`,
+    secondary: `${days} gün ortalama`,
+  };
 }
 
 function minStock(product: Product): number {
@@ -361,101 +379,150 @@ export default function DashboardPage() {
   return (
     <div className="mx-auto max-w-7xl p-6">
       {/* SECTION 1 — KPI Metrikleri */}
-      <section className="mb-4 rounded-2xl border border-[#e5e7eb] bg-[#ffffff] overflow-hidden">
+      <section className="mb-4 rounded-xl border border-[#E4E7EC] bg-[#ffffff] overflow-hidden">
         <div className="grid grid-cols-2 lg:grid-cols-5">
-          {/* 1 — 30 Günlük Ciro */}
-          <div className="p-6 border-b border-r border-[#e5e7eb] even:border-r-0 last:border-b-0 lg:border-b-0 lg:even:border-r lg:last:border-r-0">
-            <p className="text-[10px] font-mono uppercase tracking-wider text-[#75758a] mb-1">30 GÜNLÜK CİRO</p>
-            <p className="text-sm text-[#75758a] mb-3">Toplam gelir</p>
-            <p className="text-4xl font-normal tracking-[-0.03em] text-[#17171c] mb-3">{formatPrice(totalRevenue)}</p>
-            <span
-              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium w-fit mb-2 ${
-                isPositive ? 'bg-[#dcfce7] text-[#166534]' : 'bg-[#fef2f2] text-[#991b1b]'
-              }`}
-            >
-              {isPositive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-              {isPositive ? '+' : ''}
-              {revenueChange}%
-            </span>
-            <p className="text-xs text-[#75758a]">Geçen ay: {formatPrice(previousRevenue)}</p>
+          {/* 1 — Son 30 Gün Ciro */}
+          <div className="flex flex-col p-5 border-b border-r border-[#E4E7EC] even:border-r-0 last:border-b-0 lg:border-b-0 lg:even:border-r lg:last:border-r-0">
+            <div className="flex items-center gap-1.5 mb-1">
+              <DollarSign className="h-3 w-3 text-[#667085]" />
+              <p className="text-[10px] font-mono uppercase tracking-wider text-[#667085]">SON 30 GÜN CİRO</p>
+            </div>
+            <p className="text-3xl font-semibold tracking-tight text-[#101828] mt-2">{formatPrice(totalRevenue)}</p>
+            <div className="mt-auto pt-3">
+              {revenueChange === 0 ? (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#f3f4f6] text-[#667085]">
+                  %0
+                </span>
+              ) : (
+                <span
+                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    isPositive ? 'bg-[#dcfce7] text-[#166534]' : 'bg-[#fef2f2] text-[#991b1b]'
+                  }`}
+                >
+                  {isPositive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                  {isPositive ? '+' : ''}
+                  {revenueChange}%
+                </span>
+              )}
+              <p className="text-xs text-[#667085] mt-1.5">
+                {revenueChange === 0 ? 'Geçen döneme göre değişmedi' : `Geçen ay: ${formatPrice(previousRevenue)}`}
+              </p>
+            </div>
           </div>
 
           {/* 2 — Aktif Ürün */}
-          <div className="p-6 border-b border-r border-[#e5e7eb] even:border-r-0 last:border-b-0 lg:border-b-0 lg:even:border-r lg:last:border-r-0">
-            <p className="text-[10px] font-mono uppercase tracking-wider text-[#75758a] mb-1">AKTİF ÜRÜN</p>
-            <p className="text-sm text-[#75758a] mb-3">Aktif katalog</p>
-            <p className="text-4xl font-normal tracking-[-0.03em] text-[#17171c] mb-3">{products.length}</p>
-            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium w-fit mb-2 bg-[#f3f4f6] text-[#374151]">
-              {skuHealth.total} SKU
-            </span>
-            <p className="text-xs text-[#75758a]">Varyant bazlı takip</p>
+          <div className="flex flex-col p-5 border-b border-r border-[#E4E7EC] even:border-r-0 last:border-b-0 lg:border-b-0 lg:even:border-r lg:last:border-r-0">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Package className="h-3 w-3 text-[#667085]" />
+              <p className="text-[10px] font-mono uppercase tracking-wider text-[#667085]">AKTİF ÜRÜN</p>
+            </div>
+            <p className="text-3xl font-semibold tracking-tight text-[#101828] mt-2">{products.length} ürün</p>
+            <div className="mt-auto pt-3">
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[#f3f4f6] text-[#667085]">
+                {skuHealth.total} SKU
+              </span>
+              <p className="text-xs text-[#667085] mt-1.5">Varyant bazlı takip</p>
+            </div>
           </div>
 
           {/* 3 — Kritik Stok (tıklanabilir) */}
           <Link
             href="/dashboard/stok?filter=tukendi"
-            className="p-6 border-b border-r border-[#e5e7eb] even:border-r-0 last:border-b-0 lg:border-b-0 lg:even:border-r lg:last:border-r-0 block transition-colors hover:bg-[#f8f9fa] cursor-pointer"
+            className="group flex flex-col p-5 border-b border-r border-[#E4E7EC] even:border-r-0 last:border-b-0 lg:border-b-0 lg:even:border-r lg:last:border-r-0 cursor-pointer transition-all duration-200 hover:-translate-y-[1px] hover:shadow-sm hover:border-[#d0d5dd] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4c6ee6] focus-visible:ring-offset-2"
           >
-            <p className="text-[10px] font-mono uppercase tracking-wider text-[#75758a] mb-1">KRİTİK STOK</p>
-            <p className="text-sm text-[#75758a] mb-3">Müdahale gerekli</p>
-            <p className="text-4xl font-normal tracking-[-0.03em] text-[#b30000] mb-3">{criticalCount + warningCount}</p>
-            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium w-fit mb-2 bg-[#fef2f2] text-[#991b1b]">
-              {criticalCount} tükendi
-            </span>
-            <p className="text-xs text-[#75758a]">{warningCount} ürün eşik altında</p>
+            <div className="flex items-center gap-1.5 mb-1">
+              <AlertTriangle className="h-3 w-3 text-[#667085]" />
+              <p className="text-[10px] font-mono uppercase tracking-wider text-[#667085]">KRİTİK STOK</p>
+            </div>
+            <p className="text-3xl font-semibold tracking-tight text-[#101828] mt-2">{criticalCount + warningCount} ürün</p>
+            <div className="mt-auto pt-3">
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {criticalCount > 0 && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[#fef2f2] text-[#b30000]">
+                    {criticalCount} tükendi
+                  </span>
+                )}
+                {warningCount > 0 && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[#fffbeb] text-[#92400e]">
+                    {warningCount} eşik altında
+                  </span>
+                )}
+              </div>
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-[#667085] group-hover:text-[#101828] transition-colors">
+                Ürünleri görüntüle
+                <span className="inline-block transition-transform duration-200 group-hover:translate-x-0.5">&rarr;</span>
+              </span>
+            </div>
           </Link>
 
           {/* 4 — Ölü Stok (tıklanabilir) */}
           <Link
             href="/dashboard/stok?view=dead"
-            className="p-6 border-b border-r border-[#e5e7eb] even:border-r-0 last:border-b-0 lg:border-b-0 lg:even:border-r lg:last:border-r-0 block transition-colors hover:bg-[#f8f9fa] cursor-pointer"
+            className="group flex flex-col p-5 border-b border-r border-[#E4E7EC] even:border-r-0 last:border-b-0 lg:border-b-0 lg:even:border-r lg:last:border-r-0 cursor-pointer transition-all duration-200 hover:-translate-y-[1px] hover:shadow-sm hover:border-[#d0d5dd] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4c6ee6] focus-visible:ring-offset-2"
           >
-            <p className="text-[10px] font-mono uppercase tracking-wider text-[#75758a] mb-1">ÖLÜ STOK</p>
-            <p className="text-sm text-[#75758a] mb-3">Bağlı sermaye</p>
-            <p className="text-4xl font-normal tracking-[-0.03em] text-[#4338ca] mb-3">{deadStockCount}</p>
-            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium w-fit mb-2 bg-[#eef2ff] text-[#4338ca]">
-              {formatPrice(lockedCapital)}
-            </span>
-            <p className="text-xs text-[#75758a]">180+ gündür satılmıyor</p>
+            <div className="flex items-center gap-1.5 mb-1">
+              <Archive className="h-3 w-3 text-[#667085]" />
+              <p className="text-[10px] font-mono uppercase tracking-wider text-[#667085]">ÖLÜ STOK</p>
+            </div>
+            <p className="text-3xl font-semibold tracking-tight text-[#101828] mt-2">{formatPrice(lockedCapital)}</p>
+            <div className="mt-auto pt-3">
+              <p className="text-xs text-[#667085] mb-2">{deadStockCount} ürün · 180+ gündür satılmıyor</p>
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-[#667085] group-hover:text-[#101828] transition-colors">
+                Ölü stokları görüntüle
+                <span className="inline-block transition-transform duration-200 group-hover:translate-x-0.5">&rarr;</span>
+              </span>
+            </div>
           </Link>
 
           {/* 5 — Ortalama Stok Ömrü */}
-          <div className="p-6 border-b border-r border-[#e5e7eb] even:border-r-0 last:border-b-0 lg:border-b-0 lg:even:border-r lg:last:border-r-0">
-            <p className="text-[10px] font-mono uppercase tracking-wider text-[#75758a] mb-1">ORT. STOK ÖMRÜ</p>
-            <p className="text-sm text-[#75758a] mb-3">Tahmini ömür</p>
-            <p className="text-4xl font-normal tracking-[-0.03em] text-[#17171c] mb-3">
-              {avgDaysRemaining !== null ? `${avgDaysRemaining} gün` : '—'}
-            </p>
-            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium w-fit mb-2 bg-[#e0f2fe] text-[#0369a1]">
-              Satış hızına göre
-            </span>
-            <p className="text-xs text-[#75758a]">
-              {avgDaysRemaining !== null ? 'Mevcut satış hızıyla hesaplandı' : 'Yeterli satış verisi yok'}
-            </p>
+          <div className="flex flex-col p-5 border-b border-r border-[#E4E7EC] even:border-r-0 last:border-b-0 lg:border-b-0 lg:even:border-r lg:last:border-r-0">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Clock className="h-3 w-3 text-[#667085]" />
+              <p className="text-[10px] font-mono uppercase tracking-wider text-[#667085]">ORT. STOK ÖMRÜ</p>
+            </div>
+            {avgDaysRemaining !== null ? (() => {
+              const age = formatStockAge(avgDaysRemaining);
+              return (
+                <>
+                  <p className="text-3xl font-semibold tracking-tight text-[#101828] mt-2">{age.primary}</p>
+                  <div className="mt-auto pt-3">
+                    <p className="text-xs text-[#667085]">{age.secondary}</p>
+                    <p className="text-xs text-[#667085] mt-0.5">Satış hızına göre hesaplandı</p>
+                  </div>
+                </>
+              );
+            })() : (
+              <>
+                <p className="text-3xl font-semibold tracking-tight text-[#101828] mt-2">—</p>
+                <div className="mt-auto pt-3">
+                  <p className="text-xs text-[#667085]">Yeterli satış verisi yok</p>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </section>
 
       {/* SECTION 2 — Stok Sağlığı */}
-      <section className="mb-4 rounded-2xl border border-[#e5e7eb] bg-[#ffffff] p-6">
-        <div className="mb-5 flex items-center justify-between">
+      <section className="mb-4 rounded-xl border border-[#E4E7EC] bg-[#ffffff] p-5">
+        <div className="mb-4 flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-medium text-[#17171c]">Stok Sağlığı</h2>
-            <p className="mt-0.5 text-xs text-[#75758a]">
+            <h2 className="text-sm font-medium text-[#101828]">Stok Sağlığı</h2>
+            <p className="mt-0.5 text-xs text-[#667085]">
               Toplam {skuHealth.total} SKU&apos;nun stok durumu dağılımı
             </p>
           </div>
           <Link
             href="/dashboard/stok"
-            className="text-[#9ca3af] hover:text-[#17171c] transition-colors"
-            aria-label="Stok listesini görüntüle"
+            className="inline-flex items-center gap-1 text-xs font-medium text-[#667085] hover:text-[#101828] transition-colors"
           >
-            <Eye className="h-4 w-4" />
+            Tüm stokları görüntüle
+            <span>&rarr;</span>
           </Link>
         </div>
 
         <div
-          className="flex h-3 w-full overflow-hidden rounded-full"
+          className="flex h-2.5 w-full overflow-hidden rounded-full"
           role="img"
           aria-label={`Sağlıklı ${skuHealth.healthy}, Az kalan ${skuHealth.warning}, Tükendi ${skuHealth.critical}`}
         >
@@ -470,20 +537,23 @@ export default function DashboardPage() {
           )}
         </div>
 
-        <div className="mt-5 grid grid-cols-3 gap-4">
+        <div className="mt-4 grid grid-cols-3 gap-4">
           {[
-            { dot: '#10b981', label: 'Sağlıklı', count: skuHealth.healthy },
-            { dot: '#f59e0b', label: 'Az Kalan', count: skuHealth.warning },
-            { dot: '#ef4444', label: 'Tükendi', count: skuHealth.critical },
+            { dot: '#10b981', label: 'Sağlıklı', count: skuHealth.healthy, pct: skuHealth.segments.healthy },
+            { dot: '#f59e0b', label: 'Az Kalan', count: skuHealth.warning, pct: skuHealth.segments.warning },
+            { dot: '#ef4444', label: 'Tükendi', count: skuHealth.critical, pct: skuHealth.segments.critical },
           ].map(item => (
             <div key={item.label} className="flex flex-col gap-1.5">
               <div className="flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full" style={{ backgroundColor: item.dot }} />
-                <span className="text-xs text-[#75758a]">{item.label}</span>
+                <span className="text-xs text-[#667085]">{item.label}</span>
               </div>
               <p>
-                <span className="text-2xl font-semibold tracking-tight text-[#17171c]">{item.count}</span>
-                <span className="ml-1 text-xs text-[#75758a]">SKU</span>
+                <span className="text-xl font-semibold tracking-tight text-[#101828]">{item.count}</span>
+                <span className="ml-1 text-xs text-[#667085]">SKU</span>
+              </p>
+              <p className="text-xs text-[#667085]">
+                %{item.pct.toLocaleString('tr-TR', { maximumFractionDigits: 1 })}
               </p>
             </div>
           ))}
