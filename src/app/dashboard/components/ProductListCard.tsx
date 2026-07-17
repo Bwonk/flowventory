@@ -3,6 +3,8 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { Eye, Package, type LucideIcon } from 'lucide-react';
+import type { StockStatus } from '@/components/shared/badges/StatusBadge';
+import { StatusBadge } from '@/components/shared/badges/StatusBadge';
 
 export interface ProductListItem {
   productId: string;
@@ -10,7 +12,7 @@ export interface ProductListItem {
   image?: string;
   name: string;
   meta: string;
-  status?: { text: string; className: string };
+  status?: StockStatus;
 }
 
 interface ProductListCardProps {
@@ -82,7 +84,7 @@ export const ProductListCard: React.FC<ProductListCardProps> = ({
                 <p className="mt-0.5 truncate text-xs text-[#75758a]">{item.meta}</p>
               </div>
               {item.status && (
-                <span className={item.status.className}>{item.status.text}</span>
+                <StatusBadge status={item.status} size="sm" />
               )}
               <Eye className="h-4 w-4 flex-shrink-0 text-[#9ca3af] transition-colors group-hover:text-[#17171c]" />
             </Link>

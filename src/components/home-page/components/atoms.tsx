@@ -2,9 +2,6 @@
 
 import React, { useState } from 'react';
 import { Package, X } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import type { ProductStatus } from '../types';
-import { STATUS_META } from '../constants';
 
 export const MonoLabel: React.FC<{ children: React.ReactNode; className?: string }> = ({
   children,
@@ -14,15 +11,6 @@ export const MonoLabel: React.FC<{ children: React.ReactNode; className?: string
     {children}
   </p>
 );
-
-export const StatusBadge: React.FC<{ status: ProductStatus }> = ({ status }) => {
-  const { label, className } = STATUS_META[status];
-  return (
-    <Badge className={`rounded-full px-3 py-1 text-[12px] font-medium shadow-none ${className}`}>
-      {label}
-    </Badge>
-  );
-};
 
 /** Ürün görseli; kaynak yoksa veya yüklenemezse nötr placeholder'a düşer. */
 export const ProductThumb: React.FC<{ src?: string; alt: string; sizeClass?: string }> = ({

@@ -43,3 +43,18 @@ model ProductView {
   @@unique([productId, date])
   @@index([productId])
 }
+
+// Saatlik görüntülenme kırılımı — günlük ProductView'a ek olarak
+// "son 24 saat" grafiği için saat bazında tutuyoruz.
+model ProductViewHourly {
+  id         String   @id @default(cuid())
+  productId  String
+  date       String   // "2026-07-16"
+  hour       Int      // 0-23
+  viewCount  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([productId, date, hour])
+  @@index([productId, date])
+}

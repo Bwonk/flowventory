@@ -8,8 +8,6 @@ import { useProductFilters } from './hooks/use-product-filters';
 import { MonoLabel } from './components/atoms';
 import { FilterBar } from './components/FilterBar';
 import { ProductTable } from './components/ProductTable';
-import { Pagination } from './components/Pagination';
-import { TopSellers } from './components/TopSellers';
 import { ProductDetailModal } from './product-detail/ProductDetailModal';
 import { downloadCSV } from './lib/csv';
 
@@ -43,23 +41,7 @@ const HomePage: React.FC<HomePageProps> = ({ token, products = [], analytics, vi
     );
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#ffffff] font-sans">
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          <div className="mb-8 h-4 w-32 animate-pulse rounded-full bg-[#eeece7]" />
-          <div className="mb-10 h-12 w-64 animate-pulse rounded-[8px] bg-[#eeece7]" />
-          <div className="mb-6 h-40 w-full animate-pulse rounded-[22px] bg-[#eeece7]" />
-          <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-28 animate-pulse rounded-[16px] bg-[#eeece7]" />
-            ))}
-          </div>
-          <div className="h-64 w-full animate-pulse rounded-[16px] bg-[#eeece7]" />
-        </div>
-      </div>
-    );
-  }
+
 
   return (
     <div className="min-h-screen bg-[#ffffff] font-sans text-[#212121]">
@@ -73,7 +55,7 @@ const HomePage: React.FC<HomePageProps> = ({ token, products = [], analytics, vi
             <h1 className="text-3xl font-normal tracking-[-0.03em] text-[#17171c]">Stok Takibi</h1>
           </div>
           <Button
-            onClick={() => downloadCSV(filters.pagedRows)}
+            onClick={() => downloadCSV(filters.displayedRows)}
             className="h-auto gap-2 rounded-full bg-[#17171c] px-6 py-3 text-[14px] font-medium text-[#ffffff] shadow-none transition-colors hover:bg-[#000000]"
           >
             <Download className="h-4 w-4" />
@@ -97,29 +79,17 @@ const HomePage: React.FC<HomePageProps> = ({ token, products = [], analytics, vi
 
         {/* Ürün tablosu */}
         <ProductTable
-          rows={filters.pagedRows}
+          rows={filters.displayedRows}
           hasActiveFilters={filters.hasActiveFilters}
           onClearFilters={filters.clearAllFilters}
           onSelectProduct={productId => {
             const product = products.find(p => p.id === productId);
             if (product) setSelectedProduct(product);
           }}
+          hasMore={filters.hasMore}
+          onLoadMore={filters.loadMore}
+          loadingMore={filters.loadingMore}
         />
-
-        {/* Pagination */}
-        {filters.totalResults > 0 && (
-          <Pagination
-            page={filters.page}
-            totalPages={filters.totalPages}
-            totalResults={filters.totalResults}
-            visibleCount={filters.pagedRows.length}
-            onPrev={() => filters.setPage(filters.page - 1)}
-            onNext={() => filters.setPage(filters.page + 1)}
-          />
-        )}
-
-        {/* En çok satanlar */}
-        <TopSellers topProducts={topProducts} />
       </div>
 
       {/* Ürün detay modalı */}

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import type { AnalyticsApiResponse } from '@/app/api/ikas/analytics/route';
 import type { SingleProductViewStats } from '@/app/api/product-view/stats/route';
@@ -8,7 +8,6 @@ import { ApiRequests } from '@/lib/api-requests';
 import type { DaySeriesPoint, Product } from '../types';
 import { STATUS_SEVERITY } from '../constants';
 import {
-  getDaysRemaining,
   getProductCategory,
   getProductStatus,
   getProductThumbnail,
@@ -24,13 +23,11 @@ import {
   getVariantRevenue,
 } from '../lib/analytics';
 import { formatPrice } from '../lib/format';
-import { MonoLabel } from '../components/atoms';
-import { ModalProductImage, ModalStatusBadge } from './atoms';
-import { TumuCard } from './TumuCard';
+import { StatusBadge } from '@/components/shared/badges/StatusBadge';
+import { ModalProductImage } from './atoms';
 import { VariantCard } from './VariantCard';
 import { TrendChart, type TrendDataPoint } from '@/components/shared/TrendChart';
 
-/** Ürün detay modalı içeriği: başlık, varyant kartları, aydınlık satış grafiği. */
 export const ProductDetailContent: React.FC<{
   product: Product;
   analytics: AnalyticsApiResponse | null;
@@ -38,7 +35,8 @@ export const ProductDetailContent: React.FC<{
   viewStats?: Record<string, number> | null;
   criticalThreshold?: number;
   warningThreshold?: number;
-}> = ({ product, analytics, token, criticalThreshold = 5, warningThreshold = 10 }) => {
+  portalContainer?: HTMLElement | null;
+}> = ({ product, analytics, token, criticalThreshold = 5, warningThreshold = 10, portalContainer }) => {
   const [selectedVariantId, setSelectedVariantId] = useState<string>('all');
   const [viewDetail, setViewDetail] = useState<SingleProductViewStats | null>(null);
   const [viewLoading, setViewLoading] = useState(false);
@@ -54,19 +52,16 @@ export const ProductDetailContent: React.FC<{
   const topProducts = useMemo(() => analytics?.topProducts ?? [], [analytics]);
   const sumDaily = useMemo(() => dailyRevenue.reduce((s, d) => s + d.revenue, 0), [dailyRevenue]);
 
-  // Ürün-seviyesi agregatlar (mağaza toplamı DEĞİL).
   const productRevenue = useMemo(() => getProductRevenue(product, topProducts), [product, topProducts]);
   const productQuantity = useMemo(() => getProductQuantity(product, topProducts), [product, topProducts]);
 
   const selectedVariant =
     selectedVariantId === 'all' ? null : variants.find(v => v.id === selectedVariantId) ?? null;
 
-  // Grafik kapsamına (Tümü / seçili varyant) göre hedef ciro, adet ve pay.
   const targetRevenue = selectedVariant ? getVariantRevenue(selectedVariant.id, topProducts) : productRevenue;
   const soldCount = selectedVariant ? getVariantQuantity(selectedVariant.id, topProducts) : productQuantity;
   const share = totalRevenue > 0 ? targetRevenue / totalRevenue : 0;
 
-  // Lazy fetch: modal açılınca bu ürünün günlük görüntülenme verisini getir.
   useEffect(() => {
     if (!token) return;
     setViewLoading(true);
@@ -91,7 +86,6 @@ export const ProductDetailContent: React.FC<{
     return map;
   }, [viewDetail]);
 
-  // Günlük seri: ciro = pay × günlük mağaza cirosu; adet = hedef adet günlük ciroya orantılı dağıtılır.
   const dailySeries = useMemo<DaySeriesPoint[]>(
     () =>
       dailyRevenue.map(d => ({
@@ -112,11 +106,6 @@ export const ProductDetailContent: React.FC<{
     })),
     [dailySeries],
   );
-  const daysRemaining = useMemo(() => getDaysRemaining(product, topProducts), [product, topProducts]);
-
-  const maxStock = useMemo(() => variants.reduce((m, v) => Math.max(m, getVariantStock(v)), 0), [variants]);
-
-  // Kartları önem sırasına diz: tükenen → az kalan → sağlıklı.
   const variantsSorted = useMemo(
     () =>
       [...variants].sort((a, b) => {
@@ -127,83 +116,150 @@ export const ProductDetailContent: React.FC<{
     [variants, criticalThreshold, warningThreshold],
   );
 
+  const fetchHourly = useCallback(async (date: string) => {
+    if (!token) return [];
+    const res = await ApiRequests.ikas.getHourlyAnalytics(token, date);
+    return res.data?.data?.hourlyData ?? [];
+  }, [token]);
+
+  const fetchHourlyViews = useCallback(async (date: string) => {
+    if (!token) return [];
+    const res = await ApiRequests.productView.getHourlyViewStats(token, date);
+    return res.data?.data?.hourlyViews ?? [];
+  }, [token]);
+
+  const handleVariantKeyDown = useCallback((e: React.KeyboardEvent) => {
+    const container = e.currentTarget;
+    const radios = container.querySelectorAll<HTMLButtonElement>('[role="radio"]');
+    if (radios.length === 0) return;
+
+    const currentIndex = Array.from(radios).findIndex(b => b.getAttribute('aria-checked') === 'true');
+    if (currentIndex === -1) return;
+
+    let nextIndex = currentIndex;
+    switch (e.key) {
+      case 'ArrowDown':
+      case 'ArrowRight':
+        e.preventDefault();
+        nextIndex = (currentIndex + 1) % radios.length;
+        break;
+      case 'ArrowUp':
+      case 'ArrowLeft':
+        e.preventDefault();
+        nextIndex = (currentIndex - 1 + radios.length) % radios.length;
+        break;
+      case 'Home':
+        e.preventDefault();
+        nextIndex = 0;
+        break;
+      case 'End':
+        e.preventDefault();
+        nextIndex = radios.length - 1;
+        break;
+      default:
+        return;
+    }
+
+    const target = radios[nextIndex];
+    if (target) {
+      target.focus();
+      target.click();
+      target.scrollIntoView({ block: 'nearest' });
+    }
+  }, []);
+
   return (
-    <div className="flex max-h-[85vh] flex-col max-sm:max-h-full">
-      {/* Başlık — tam genişlik, yatay */}
-      <div className="flex items-start gap-4 border-b border-[#e5e7eb] p-6 pb-4 pr-12">
+    <div className="flex h-full min-h-0 flex-col max-sm:max-h-full">
+      <div className="flex shrink-0 items-center gap-4 border-b border-border px-6 py-4 pr-14">
         <ModalProductImage src={productImage} alt={product.name} />
-        <div className="flex min-w-0 flex-col gap-2">
-          <DialogTitle className="text-[24px] font-semibold leading-[1.2] tracking-tight text-[#17171c]">
+        <div className="min-w-0 flex-1">
+          <DialogTitle className="line-clamp-2 text-lg font-semibold leading-snug tracking-tight text-foreground">
             {product.name}
           </DialogTitle>
           <DialogDescription className="sr-only">
             {product.name} ürününün varyant ve satış detayları
           </DialogDescription>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
             {category && (
-              <span className="inline-flex rounded-full bg-[#f1f5ff] px-2.5 py-0.5 text-[12px] font-medium text-[#1863dc]">
+              <span className="inline-flex items-center rounded-full bg-accent px-2 py-0.5 text-xs font-medium text-accent-foreground">
                 {category}
               </span>
             )}
-            <ModalStatusBadge status={overallStatus} />
+            <span>{variants.length} varyant</span>
+            <span>{totalStock} adet stok</span>
           </div>
-          <span className="text-[14px] text-[#75758a]">
-            {variants.length} varyant • Toplam {totalStock} adet stok
-          </span>
         </div>
+        <StatusBadge status={overallStatus} />
       </div>
 
-      {/* Gövde — iki kolon: sol sabit 380px, sağ esner (grafik) */}
-      <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-5 md:flex-row md:gap-0">
-        {/* Sol panel */}
-        <div className="flex flex-col gap-4 md:w-[380px] md:flex-shrink-0 md:pr-5">
-          <TumuCard
-            totalStock={totalStock}
-            productRevenue={productRevenue}
-            totalViews={viewDetail?.totalViews}
-            daysRemaining={daysRemaining}
-            variantCount={variants.length}
-            status={overallStatus}
-            selected={selectedVariantId === 'all'}
-            onClick={() => setSelectedVariantId('all')}
-          />
-          {variantsSorted.length > 0 && (
-            <div>
-              <MonoLabel className="mb-2">Varyantlar</MonoLabel>
-              <div className="grid max-h-64 grid-cols-2 gap-2 overflow-y-auto pr-1">
+      <div className="min-h-0 flex-1 overflow-y-auto md:overflow-hidden">
+        <div className="md:grid md:h-full md:min-h-0 md:grid-cols-[280px_minmax(0,1fr)]">
+          <div className="md:flex md:flex-col md:min-h-0 md:overflow-hidden md:border-r md:border-border">
+            <div
+              role="radiogroup"
+              aria-label="Varyant seçimi"
+              onKeyDown={handleVariantKeyDown}
+              className="flex min-h-0 flex-1 flex-col overflow-hidden"
+            >
+              <div className="shrink-0">
+                <VariantCard
+                  label="Tüm Varyantlar"
+                  secondaryText={`${variants.length} varyant · ${totalStock} adet toplam stok`}
+                  status={overallStatus}
+                  selected={selectedVariantId === 'all'}
+                  tabIndex={selectedVariantId === 'all' ? 0 : -1}
+                  onClick={() => setSelectedVariantId('all')}
+                  hideBadge
+                />
+              </div>
+              
+              <div className="shrink-0">
+                <p className="px-4 py-2 mt-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                  VARYANTLAR
+                </p>
+              </div>
+
+              <div className="min-h-0 flex-1 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border hover:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/30">
                 {variantsSorted.map(v => {
                   const stock = getVariantStock(v);
                   const price = v.prices?.[0]?.sellPrice ?? 0;
+                  const variantStatus = stockToStatus(stock, criticalThreshold, warningThreshold);
+                  const hideBadge = variantStatus === overallStatus;
+                  
+                  const stockText = stock === 0 ? 'Stok yok' : `${stock} adet`;
+                  const priceText = price > 0 ? formatPrice(price) : '—';
+
                   return (
                     <VariantCard
                       key={v.id}
                       label={getVariantName(v)}
-                      stock={stock}
-                      priceLabel={price > 0 ? formatPrice(price) : '—'}
-                      status={stockToStatus(stock, criticalThreshold, warningThreshold)}
+                      secondaryText={`${stockText} · ${priceText}`}
+                      status={variantStatus}
                       selected={selectedVariantId === v.id}
-                      fillPercent={maxStock > 0 ? Math.min((stock / maxStock) * 100, 100) : 0}
+                      tabIndex={selectedVariantId === v.id ? 0 : -1}
                       onClick={() => setSelectedVariantId(v.id)}
+                      hideBadge={hideBadge}
                     />
                   );
                 })}
               </div>
             </div>
-          )}
-        </div>
-
-        {/* Sağ panel — grafik (mobilde Tümü/varyantlardan önce) */}
-        <div className="order-first flex min-w-0 flex-1 md:order-none">
-          <TrendChart
-            title="Satış Grafiği"
-            subtitle={selectedVariant ? getVariantName(selectedVariant) : 'Tüm Varyantlar'}
-            data={productTrendData}
-            metrics={['revenue', 'quantity', 'views']}
-            defaultMetric="revenue"
-            defaultPeriod="daily"
-            height={240}
-            emptyMessage="Bu ürün için henüz veri yok"
-          />
+          </div>
+          <div className="min-w-0 p-4 flex flex-col min-h-0">
+            <TrendChart
+              title="Satış Grafiği"
+              subtitle={selectedVariant ? getVariantName(selectedVariant) : 'Tüm Varyantlar'}
+              data={productTrendData}
+              metrics={!selectedVariantId || selectedVariantId === 'all' ? ['revenue', 'quantity', 'views'] : ['revenue', 'quantity']}
+              defaultMetric="revenue"
+              defaultPeriod="last30d"
+              height={240}
+              hourlyFetch={fetchHourly}
+              hourlyViewFetch={fetchHourlyViews}
+              layout="modal"
+              portalContainer={portalContainer}
+            />
+          </div>
         </div>
       </div>
     </div>

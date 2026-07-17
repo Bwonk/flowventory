@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useStockThreshold } from '@/lib/stock-threshold';
 import type { Product, ProductRow, SortBy, StatusFilter, StockRange, TopProduct } from '../types';
 import { DEFAULT_SORT, ITEMS_PER_PAGE } from '../constants';
@@ -22,18 +22,13 @@ export interface UseProductFilters {
   activeFilterCount: number;
   hasActiveFilters: boolean;
   clearAllFilters: () => void;
-  page: number;
-  totalPages: number;
   totalResults: number;
-  pagedRows: ProductRow[];
-  setPage: (value: number) => void;
+  displayedRows: ProductRow[];
+  hasMore: boolean;
+  loadMore: () => void;
+  loadingMore: boolean;
 }
 
-/**
- * Stok listesi için filtre/sıralama/sayfalama durumunu ve türetilmiş satırları yönetir.
- * Eşik (min/max) doğrudan useStockThreshold'dan okunur; böylece tüketici bileşenler
- * eşik prop'u taşımak zorunda kalmaz.
- */
 export function useProductFilters(
   products: Product[],
   viewStats?: Record<string, number> | null,
@@ -48,7 +43,8 @@ export function useProductFilters(
   const [stockRange, setStockRange] = useState<StockRange>('all');
   const [sortBy, setSortBy] = useState<SortBy>(DEFAULT_SORT);
   const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode ?? 'normal');
-  const [currentPage, setCurrentPage] = useState(1);
+  const [displayCount, setDisplayCount] = useState(ITEMS_PER_PAGE);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const productRows = useMemo(
     () => flattenToProducts(products, threshold.min, threshold.max, viewStats, topProducts),
@@ -60,7 +56,6 @@ export function useProductFilters(
     [productRows, statusFilter, query, stockRange, sortBy],
   );
 
-  // View mode post-filter: 'dead' → satışı olmayan veya stok ömrü >180 gün olan ürünler.
   const viewFilteredRows = useMemo(() => {
     if (viewMode !== 'dead') return filteredRows;
     return filteredRows.filter(
@@ -68,17 +63,24 @@ export function useProductFilters(
     );
   }, [filteredRows, viewMode]);
 
-  // Herhangi bir filtre veya eşik değişince ilk sayfaya dön.
+  // Reset display count when filters or sorting change.
   useEffect(() => {
-    setCurrentPage(1);
+    setDisplayCount(ITEMS_PER_PAGE);
+    setLoadingMore(false);
   }, [statusFilter, query, stockRange, sortBy, threshold.min, threshold.max, viewMode]);
 
-  // Pagination (client-side).
   const totalResults = viewFilteredRows.length;
-  const totalPages = Math.max(1, Math.ceil(totalResults / ITEMS_PER_PAGE));
-  const page = Math.min(currentPage, totalPages);
-  const startIndex = (page - 1) * ITEMS_PER_PAGE;
-  const pagedRows = viewFilteredRows.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  const displayedRows = viewFilteredRows.slice(0, displayCount);
+  const hasMore = displayCount < viewFilteredRows.length;
+
+  const loadMore = useCallback(() => {
+    if (loadingMore || displayCount >= viewFilteredRows.length) return;
+    setLoadingMore(true);
+    setTimeout(() => {
+      setDisplayCount(prev => prev + ITEMS_PER_PAGE);
+      setLoadingMore(false);
+    }, 80);
+  }, [loadingMore, displayCount, viewFilteredRows.length]);
 
   const activeFilterCount =
     (statusFilter !== 'all' ? 1 : 0) +
@@ -94,7 +96,6 @@ export function useProductFilters(
     setStockRange('all');
     setSortBy(DEFAULT_SORT);
     setViewMode('normal');
-    setCurrentPage(1);
   };
 
   return {
@@ -111,10 +112,10 @@ export function useProductFilters(
     activeFilterCount,
     hasActiveFilters,
     clearAllFilters,
-    page,
-    totalPages,
     totalResults,
-    pagedRows,
-    setPage: setCurrentPage,
+    displayedRows,
+    hasMore,
+    loadMore,
+    loadingMore,
   };
 }

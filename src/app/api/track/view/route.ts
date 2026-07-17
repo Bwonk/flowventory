@@ -21,7 +21,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Bugünün tarihi — "2026-07-16" formatında
-    const today = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    const hour = now.getHours();
 
     // Upsert: varsa artır, yoksa oluştur
     await prisma.productView.upsert({
@@ -36,6 +38,13 @@ export async function POST(request: NextRequest) {
         date: today,
         viewCount: 1,
       },
+    });
+
+    // YENİ: saatlik upsert
+    await prisma.productViewHourly.upsert({
+      where: { productId_date_hour: { productId, date: today, hour } },
+      update: { viewCount: { increment: 1 } },
+      create: { productId, date: today, hour, viewCount: 1 },
     });
 
     return NextResponse.json({ ok: true }, { headers: corsHeaders() });

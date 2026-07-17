@@ -1,4 +1,5 @@
 import type { Product, Variant, ProductStatus, TopProduct } from '../types';
+import type { StockStatus } from '@/components/shared/badges/StatusBadge';
 
 export function getProductStatus(
   product: Product,
@@ -22,6 +23,17 @@ export function getProductCategory(product: Product): string | undefined {
 /** Ürünün gösterilecek ana görseli: ilk görseli olan varyant. */
 export function getProductThumbnail(product: Product): string | undefined {
   return product.variants.find(v => v.imageUrl)?.imageUrl ?? undefined;
+}
+
+/** Stok sayısından durum türetir. */
+export function getStockStatus(
+  stock: number,
+  criticalThreshold: number = 0,
+  warningThreshold: number = 10,
+): StockStatus {
+  if (stock <= criticalThreshold) return 'critical';
+  if (stock <= warningThreshold) return 'warning';
+  return 'healthy';
 }
 
 /** Bir varyantın okunabilir adı (variantValues → SKU → fallback). */

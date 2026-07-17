@@ -7,6 +7,7 @@ import { ApiRequests } from '@/lib/api-requests';
 import HomePage from '../../../components/home-page';
 import { ListProductsApiResponse } from '../../api/ikas/list-products/route';
 import { AnalyticsApiResponse } from '../../api/ikas/analytics/route';
+import { StokSkeleton } from './_components/StokSkeleton';
 
 type Product = NonNullable<ListProductsApiResponse['products']>[0];
 
@@ -97,6 +98,10 @@ function StokPageContent() {
     initializeDashboard();
   }, [initializeDashboard]);
 
+  if (loading) {
+    return <StokSkeleton />;
+  }
+
   return (
     <HomePage
       token={token}
@@ -114,7 +119,7 @@ function StokPageContent() {
 
 export default function StokPage() {
   return (
-    <Suspense fallback={<div className="flex min-h-[400px] items-center justify-center"><p className="text-[14px] text-[#75758a]">Yükleniyor...</p></div>}>
+    <Suspense fallback={<StokSkeleton />}>
       <StokPageContent />
     </Suspense>
   );

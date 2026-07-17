@@ -23,6 +23,8 @@ import { useStockThreshold } from '@/lib/stock-threshold';
 import { getTotalStock, getDaysRemaining } from '@/components/home-page/lib/product';
 import { ProductListCard, type ProductListItem } from './components/ProductListCard';
 import { TrendChart, type TrendDataPoint } from '@/components/shared/TrendChart';
+import { StatusBadge } from '@/components/shared/badges/StatusBadge';
+import { DashboardSkeleton } from './_components/DashboardSkeleton';
 
 type Product = NonNullable<ListProductsApiResponse['products']>[0];
 type Variant = Product['variants'][number];
@@ -54,7 +56,7 @@ function getProductThumbnail(product: Product): string | undefined {
 }
 
 export default function DashboardPage() {
-  const [, setToken] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [, setStoreName] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
   const [analytics, setAnalytics] = useState<AnalyticsApiResponse | null>(null);
@@ -111,6 +113,18 @@ export default function DashboardPage() {
       console.error('Error fetching daily view stats:', error);
     }
   }, []);
+
+  const fetchHourly = useCallback(async (date: string) => {
+    if (!token) return [];
+    const res = await ApiRequests.ikas.getHourlyAnalytics(token, date);
+    return res.data?.data?.hourlyData ?? [];
+  }, [token]);
+
+  const fetchHourlyViews = useCallback(async (date: string) => {
+    if (!token) return [];
+    const res = await ApiRequests.productView.getHourlyViewStats(token, date);
+    return res.data?.data?.hourlyViews ?? [];
+  }, [token]);
 
   const initialize = useCallback(async () => {
     try {
@@ -191,12 +205,30 @@ export default function DashboardPage() {
     const totalQty = topProducts.reduce((s, tp) => s + tp.quantity, 0);
     const totalDailyRev = dailyRev.reduce((s, d) => s + d.revenue, 0);
 
-    return dailyRev.map(d => ({
-      date: d.date,
-      revenue: d.revenue,
-      quantity: totalDailyRev > 0 ? Math.round((d.revenue / totalDailyRev) * totalQty) : 0,
-      views: dailyViewMap.get(d.date) ?? 0,
-    }));
+    const allDates = new Set<string>();
+    
+    for (const date of dailyViewMap.keys()) {
+      allDates.add(date);
+    }
+    
+    for (const d of dailyRev) {
+      allDates.add(d.date);
+    }
+    
+    const revMap = new Map<string, number>();
+    for (const d of dailyRev) {
+      revMap.set(d.date, d.revenue);
+    }
+
+    return Array.from(allDates).sort().map(date => {
+      const revenue = revMap.get(date) ?? 0;
+      return {
+        date,
+        revenue,
+        quantity: totalDailyRev > 0 ? Math.round((revenue / totalDailyRev) * totalQty) : 0,
+        views: dailyViewMap.get(date) ?? 0,
+      };
+    });
   }, [analytics, topProducts, dailyViewMap]);
 
   // Ölü stok: satışı olmayan veya stok ömrü >180 gün olan ürünler.
@@ -357,23 +389,14 @@ export default function DashboardPage() {
         image: getProductThumbnail(p),
         name: p.name,
         meta: `${p.variants.length} varyant • ${getTotalStock(p)} adet`,
-        status: {
-          text: stock === 0 ? 'Tükendi' : 'Az Kalan',
-          className: stock === 0
-            ? 'bg-[#fef2f2] text-[#b30000] text-xs px-2 py-0.5 rounded-full'
-            : 'bg-[#fffbeb] text-[#92400e] text-xs px-2 py-0.5 rounded-full',
-        },
+        status: stock === 0 ? 'critical' : 'warning',
       };
     }),
     [lowStockProducts],
   );
 
   if (loading) {
-    return (
-      <div className="flex min-h-[400px] items-center justify-center">
-        <p className="text-[14px] text-[#75758a]">Yükleniyor...</p>
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   return (
@@ -438,14 +461,10 @@ export default function DashboardPage() {
             <div className="mt-auto pt-3">
               <div className="flex flex-wrap gap-1.5 mb-2">
                 {criticalCount > 0 && (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[#fef2f2] text-[#b30000]">
-                    {criticalCount} tükendi
-                  </span>
+                  <StatusBadge status="critical" label={`${criticalCount} tükendi`} size="sm" />
                 )}
                 {warningCount > 0 && (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[#fffbeb] text-[#92400e]">
-                    {warningCount} eşik altında
-                  </span>
+                  <StatusBadge status="warning" label={`${warningCount} eşik altında`} size="sm" />
                 )}
               </div>
               <span className="inline-flex items-center gap-1 text-xs font-medium text-[#667085] group-hover:text-[#101828] transition-colors">
@@ -568,9 +587,10 @@ export default function DashboardPage() {
           data={dashboardTrendData}
           metrics={['revenue', 'quantity', 'views']}
           defaultMetric="revenue"
-          defaultPeriod="daily"
+          defaultPeriod="last30d"
           height={280}
-          emptyMessage="Henüz yeterli veri yok"
+          hourlyFetch={fetchHourly}
+          hourlyViewFetch={fetchHourlyViews}
         />
       </div>
 

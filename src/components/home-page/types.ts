@@ -3,7 +3,10 @@ import { AnalyticsApiResponse } from '@/app/api/ikas/analytics/route';
 
 export type Product = NonNullable<ListProductsApiResponse['products']>[0];
 export type Variant = Product['variants'][number];
-export type ProductStatus = 'critical' | 'warning' | 'healthy';
+import type { StockStatus } from '@/components/shared/badges/StatusBadge';
+
+export type { StockStatus };
+export type ProductStatus = StockStatus;
 
 export interface ProductRow {
   productId: string;

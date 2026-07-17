@@ -155,3 +155,15 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Date picker: neutral black/white theme tokens scoped to the shadcn Calendar.
+   Overrides the app's purple primary and blue focus ring for the date picker
+   only, so the rest of the product theme stays unchanged. Token-based only —
+   no custom day-cell styling. */
+[data-slot="calendar"] {
+  --primary: #17171c; /* neutral selected (range start/end, single) */
+  --primary-foreground: #ffffff;
+  --accent: #f3f4f6; /* softer neutral for range middle + hover */
+  --accent-foreground: #17171c;
+  --ring: #17171c; /* neutral focus ring (no blue) */
+}

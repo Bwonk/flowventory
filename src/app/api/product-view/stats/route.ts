@@ -14,7 +14,12 @@ export type BatchViewStatsResponse = {
   [productId: string]: number;
 };
 
-export type ViewStatsApiResponse = SingleProductViewStats | DailyViewStatsResponse | BatchViewStatsResponse;
+export type HourlyViewStatsResponse = {
+  date: string;
+  hourlyViews: Array<{ hour: number; label: string; viewCount: number }>;
+};
+
+export type ViewStatsApiResponse = SingleProductViewStats | DailyViewStatsResponse | BatchViewStatsResponse | HourlyViewStatsResponse;
 
 export async function GET(request: NextRequest) {
   try {
@@ -22,15 +27,31 @@ export async function GET(request: NextRequest) {
     const productId = searchParams.get('productId');
     const daily = searchParams.get('daily');
 
-    if (daily === 'true') {
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      const since = thirtyDaysAgo.toISOString().split('T')[0];
+    if (searchParams.get('hourly') === 'true') {
+      const date = searchParams.get('date') ?? new Date().toISOString().split('T')[0];
 
+      const rows = await prisma.productViewHourly.groupBy({
+        by: ['hour'],
+        where: { date },
+        _sum: { viewCount: true },
+        orderBy: { hour: 'asc' },
+      });
+
+      // 24 saatin hepsini doldur (boş saatler 0)
+      const hourMap = new Map(rows.map(r => [r.hour, r._sum.viewCount ?? 0]));
+      const hourlyViews = Array.from({ length: 24 }, (_, h) => ({
+        hour: h,
+        label: `${String(h).padStart(2, '0')}:00`,
+        viewCount: hourMap.get(h) ?? 0,
+      }));
+
+      return NextResponse.json({ data: { date, hourlyViews } });
+    }
+
+    if (daily === 'true') {
       const aggregated = await prisma.productView.groupBy({
         by: ['date'],
         _sum: { viewCount: true },
-        where: { date: { gte: since } },
         orderBy: { date: 'asc' },
       });
 

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { type ChartConfig, ChartContainer } from "@/components/evilcharts/ui/chart";
 import { Bar, BarChart, Rectangle, XAxis } from "recharts";
@@ -41,6 +41,8 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
+export { BarShape };
+
 export function EvilMonospaceBarChart() {
   return (
     <div className="flex h-full flex-col p-4">
@@ -55,7 +57,7 @@ export function EvilMonospaceBarChart() {
           </div>
           <hr className="mx-4 h-full border-l border-dashed" />
           <div className="flex flex-col gap-2">
-            <span className="text-muted-foreground font-mono text-xs">{"[⬆] Top Month"}</span>
+            <span className="text-muted-foreground font-mono text-xs">{"[â¬†] Top Month"}</span>
             <span className="text-primary font-mono text-3xl">
               <span className="tracking-tighter">June</span>
             </span>
@@ -155,7 +157,7 @@ const BarShape = (props: BarProps) => {
             exit={{ opacity: 0, y: -10, filter: "blur(3px)" }}
             transition={{ duration: 0.2 }}
             x={centerX}
-            y={yPos - 5}
+            y={yPos - 8}
             textAnchor="middle"
             fill={fill}
             style={{ pointerEvents: "none" }}
@@ -167,3 +169,4 @@ const BarShape = (props: BarProps) => {
     </>
   );
 };
+
