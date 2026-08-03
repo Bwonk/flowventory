@@ -5,6 +5,17 @@ export type OrderPaymentStatusEnum = string;
 export type OrderPackageStatusEnum = string;
 export type StorefrontTypeEnum = string;
 
+export enum SalesChannelTypeEnum {
+  ADMIN = "ADMIN",
+  APP = "APP",
+  B2B_STOREFRONT = "B2B_STOREFRONT",
+  FACEBOOK = "FACEBOOK",
+  GOOGLE = "GOOGLE",
+  POS = "POS",
+  STOREFRONT = "STOREFRONT",
+  STOREFRONT_APP = "STOREFRONT_APP"
+}
+
 export enum StorefrontJSScriptContentTypeEnum {
   FILE = "FILE",
   SCRIPT = "SCRIPT"
@@ -80,6 +91,18 @@ export type GetAuthorizedAppQueryData = {
 
 export interface GetAuthorizedAppQuery {
   getAuthorizedApp: GetAuthorizedAppQueryData;
+}
+
+export type GetSalesChannelQueryVariables = {}
+
+export type GetSalesChannelQueryData = {
+  id: string;
+  name: string;
+  type: SalesChannelTypeEnum;
+}
+
+export interface GetSalesChannelQuery {
+  getSalesChannel: GetSalesChannelQueryData;
 }
 
 export type ListOrderQueryVariables = {
@@ -328,6 +351,19 @@ export class GeneratedQueries {
   }
 `;
     return this.client.query<Partial<GetAuthorizedAppQuery>>({ query });
+  }
+
+  async getSalesChannel(): Promise<APIResult<Partial<GetSalesChannelQuery>>> {
+    const query = `
+  query getSalesChannel {
+    getSalesChannel {
+      id
+      name
+      type
+    }
+  }
+`;
+    return this.client.query<Partial<GetSalesChannelQuery>>({ query });
   }
 
   async listOrder(variables: ListOrderQueryVariables): Promise<APIResult<Partial<ListOrderQuery>>> {

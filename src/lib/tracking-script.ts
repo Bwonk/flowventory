@@ -38,14 +38,13 @@ export function buildTrackerScript(apiUrl: string, merchantId: string): string {
 
 /**
  * Storefront id çözümlemesi.
- * getAuthorizedApp bazen salesChannelId vermez; o durumda listStorefront
- * filtresiz çağrılır ve ilk uygun vitrin seçilir.
+ * Sıra: AuthToken / getAuthorizedApp salesChannelId → getSalesChannel →
+ * listStorefront (filtreli veya filtresiz).
  */
 export async function resolveStorefrontId(authToken: AuthToken): Promise<string> {
   const ikasClient = getIkas(authToken);
 
-  let salesChannelId: string | null =
-    authToken.salesChannelId || null;
+  let salesChannelId: string | null = authToken.salesChannelId || null;
 
   try {
     const authorizedAppResponse = await ikasClient.queries.getAuthorizedApp();
@@ -55,6 +54,25 @@ export async function resolveStorefrontId(authToken: AuthToken): Promise<string>
     }
   } catch (error) {
     console.warn('getAuthorizedApp failed while resolving storefront', error);
+  }
+
+  // App'e salesChannel bağlı değilse merchant'ın storefront kanalını dene.
+  if (!salesChannelId) {
+    try {
+      const salesChannelResponse = await ikasClient.queries.getSalesChannel();
+      const channel = salesChannelResponse.data?.getSalesChannel;
+      if (salesChannelResponse.isSuccess && channel?.id) {
+        const type = String(channel.type).toUpperCase();
+        if (type === 'STOREFRONT' || type === 'STOREFRONT_APP' || type === 'B2B_STOREFRONT') {
+          salesChannelId = channel.id;
+        } else {
+          // Tip uygun olmasa bile tek kanal buysa yine kullan.
+          salesChannelId = channel.id;
+        }
+      }
+    } catch (error) {
+      console.warn('getSalesChannel failed while resolving storefront', error);
+    }
   }
 
   const storefrontResponse = salesChannelId
@@ -70,13 +88,11 @@ export async function resolveStorefrontId(authToken: AuthToken): Promise<string>
     );
   }
 
-  // STOREFRONT tipini tercih et; yoksa ilk kaydı al.
   const preferred =
     storefronts.find((sf) => String(sf.type).toUpperCase() === 'STOREFRONT') ?? storefronts[0];
 
   const resolvedSalesChannelId = preferred.salesChannelId || salesChannelId;
   if (resolvedSalesChannelId && resolvedSalesChannelId !== authToken.salesChannelId) {
-    // Sonraki kurulumlar için AuthToken'a yaz.
     try {
       await AuthTokenManager.put({
         ...authToken,
@@ -89,6 +105,48 @@ export async function resolveStorefrontId(authToken: AuthToken): Promise<string>
   }
 
   return preferred.id;
+}
+
+function formatIkasMutationError(errors: unknown): string {
+  try {
+    const list = Array.isArray(errors) ? errors : [];
+    for (const err of list) {
+      const extensions = (err as { extensions?: Record<string, unknown> })?.extensions;
+      const exception = extensions?.exception as
+        | { response?: { message?: string | string[] } }
+        | undefined;
+      const msg = exception?.response?.message;
+      if (Array.isArray(msg) && msg.length) return msg.join('; ');
+      if (typeof msg === 'string' && msg) return msg;
+
+      const validation = extensions?.validationErrors;
+      if (validation) return JSON.stringify(validation);
+
+      const message = (err as { message?: string })?.message;
+      if (message) return message;
+    }
+    return JSON.stringify(errors);
+  } catch {
+    return 'Bilinmeyen ikas hatası';
+  }
+}
+
+function throwCreateScriptError(errors: unknown): never {
+  const detail = formatIkasMutationError(errors);
+  console.error('createStorefrontJSScript failed', detail);
+
+  const lower = detail.toLowerCase();
+  if (lower.includes('saleschannel') || lower.includes('sales channel') || lower.includes('storefront')) {
+    throw new TrackingScriptError(
+      'Vitrin/satış kanalı doğrulanamadı. Partners panelinde uygulamaya satış kanalı bağlayın, sonra tekrar deneyin.',
+      500,
+    );
+  }
+
+  throw new TrackingScriptError(
+    `Takip scripti kaydedilemedi: ${detail}`,
+    500,
+  );
 }
 
 export async function getTrackingScriptStatus(merchantId: string): Promise<TrackingScriptStatus> {
@@ -154,18 +212,11 @@ export async function installOrUpdateTrackingScript(params: {
           name: TRACKING_SCRIPT_NAME,
           scriptContent,
           storefrontId,
-          isHighPriority: false,
         },
       });
 
       if (!created.isSuccess || !created.data?.createStorefrontJSScript?.id) {
-        console.error('createStorefrontJSScript failed after update miss', {
-          errors: created.errors,
-        });
-        throw new TrackingScriptError(
-          'Takip scripti kaydedilemedi. Vitrin JS script izninizi kontrol edin.',
-          500,
-        );
+        throwCreateScriptError(created.errors);
       }
 
       scriptId = created.data.createStorefrontJSScript.id;
@@ -175,22 +226,24 @@ export async function installOrUpdateTrackingScript(params: {
       updated = true;
     }
   } else {
+    console.info('Installing tracking script', {
+      storefrontId,
+      salesChannelId: authToken.salesChannelId,
+      apiUrl,
+      scriptLength: scriptContent.length,
+    });
+
     const created = await ikasClient.mutations.createStorefrontJSScript({
       input: {
         contentType: StorefrontJSScriptContentTypeEnum.SCRIPT,
         name: TRACKING_SCRIPT_NAME,
         scriptContent,
         storefrontId,
-        isHighPriority: false,
       },
     });
 
     if (!created.isSuccess || !created.data?.createStorefrontJSScript?.id) {
-      console.error('createStorefrontJSScript failed', { errors: created.errors });
-      throw new TrackingScriptError(
-        'Takip scripti kaydedilemedi. Vitrin JS script izninizi kontrol edin.',
-        500,
-      );
+      throwCreateScriptError(created.errors);
     }
 
     scriptId = created.data.createStorefrontJSScript.id;

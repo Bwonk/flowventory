@@ -19,6 +19,16 @@ export const GET_AUTHORIZED_APP = gql`
   }
 `;
 
+export const GET_SALES_CHANNEL = gql`
+  query getSalesChannel {
+    getSalesChannel {
+      id
+      name
+      type
+    }
+  }
+`;
+
 export const LIST_ORDER = gql`
   query listOrder($id: StringFilterInput) {
     listOrder(id: $id) {
