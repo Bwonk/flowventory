@@ -28,29 +28,30 @@ export async function GET(request: NextRequest) {
     sixtyDaysAgo.setDate(now.getDate() - 60);
 
     const recentOrders = await ikasClient.queries.listOrderForAnalytics({
-      orderedAt: { gte: thirtyDaysAgo.toISOString() } as any,
+      orderedAt: { gte: thirtyDaysAgo.getTime() },
     });
 
     const previousOrders = await ikasClient.queries.listOrderForAnalytics({
-        orderedAt: {
-        gte: sixtyDaysAgo.toISOString(),
-        lte: thirtyDaysAgo.toISOString(),
-      } as any,
+      orderedAt: {
+        gte: sixtyDaysAgo.getTime(),
+        lte: thirtyDaysAgo.getTime(),
+      },
     });
 
     const recentData = recentOrders.data?.listOrder?.data || [];
     const previousData = previousOrders.data?.listOrder?.data || [];
 
-    const totalRevenue = recentData.reduce((sum: number, order: any) => 
+    const totalRevenue = recentData.reduce((sum, order) => 
       sum + (order.totalFinalPrice || 0), 0);
-    const previousRevenue = previousData.reduce((sum: number, order: any) => 
+    const previousRevenue = previousData.reduce((sum, order) => 
       sum + (order.totalFinalPrice || 0), 0);
 
     const revenueChange = previousRevenue === 0 ? 0 :
       Math.round(((totalRevenue - previousRevenue) / previousRevenue) * 100);
 
     const dailyMap = new Map<string, number>();
-    recentData.forEach((order: any) => {
+    recentData.forEach((order) => {
+      if (!order.orderedAt) return;
       const date = new Date(order.orderedAt).toISOString().split('T')[0];
       dailyMap.set(date, (dailyMap.get(date) || 0) + (order.totalFinalPrice || 0));
     });
@@ -60,8 +61,8 @@ export async function GET(request: NextRequest) {
       .sort((a, b) => a.date.localeCompare(b.date));
 
     const productMap = new Map<string, { sku: string; revenue: number; quantity: number }>();
-    recentData.forEach((order: any) => {
-      order.orderLineItems?.forEach((item: any) => {
+    recentData.forEach((order) => {
+      order.orderLineItems?.forEach((item) => {
         const id = item.variant?.id || '';
         const existing = productMap.get(id) || { 
           sku: item.variant?.sku || id, 

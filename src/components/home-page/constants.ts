@@ -1,6 +1,4 @@
 import type {
-  ChartMetric,
-  ChartRange,
   ProductStatus,
   SortBy,
   StatusFilter,
@@ -67,24 +65,4 @@ export const STATUS_META: Record<ProductStatus, { label: string; className: stri
   healthy: { label: 'Sağlıklı', className: 'border-transparent bg-[#edfce9] text-[#003c33]' },
 };
 
-export const RANGE_OPTIONS: ReadonlyArray<{ value: ChartRange; label: string }> = [
-  { value: 'daily', label: 'Günlük' },
-  { value: 'weekly', label: 'Haftalık' },
-  { value: 'monthly', label: 'Aylık' },
-  { value: 'yearly', label: 'Yıllık' },
-];
-
-export const METRIC_OPTIONS: ReadonlyArray<{ value: ChartMetric; label: string }> = [
-  { value: 'revenue', label: 'Ciro' },
-  { value: 'quantity', label: 'Satış Adedi' },
-  { value: 'views', label: 'Görüntülenme' },
-];
-
 export const TR_MONTHS = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'] as const;
-
-/** Modal rozetleri — ana tablo ile aynı yumuşak pill dili. */
-export const MODAL_STATUS_META: Record<ProductStatus, { label: string; className: string }> = {
-  critical: { label: 'Tükendi', className: 'bg-[#fef2f2] text-[#b30000]' },
-  warning: { label: 'Az Kalan', className: 'bg-[#fffbeb] text-[#d97706]' },
-  healthy: { label: 'Sağlıklı', className: 'bg-[#edfce9] text-[#003c33]' },
-};

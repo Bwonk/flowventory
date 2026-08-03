@@ -13,7 +13,6 @@ import {
   TrendingDown,
   TrendingUp,
 } from 'lucide-react';
-import { AppBridgeHelper } from '@ikas/app-helpers';
 import { TokenHelpers } from '@/helpers/token-helpers';
 import { ApiRequests } from '@/lib/api-requests';
 import { ListProductsApiResponse } from '../api/ikas/list-products/route';
@@ -65,10 +64,6 @@ export default function DashboardPage() {
 
   const { threshold } = useStockThreshold();
   const { min: minThreshold, max: maxThreshold } = threshold;
-
-  useEffect(() => {
-    AppBridgeHelper.closeLoader();
-  }, []);
 
   const fetchStoreName = useCallback(async (currentToken: string) => {
     try {

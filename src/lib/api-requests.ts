@@ -7,7 +7,7 @@ import { AnalyticsApiResponse } from '../app/api/ikas/analytics/route';
 import { HourlyAnalyticsApiResponse } from '../app/api/ikas/analytics/hourly/route';
 import { DailyViewStatsResponse, ViewStatsApiResponse, HourlyViewStatsResponse } from '../app/api/product-view/stats/route';
 
-export async function makePostRequest<T>({ url, data, token }: { url: string; data?: any; token?: string }) {
+export async function makePostRequest<T>({ url, data, token }: { url: string; data?: Record<string, unknown>; token?: string }) {
   return axios.post<ApiResponseType<T>>(url, data, {
     headers: token
       ? {
@@ -17,7 +17,7 @@ export async function makePostRequest<T>({ url, data, token }: { url: string; da
   });
 }
 
-export async function makeGetRequest<T>({ url, data, token }: { url: string; data?: any; token?: string }) {
+export async function makeGetRequest<T>({ url, data, token }: { url: string; data?: Record<string, unknown>; token?: string }) {
   return axios.get<ApiResponseType<T>>(url, {
     params: data,
     headers: token

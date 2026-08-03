@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { getUserFromRequest } from '@/lib/auth-helpers';
 import { NextRequest, NextResponse } from 'next/server';
 
 export type SingleProductViewStats = {
@@ -23,6 +24,9 @@ export type ViewStatsApiResponse = SingleProductViewStats | DailyViewStatsRespon
 
 export async function GET(request: NextRequest) {
   try {
+    const user = getUserFromRequest(request);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
     const { searchParams } = new URL(request.url);
     const productId = searchParams.get('productId');
     const daily = searchParams.get('daily');

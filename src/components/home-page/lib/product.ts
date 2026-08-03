@@ -1,5 +1,4 @@
 import type { Product, Variant, ProductStatus, TopProduct } from '../types';
-import type { StockStatus } from '@/components/shared/badges/StatusBadge';
 
 export function getProductStatus(
   product: Product,
@@ -23,17 +22,6 @@ export function getProductCategory(product: Product): string | undefined {
 /** Ürünün gösterilecek ana görseli: ilk görseli olan varyant. */
 export function getProductThumbnail(product: Product): string | undefined {
   return product.variants.find(v => v.imageUrl)?.imageUrl ?? undefined;
-}
-
-/** Stok sayısından durum türetir. */
-export function getStockStatus(
-  stock: number,
-  criticalThreshold: number = 0,
-  warningThreshold: number = 10,
-): StockStatus {
-  if (stock <= criticalThreshold) return 'critical';
-  if (stock <= warningThreshold) return 'warning';
-  return 'healthy';
 }
 
 /** Bir varyantın okunabilir adı (variantValues → SKU → fallback). */
@@ -77,11 +65,4 @@ export function getDaysRemaining(product: Product, topProducts: TopProduct[]): n
 
   const dailyRate = soldQuantity / 30;
   return Math.round(totalStock / dailyRate);
-}
-
-/** Progress bar dolgu rengi (duruma göre). */
-export function statusFillColor(status: ProductStatus): string {
-  if (status === 'critical') return '#b30000';
-  if (status === 'warning') return '#d97706';
-  return '#003c33';
 }

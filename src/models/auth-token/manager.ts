@@ -5,8 +5,10 @@ import { prisma } from '@/lib/prisma';
  * AuthTokenManager provides methods to manage AuthTokens.
  * This implementation uses a local JSON file for storage (for development only).
  */
+type AuthTokenRow = NonNullable<Awaited<ReturnType<typeof prisma.authToken.findUnique>>>;
+
 export class AuthTokenManager {
-  private static toModel(db: any): AuthToken {
+  private static toModel(db: AuthTokenRow): AuthToken {
     return {
       id: db.id,
       merchantId: db.merchantId,

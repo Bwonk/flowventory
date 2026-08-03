@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
       orderedAt: {
         gte: dayStart.getTime(),
         lte: dayEnd.getTime(),
-      } as any,
+      },
     });
 
     const orders = ordersResponse.data?.listOrder?.data || [];
@@ -45,15 +45,15 @@ export async function GET(request: NextRequest) {
       hourlyMap.set(h, { revenue: 0, quantity: 0 });
     }
 
-    orders.forEach((order: any) => {
-        if (!order.orderedAt) return;  // orderedAt yoksa atla
-        const orderDate = new Date(order.orderedAt);
-        const hour = orderDate.getHours();
-        const existing = hourlyMap.get(hour)!;
+    orders.forEach((order) => {
+      if (!order.orderedAt) return; // orderedAt yoksa atla
+      const orderDate = new Date(order.orderedAt);
+      const hour = orderDate.getHours();
+      const existing = hourlyMap.get(hour)!;
       existing.revenue += order.totalFinalPrice || 0;
 
       const qty = (order.orderLineItems || [])
-        .reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
+        .reduce((sum: number, item) => sum + (item.quantity || 0), 0);
       existing.quantity += qty;
     });
 

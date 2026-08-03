@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { AppBridgeHelper } from '@ikas/app-helpers';
 import { TokenHelpers } from '@/helpers/token-helpers';
 import { ApiRequests } from '@/lib/api-requests';
 import Sidebar from '@/components/layout/Sidebar';
@@ -23,6 +24,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Error fetching store name:', error);
     }
+  }, []);
+
+  // ikas platform yükleme göstergesini kapat (tüm dashboard iframe sayfaları için tek nokta).
+  useEffect(() => {
+    AppBridgeHelper.closeLoader();
   }, []);
 
   useEffect(() => {
