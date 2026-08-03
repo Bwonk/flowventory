@@ -5,6 +5,8 @@ import { ListProductsApiResponse } from '../app/api/ikas/list-products/route';
 import { AnalyticsApiResponse } from '../app/api/ikas/analytics/route';
 import { HourlyAnalyticsApiResponse } from '../app/api/ikas/analytics/hourly/route';
 import { DailyViewStatsResponse, ViewStatsApiResponse, HourlyViewStatsResponse } from '../app/api/product-view/stats/route';
+import { TrackingScriptStatusApiResponse } from '../app/api/tracking-script/status/route';
+import { TrackingScriptInstallApiResponse } from '../app/api/tracking-script/install/route';
 
 export async function makePostRequest<T>({ url, data, token }: { url: string; data?: Record<string, unknown>; token?: string }) {
   return axios.post<ApiResponseType<T>>(url, data, {
@@ -58,6 +60,18 @@ export const ApiRequests = {
         url: '/api/product-view/stats',
         token,
         data: { hourly: 'true', ...(date ? { date } : {}) },
+      }),
+  },
+  trackingScript: {
+    getStatus: (token: string) =>
+      makeGetRequest<TrackingScriptStatusApiResponse>({
+        url: '/api/tracking-script/status',
+        token,
+      }),
+    install: (token: string) =>
+      makePostRequest<TrackingScriptInstallApiResponse>({
+        url: '/api/tracking-script/install',
+        token,
       }),
   },
 };

@@ -60,3 +60,15 @@ model ProductViewHourly {
   @@unique([merchantId, productId, date, hour])
   @@index([merchantId, productId, date])
 }
+
+// Storefront takip scripti kurulumu — ikas'ta listStorefrontJSScript
+// olmadığı için scriptId'yi burada tutup update-or-create yapıyoruz.
+model TrackingScriptInstall {
+  id           String   @id @default(cuid())
+  merchantId   String   @unique
+  storefrontId String
+  scriptId     String
+  apiUrl       String
+  installedAt  DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}

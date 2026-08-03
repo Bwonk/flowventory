@@ -173,6 +173,20 @@ export const CREATE_STOREFRONT_JS_SCRIPT = gql`
   }
 `;
 
+export const UPDATE_STOREFRONT_JS_SCRIPT = gql`
+  mutation updateStorefrontJSScript($input: UpdateStorefrontJSScriptInput!) {
+    updateStorefrontJSScript(input: $input) {
+      id
+      name
+      contentType
+      scriptContent
+      isActive
+      isHighPriority
+      storefrontId
+    }
+  }
+`;
+
 export const LIST_ORDER_FOR_ANALYTICS = gql`
   query listOrderForAnalytics($orderedAt: DateFilterInput) {
     listOrder(orderedAt: $orderedAt) {

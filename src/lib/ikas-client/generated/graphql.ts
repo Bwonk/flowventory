@@ -49,6 +49,16 @@ export type StringFilterInput = {
   nin?: Array<string>;
 }
 
+export type UpdateStorefrontJSScriptInput = {
+  contentType?: StorefrontJSScriptContentTypeEnum;
+  fileName?: string;
+  id: string;
+  isHighPriority?: boolean;
+  name?: string;
+  scriptContent?: string;
+  storefrontId?: string;
+}
+
 export type GetMerchantQueryVariables = {}
 
 export type GetMerchantQueryData = {
@@ -242,6 +252,24 @@ export type CreateStorefrontJSScriptMutationData = {
 
 export interface CreateStorefrontJSScriptMutation {
   createStorefrontJSScript: CreateStorefrontJSScriptMutationData;
+}
+
+export type UpdateStorefrontJSScriptMutationVariables = {
+  input: UpdateStorefrontJSScriptInput;
+}
+
+export type UpdateStorefrontJSScriptMutationData = {
+  id: string;
+  name: string;
+  contentType?: StorefrontJSScriptContentTypeEnum;
+  scriptContent: string;
+  isActive: boolean;
+  isHighPriority?: boolean;
+  storefrontId: string;
+}
+
+export interface UpdateStorefrontJSScriptMutation {
+  updateStorefrontJSScript: UpdateStorefrontJSScriptMutationData;
 }
 
 export type ListOrderForAnalyticsQueryVariables = {
@@ -502,6 +530,23 @@ export class GeneratedMutations {
   }
 `;
     return this.client.mutate<Partial<CreateStorefrontJSScriptMutation>>({ mutation, variables });
+  }
+
+  async updateStorefrontJSScript(variables: UpdateStorefrontJSScriptMutationVariables): Promise<APIResult<Partial<UpdateStorefrontJSScriptMutation>>> {
+    const mutation = `
+  mutation updateStorefrontJSScript($input: UpdateStorefrontJSScriptInput!) {
+    updateStorefrontJSScript(input: $input) {
+      id
+      name
+      contentType
+      scriptContent
+      isActive
+      isHighPriority
+      storefrontId
+    }
+  }
+`;
+    return this.client.mutate<Partial<UpdateStorefrontJSScriptMutation>>({ mutation, variables });
   }
 }
 
