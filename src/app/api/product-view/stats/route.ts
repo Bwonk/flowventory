@@ -27,6 +27,8 @@ export async function GET(request: NextRequest) {
     const user = getUserFromRequest(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+    const { merchantId } = user;
+
     const { searchParams } = new URL(request.url);
     const productId = searchParams.get('productId');
     const daily = searchParams.get('daily');
@@ -36,7 +38,7 @@ export async function GET(request: NextRequest) {
 
       const rows = await prisma.productViewHourly.groupBy({
         by: ['hour'],
-        where: { date },
+        where: { merchantId, date },
         _sum: { viewCount: true },
         orderBy: { hour: 'asc' },
       });
@@ -55,6 +57,7 @@ export async function GET(request: NextRequest) {
     if (daily === 'true') {
       const aggregated = await prisma.productView.groupBy({
         by: ['date'],
+        where: { merchantId },
         _sum: { viewCount: true },
         orderBy: { date: 'asc' },
       });
@@ -71,7 +74,7 @@ export async function GET(request: NextRequest) {
 
     if (productId) {
       const dailyViews = await prisma.productView.findMany({
-        where: { productId },
+        where: { merchantId, productId },
         orderBy: { date: 'asc' },
       });
 
@@ -90,6 +93,7 @@ export async function GET(request: NextRequest) {
 
     const aggregated = await prisma.productView.groupBy({
       by: ['productId'],
+      where: { merchantId },
       _sum: { viewCount: true },
       orderBy: { productId: 'asc' },
     });

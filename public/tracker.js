@@ -9,16 +9,18 @@
  */
 (function () {
   var API_URL = 'https://tap-bit-accordance-bolt.trycloudflare.com'; // ikas app dev başlayınca güncellenecek
+  var MERCHANT_ID = '__MERCHANT_ID__'; // kurulum sırasında merchant'a göre doldurulur
   var COOLDOWN_MS = 30 * 60 * 1000;      // aynı ürün için 30 dakika
 
   /**
    * Bu ürün yakın zamanda sayıldı mı?
-   * sessionStorage'da "flowventory_view_<productId>" anahtarında
-   * son gönderim zamanını tutuyoruz.
+   * sessionStorage'da "flowventory_view_<merchantId>_<productId>" anahtarında
+   * son gönderim zamanını tutuyoruz. Merchant bazlı ayırıyoruz ki farklı
+   * mağazaların aynı ürün id'si çakışmasın.
    */
   function shouldTrack(productId) {
     try {
-      var key = 'flowventory_view_' + productId;
+      var key = 'flowventory_view_' + MERCHANT_ID + '_' + productId;
       var last = sessionStorage.getItem(key);
       var now = Date.now();
 
@@ -34,12 +36,13 @@
   }
 
   function sendView(productId) {
-    if (!productId || !shouldTrack(productId)) return;
+    if (!productId || !MERCHANT_ID || MERCHANT_ID === '__MERCHANT_ID__') return;
+    if (!shouldTrack(productId)) return;
 
     fetch(API_URL + '/api/track/view', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ productId: productId }),
+      body: JSON.stringify({ productId: productId, merchantId: MERCHANT_ID }),
     }).catch(function (err) {
       // Storefront'u bozmamak için sessizce geç
       console.warn('[Flowventory] view gönderilemedi:', err.message);

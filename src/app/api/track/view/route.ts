@@ -7,17 +7,23 @@ import { NextRequest, NextResponse } from 'next/server';
  * Storefront'tan gelen ürün görüntülenme event'ini kaydeder.
  * Admin panelinden değil, müşterinin tarayıcısından çağrılır — token yok.
  *
- * Body: { productId: string }
+ * Body: { productId: string, merchantId: string }
  *
- * Aynı ürün + aynı gün için tek satır tutuyoruz, viewCount'u artırıyoruz.
+ * Aynı merchant + ürün + gün için tek satır tutuyoruz, viewCount'u artırıyoruz.
+ * merchantId, kurulum sırasında tracker script'ine gömülür ve multi-tenant
+ * izolasyonu sağlar (her mağazanın verisi ayrı).
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { productId } = body;
+    const { productId, merchantId } = body;
 
     if (!productId || typeof productId !== 'string') {
       return NextResponse.json({ error: 'productId gerekli' }, { status: 400 });
+    }
+
+    if (!merchantId || typeof merchantId !== 'string') {
+      return NextResponse.json({ error: 'merchantId gerekli' }, { status: 400 });
     }
 
     // Bugünün tarihi — "2026-07-16" formatında
@@ -28,12 +34,13 @@ export async function POST(request: NextRequest) {
     // Upsert: varsa artır, yoksa oluştur
     await prisma.productView.upsert({
       where: {
-        productId_date: { productId, date: today },
+        merchantId_productId_date: { merchantId, productId, date: today },
       },
       update: {
         viewCount: { increment: 1 },
       },
       create: {
+        merchantId,
         productId,
         date: today,
         viewCount: 1,
@@ -42,9 +49,9 @@ export async function POST(request: NextRequest) {
 
     // YENİ: saatlik upsert
     await prisma.productViewHourly.upsert({
-      where: { productId_date_hour: { productId, date: today, hour } },
+      where: { merchantId_productId_date_hour: { merchantId, productId, date: today, hour } },
       update: { viewCount: { increment: 1 } },
-      create: { productId, date: today, hour, viewCount: 1 },
+      create: { merchantId, productId, date: today, hour, viewCount: 1 },
     });
 
     return NextResponse.json({ ok: true }, { headers: corsHeaders() });

@@ -9,6 +9,11 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+// Seed verisi tek bir merchant'a scope'lanır. Dashboard giriş yapan
+// merchant'ın merchantId'sine göre filtrelediği için, verinin görünmesi
+// isteniyorsa SEED_MERCHANT_ID env ile kendi merchantId'nizi verin.
+const MERCHANT_ID = process.env.SEED_MERCHANT_ID ?? 'seed-merchant';
+
 const PRODUCT_IDS = [
   '6f594145-7602-4c63-8c03-f97f04ff46b2',
   '7463bce1-fae0-4ce3-88cd-903e5af0e59a',
@@ -33,9 +38,11 @@ async function main() {
       const viewCount = Math.floor(Math.random() * 61);
 
       await prisma.productView.upsert({
-        where: { productId_date: { productId, date: dateStr } },
+        where: {
+          merchantId_productId_date: { merchantId: MERCHANT_ID, productId, date: dateStr },
+        },
         update: { viewCount },
-        create: { productId, date: dateStr, viewCount },
+        create: { merchantId: MERCHANT_ID, productId, date: dateStr, viewCount },
       });
       total++;
     }
@@ -48,9 +55,16 @@ async function main() {
     for (let hour = 0; hour < 24; hour++) {
       const viewCount = Math.floor(Math.random() * 15); // 0-14 arası
       await prisma.productViewHourly.upsert({
-        where: { productId_date_hour: { productId, date: todayStr, hour } },
+        where: {
+          merchantId_productId_date_hour: {
+            merchantId: MERCHANT_ID,
+            productId,
+            date: todayStr,
+            hour,
+          },
+        },
         update: { viewCount },
-        create: { productId, date: todayStr, hour, viewCount },
+        create: { merchantId: MERCHANT_ID, productId, date: todayStr, hour, viewCount },
       });
     }
   }

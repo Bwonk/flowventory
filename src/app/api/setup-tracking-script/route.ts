@@ -22,10 +22,9 @@ export async function POST(request: NextRequest) {
 
     const trackerPath = join(process.cwd(), 'public', 'tracker.js');
     const rawScript = readFileSync(trackerPath, 'utf-8');
-    const scriptContent = rawScript.replace(
-      /var API_URL = '.*?'/,
-      `var API_URL = '${deployUrl}'`,
-    );
+    const scriptContent = rawScript
+      .replace(/var API_URL = '.*?'/, `var API_URL = '${deployUrl}'`)
+      .replace(/var MERCHANT_ID = '.*?'/, `var MERCHANT_ID = '${user.merchantId}'`);
 
     const ikasClient = getIkas(authToken);
 
