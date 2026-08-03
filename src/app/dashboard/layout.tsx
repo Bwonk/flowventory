@@ -36,9 +36,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   }, [fetchStoreName]);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#ffffff]">
+    <div className="flex h-screen overflow-hidden bg-background">
       <Sidebar storeName={storeName} />
-      <main className="flex-1 overflow-y-auto bg-[#f8f9fa]">{children}</main>
+      <main className="flex-1 overflow-y-auto bg-muted">{children}</main>
     </div>
   );
 }

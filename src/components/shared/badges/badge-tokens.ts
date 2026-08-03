@@ -5,36 +5,39 @@ export const BADGE_SIZE: Record<BadgeSize, string> = {
   md: 'px-3 py-1 text-xs',
 };
 
+// DESIGN.md ile hizalı semantic renkler. Marka değerleri (pale-green,
+// deep-green, error) design token'larından; kalan durum aksanları Tailwind
+// paletinden gelir. Arbitrary hex kullanılmaz.
 export const BADGE_COLORS = {
   green: {
-    bg: 'bg-[#edfce9]',
-    text: 'text-[#003c33]',
-    dot: 'bg-[#10b981]',
+    bg: 'bg-pale-green', // #edfce9
+    text: 'text-deep-green', // #003c33
+    dot: 'bg-emerald-500',
   },
   amber: {
-    bg: 'bg-[#fffbeb]',
-    text: 'text-[#92400e]',
-    dot: 'bg-[#f59e0b]',
+    bg: 'bg-amber-50',
+    text: 'text-amber-800',
+    dot: 'bg-amber-500',
   },
   red: {
-    bg: 'bg-[#fef2f2]',
-    text: 'text-[#b30000]',
-    dot: 'bg-[#ef4444]',
+    bg: 'bg-red-50',
+    text: 'text-destructive', // #b30000
+    dot: 'bg-red-500',
   },
   indigo: {
-    bg: 'bg-[#eef2ff]',
-    text: 'text-[#4338ca]',
-    dot: 'bg-[#6366f1]',
+    bg: 'bg-indigo-50',
+    text: 'text-indigo-700',
+    dot: 'bg-indigo-500',
   },
   neutral: {
-    bg: 'bg-[#f3f4f6]',
-    text: 'text-[#374151]',
-    dot: 'bg-[#9ca3af]',
+    bg: 'bg-muted',
+    text: 'text-muted-foreground',
+    dot: 'bg-gray-400',
   },
   blue: {
-    bg: 'bg-[#eff6ff]',
-    text: 'text-[#1e40af]',
-    dot: 'bg-[#3b82f6]',
+    bg: 'bg-blue-50',
+    text: 'text-blue-800',
+    dot: 'bg-blue-500',
   },
 } as const;
 

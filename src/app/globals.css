@@ -48,60 +48,84 @@
   --color-success-foreground: var(--success-foreground);
   --color-success: var(--success);
   --color-destructive-foreground: var(--destructive-foreground);
+  /* DESIGN.md brand palette */
+  --color-ink: var(--ink);
+  --color-deep-green: var(--deep-green);
+  --color-dark-navy: var(--dark-navy);
+  --color-soft-stone: var(--soft-stone);
+  --color-pale-green: var(--pale-green);
+  --color-pale-blue: var(--pale-blue);
+  --color-hairline: var(--hairline);
+  --color-coral: var(--coral);
+  --color-coral-soft: var(--coral-soft);
+  --color-action-blue: var(--action-blue);
+  --color-slate: var(--slate);
 }
 
 :root {
   --radius: 0.625rem;
-  /* base */
-  --background: #f8fafc; /* bg2 */
-  --foreground: #121926; /* textPrimary */
+  /* base — Cohere canvas + ink (DESIGN.md) */
+  --background: #ffffff; /* canvas */
+  --foreground: #212121; /* ink */
   /* surfaces */
-  --card: #ffffff; /* bg1 */
-  --card-foreground: #121926;
+  --card: #ffffff; /* canvas */
+  --card-foreground: #212121;
   --popover: #ffffff;
-  --popover-foreground: #121926;
+  --popover-foreground: #212121;
   /* action */
-  --primary: #6f55ff; /* purple */
-  --primary-foreground: #ffffff;
-  --secondary: #f8fafc; /* gray-blue-0 */
-  --secondary-foreground: #121926;
+  --primary: #17171c; /* near-black */
+  --primary-foreground: #ffffff; /* on-primary */
+  --secondary: #eeece7; /* soft-stone */
+  --secondary-foreground: #212121;
   /* neutral */
-  --muted: #f8fafc; /* gray-blue-0 */
-  --muted-foreground: #4b5565; /* textSecondary */
-  --accent: #f8fafc; /* gray-blue-0 */
-  --accent-foreground: #121926;
-  --destructive: #ff3c48; /* error */
+  --muted: #f2f2f2; /* card-border light neutral */
+  --muted-foreground: #616161; /* body-muted */
+  --accent: #f2f2f2;
+  --accent-foreground: #17171c;
+  --destructive: #b30000; /* error */
   /* controls */
-  --border: #eef2f6; /* border */
-  --input: #eef2f6;
-  --ring: #2a9ef2; /* blue */
-  /* charts */
-  --chart-1: #dcfb6e; /* neon */
-  --chart-2: #2a9ef2; /* blue */
-  --chart-3: #e05bb1; /* pink */
-  --chart-4: #f9a63a; /* warning */
-  --chart-5: #12b76a; /* success */
+  --border: #e5e7eb; /* border-light */
+  --input: #e5e7eb;
+  --ring: #4c6ee6; /* focus-blue */
+  /* charts — DESIGN.md accents */
+  --chart-1: #003c33; /* deep-green */
+  --chart-2: #1863dc; /* action-blue */
+  --chart-3: #ff7759; /* coral */
+  --chart-4: #071829; /* dark-navy */
+  --chart-5: #75758a; /* slate */
   /* sidebar */
   --sidebar: #ffffff;
-  --sidebar-foreground: #121926;
-  --sidebar-primary: #6f55ff;
+  --sidebar-foreground: #212121;
+  --sidebar-primary: #17171c;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f8fafc;
-  --sidebar-accent-foreground: #121926;
-  --sidebar-border: #eef2f6;
-  --sidebar-ring: #2a9ef2;
+  --sidebar-accent: #f2f2f2;
+  --sidebar-accent-foreground: #17171c;
+  --sidebar-border: #e5e7eb;
+  --sidebar-ring: #4c6ee6;
+  /* brand palette (DESIGN.md) */
+  --ink: #212121;
+  --deep-green: #003c33;
+  --dark-navy: #071829;
+  --soft-stone: #eeece7;
+  --pale-green: #edfce9;
+  --pale-blue: #f1f5ff;
+  --hairline: #d9d9dd;
+  --coral: #ff7759;
+  --coral-soft: #ffad9b;
+  --action-blue: #1863dc;
+  --slate: #75758a;
   /* extras */
-  --modal-bg: rgba(19, 19, 24, 0.8);
-  --icon: #697586;
-  --destructive-foreground: var(--color-red-800);
-  --success: var(--color-emerald-500);
-  --success-foreground: var(--color-emerald-900);
-  --info: var(--color-violet-500);
-  --info-foreground: var(--color-violet-900);
-  --warning: var(--color-yellow-500);
-  --warning-foreground: var(--color-yellow-900);
-  --invert: var(--color-zinc-900);
-  --invert-foreground: var(--color-zinc-50);
+  --modal-bg: rgba(23, 23, 28, 0.8);
+  --icon: #616161;
+  --destructive-foreground: #ffffff;
+  --success: #edfce9; /* pale-green */
+  --success-foreground: #003c33; /* deep-green */
+  --info: #f1f5ff; /* pale-blue */
+  --info-foreground: #1863dc; /* action-blue */
+  --warning: #fffbeb;
+  --warning-foreground: #92400e;
+  --invert: #17171c;
+  --invert-foreground: #ffffff;
 }
 
 .dark {
@@ -156,14 +180,9 @@
   }
 }
 
-/* Date picker: neutral black/white theme tokens scoped to the shadcn Calendar.
-   Overrides the app's purple primary and blue focus ring for the date picker
-   only, so the rest of the product theme stays unchanged. Token-based only —
-   no custom day-cell styling. */
+/* Date picker: keep a neutral (non-blue) focus ring scoped to the shadcn
+   Calendar. Primary/accent now match the global near-black theme, so only the
+   ring needs an override here. Token-based only — no custom day-cell styling. */
 [data-slot="calendar"] {
-  --primary: #17171c; /* neutral selected (range start/end, single) */
-  --primary-foreground: #ffffff;
-  --accent: #f3f4f6; /* softer neutral for range middle + hover */
-  --accent-foreground: #17171c;
   --ring: #17171c; /* neutral focus ring (no blue) */
 }

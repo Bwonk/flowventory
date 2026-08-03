@@ -36,11 +36,11 @@ export default function Sidebar({ storeName }: SidebarProps) {
   const pathname = usePathname();
 
   return (
-    <aside className="sticky top-0 flex h-screen w-16 shrink-0 flex-col border-r border-[#e5e7eb] bg-[#ffffff] md:w-[220px]">
+    <aside className="sticky top-0 flex h-screen w-16 shrink-0 flex-col border-r border-border bg-background md:w-[220px]">
       {/* Logo alanı */}
-      <div className="flex h-16 items-center gap-2 border-b border-[#e5e7eb] px-4 md:px-5">
-        <Zap className="h-5 w-5 shrink-0 text-[#17171c]" />
-        <span className="hidden text-[16px] font-semibold tracking-tight text-[#17171c] md:inline">Flowventory</span>
+      <div className="flex h-16 items-center gap-2 border-b border-border px-4 md:px-5">
+        <Zap className="h-5 w-5 shrink-0 text-primary" />
+        <span className="hidden text-[16px] font-semibold tracking-tight text-primary md:inline">Flowventory</span>
       </div>
 
       {/* Navigasyon öğeleri */}
@@ -56,8 +56,8 @@ export default function Sidebar({ storeName }: SidebarProps) {
               title={item.label}
               className={`flex h-9 items-center rounded-lg px-3 text-[14px] transition-colors duration-100 ${
                 active
-                  ? 'bg-[#f3f4f6] font-medium text-[#17171c]'
-                  : 'text-[#75758a] hover:bg-[#f8f9fa] hover:text-[#17171c]'
+                  ? 'bg-muted font-medium text-primary'
+                  : 'text-slate hover:bg-muted hover:text-primary'
               }`}
             >
               <Icon className="h-4 w-4 shrink-0 md:mr-3" />
@@ -68,9 +68,9 @@ export default function Sidebar({ storeName }: SidebarProps) {
       </nav>
 
       {/* Alt alan — mağaza adı */}
-      <div className="flex items-center gap-2 border-t border-[#e5e7eb] p-4">
-        <Store className="h-4 w-4 shrink-0 text-[#75758a]" />
-        <span className="hidden truncate text-[12px] text-[#75758a] md:inline" title={storeName}>
+      <div className="flex items-center gap-2 border-t border-border p-4">
+        <Store className="h-4 w-4 shrink-0 text-slate" />
+        <span className="hidden truncate text-[12px] text-slate md:inline" title={storeName}>
           {storeName}
         </span>
       </div>

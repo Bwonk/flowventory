@@ -7,7 +7,7 @@ export const MonoLabel: React.FC<{ children: React.ReactNode; className?: string
   children,
   className,
 }) => (
-  <p className={`font-mono text-[12px] uppercase tracking-[0.08em] text-[#75758a] ${className ?? ''}`}>
+  <p className={`font-mono text-[12px] uppercase tracking-[0.08em] text-slate ${className ?? ''}`}>
     {children}
   </p>
 );
@@ -21,8 +21,8 @@ export const ProductThumb: React.FC<{ src?: string; alt: string; sizeClass?: str
   const [errored, setErrored] = useState(false);
   if (!src || errored) {
     return (
-      <div className={`flex ${sizeClass} items-center justify-center rounded-lg bg-[#eeece7]`}>
-        <Package className="h-4 w-4 text-[#93939f]" />
+      <div className={`flex ${sizeClass} items-center justify-center rounded-lg bg-soft-stone`}>
+        <Package className="h-4 w-4 text-slate" />
       </div>
     );
   }
@@ -42,9 +42,9 @@ export const FilterChip: React.FC<{ label: string; onRemove: () => void }> = ({ 
   <button
     type="button"
     onClick={onRemove}
-    className="inline-flex items-center gap-1.5 rounded-full bg-[#f3f4f6] px-3 py-1 text-[14px] text-[#374151] transition-colors hover:bg-[#e5e7eb] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#4c6ee6]"
+    className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-[14px] text-foreground transition-colors hover:bg-border focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
   >
     {label}
-    <X className="h-3.5 w-3.5 text-[#374151]" />
+    <X className="h-3.5 w-3.5 text-foreground" />
   </button>
 );

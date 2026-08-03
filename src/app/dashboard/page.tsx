@@ -397,24 +397,24 @@ export default function DashboardPage() {
   return (
     <div className="mx-auto max-w-7xl p-6">
       {/* SECTION 1 — KPI Metrikleri */}
-      <section className="mb-4 rounded-xl border border-[#E4E7EC] bg-[#ffffff] overflow-hidden">
+      <section className="mb-4 rounded-xl border border-border bg-background overflow-hidden">
         <div className="grid grid-cols-2 lg:grid-cols-5">
           {/* 1 — Son 30 Gün Ciro */}
-          <div className="flex flex-col p-5 border-b border-r border-[#E4E7EC] even:border-r-0 last:border-b-0 lg:border-b-0 lg:even:border-r lg:last:border-r-0">
+          <div className="flex flex-col p-5 border-b border-r border-border even:border-r-0 last:border-b-0 lg:border-b-0 lg:even:border-r lg:last:border-r-0">
             <div className="flex items-center gap-1.5 mb-1">
-              <DollarSign className="h-3 w-3 text-[#667085]" />
-              <p className="text-[10px] font-mono uppercase tracking-wider text-[#667085]">SON 30 GÜN CİRO</p>
+              <DollarSign className="h-3 w-3 text-muted-foreground" />
+              <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">SON 30 GÜN CİRO</p>
             </div>
-            <p className="text-3xl font-semibold tracking-tight text-[#101828] mt-2">{formatPrice(totalRevenue)}</p>
+            <p className="text-3xl font-semibold tracking-tight text-foreground mt-2">{formatPrice(totalRevenue)}</p>
             <div className="mt-auto pt-3">
               {revenueChange === 0 ? (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#f3f4f6] text-[#667085]">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground">
                   %0
                 </span>
               ) : (
                 <span
                   className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    isPositive ? 'bg-[#dcfce7] text-[#166534]' : 'bg-[#fef2f2] text-[#991b1b]'
+                    isPositive ? 'bg-green-100 text-green-800' : 'bg-red-50 text-red-800'
                   }`}
                 >
                   {isPositive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
@@ -422,37 +422,37 @@ export default function DashboardPage() {
                   {revenueChange}%
                 </span>
               )}
-              <p className="text-xs text-[#667085] mt-1.5">
+              <p className="text-xs text-muted-foreground mt-1.5">
                 {revenueChange === 0 ? 'Geçen döneme göre değişmedi' : `Geçen ay: ${formatPrice(previousRevenue)}`}
               </p>
             </div>
           </div>
 
           {/* 2 — Aktif Ürün */}
-          <div className="flex flex-col p-5 border-b border-r border-[#E4E7EC] even:border-r-0 last:border-b-0 lg:border-b-0 lg:even:border-r lg:last:border-r-0">
+          <div className="flex flex-col p-5 border-b border-r border-border even:border-r-0 last:border-b-0 lg:border-b-0 lg:even:border-r lg:last:border-r-0">
             <div className="flex items-center gap-1.5 mb-1">
-              <Package className="h-3 w-3 text-[#667085]" />
-              <p className="text-[10px] font-mono uppercase tracking-wider text-[#667085]">AKTİF ÜRÜN</p>
+              <Package className="h-3 w-3 text-muted-foreground" />
+              <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">AKTİF ÜRÜN</p>
             </div>
-            <p className="text-3xl font-semibold tracking-tight text-[#101828] mt-2">{products.length} ürün</p>
+            <p className="text-3xl font-semibold tracking-tight text-foreground mt-2">{products.length} ürün</p>
             <div className="mt-auto pt-3">
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[#f3f4f6] text-[#667085]">
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-muted text-muted-foreground">
                 {skuHealth.total} SKU
               </span>
-              <p className="text-xs text-[#667085] mt-1.5">Varyant bazlı takip</p>
+              <p className="text-xs text-muted-foreground mt-1.5">Varyant bazlı takip</p>
             </div>
           </div>
 
           {/* 3 — Kritik Stok (tıklanabilir) */}
           <Link
             href="/dashboard/stok?filter=tukendi"
-            className="group flex flex-col p-5 border-b border-r border-[#E4E7EC] even:border-r-0 last:border-b-0 lg:border-b-0 lg:even:border-r lg:last:border-r-0 cursor-pointer transition-all duration-200 hover:-translate-y-[1px] hover:shadow-sm hover:border-[#d0d5dd] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4c6ee6] focus-visible:ring-offset-2"
+            className="group flex flex-col p-5 border-b border-r border-border even:border-r-0 last:border-b-0 lg:border-b-0 lg:even:border-r lg:last:border-r-0 cursor-pointer transition-all duration-200 hover:-translate-y-[1px] hover:shadow-sm hover:border-hairline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <div className="flex items-center gap-1.5 mb-1">
-              <AlertTriangle className="h-3 w-3 text-[#667085]" />
-              <p className="text-[10px] font-mono uppercase tracking-wider text-[#667085]">KRİTİK STOK</p>
+              <AlertTriangle className="h-3 w-3 text-muted-foreground" />
+              <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">KRİTİK STOK</p>
             </div>
-            <p className="text-3xl font-semibold tracking-tight text-[#101828] mt-2">{criticalCount + warningCount} ürün</p>
+            <p className="text-3xl font-semibold tracking-tight text-foreground mt-2">{criticalCount + warningCount} ürün</p>
             <div className="mt-auto pt-3">
               <div className="flex flex-wrap gap-1.5 mb-2">
                 {criticalCount > 0 && (
@@ -462,7 +462,7 @@ export default function DashboardPage() {
                   <StatusBadge status="warning" label={`${warningCount} eşik altında`} size="sm" />
                 )}
               </div>
-              <span className="inline-flex items-center gap-1 text-xs font-medium text-[#667085] group-hover:text-[#101828] transition-colors">
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors">
                 Ürünleri görüntüle
                 <span className="inline-block transition-transform duration-200 group-hover:translate-x-0.5">&rarr;</span>
               </span>
@@ -472,16 +472,16 @@ export default function DashboardPage() {
           {/* 4 — Ölü Stok (tıklanabilir) */}
           <Link
             href="/dashboard/stok?view=dead"
-            className="group flex flex-col p-5 border-b border-r border-[#E4E7EC] even:border-r-0 last:border-b-0 lg:border-b-0 lg:even:border-r lg:last:border-r-0 cursor-pointer transition-all duration-200 hover:-translate-y-[1px] hover:shadow-sm hover:border-[#d0d5dd] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4c6ee6] focus-visible:ring-offset-2"
+            className="group flex flex-col p-5 border-b border-r border-border even:border-r-0 last:border-b-0 lg:border-b-0 lg:even:border-r lg:last:border-r-0 cursor-pointer transition-all duration-200 hover:-translate-y-[1px] hover:shadow-sm hover:border-hairline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <div className="flex items-center gap-1.5 mb-1">
-              <Archive className="h-3 w-3 text-[#667085]" />
-              <p className="text-[10px] font-mono uppercase tracking-wider text-[#667085]">ÖLÜ STOK</p>
+              <Archive className="h-3 w-3 text-muted-foreground" />
+              <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">ÖLÜ STOK</p>
             </div>
-            <p className="text-3xl font-semibold tracking-tight text-[#101828] mt-2">{formatPrice(lockedCapital)}</p>
+            <p className="text-3xl font-semibold tracking-tight text-foreground mt-2">{formatPrice(lockedCapital)}</p>
             <div className="mt-auto pt-3">
-              <p className="text-xs text-[#667085] mb-2">{deadStockCount} ürün · 180+ gündür satılmıyor</p>
-              <span className="inline-flex items-center gap-1 text-xs font-medium text-[#667085] group-hover:text-[#101828] transition-colors">
+              <p className="text-xs text-muted-foreground mb-2">{deadStockCount} ürün · 180+ gündür satılmıyor</p>
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors">
                 Ölü stokları görüntüle
                 <span className="inline-block transition-transform duration-200 group-hover:translate-x-0.5">&rarr;</span>
               </span>
@@ -489,27 +489,27 @@ export default function DashboardPage() {
           </Link>
 
           {/* 5 — Ortalama Stok Ömrü */}
-          <div className="flex flex-col p-5 border-b border-r border-[#E4E7EC] even:border-r-0 last:border-b-0 lg:border-b-0 lg:even:border-r lg:last:border-r-0">
+          <div className="flex flex-col p-5 border-b border-r border-border even:border-r-0 last:border-b-0 lg:border-b-0 lg:even:border-r lg:last:border-r-0">
             <div className="flex items-center gap-1.5 mb-1">
-              <Clock className="h-3 w-3 text-[#667085]" />
-              <p className="text-[10px] font-mono uppercase tracking-wider text-[#667085]">ORT. STOK ÖMRÜ</p>
+              <Clock className="h-3 w-3 text-muted-foreground" />
+              <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">ORT. STOK ÖMRÜ</p>
             </div>
             {avgDaysRemaining !== null ? (() => {
               const age = formatStockAge(avgDaysRemaining);
               return (
                 <>
-                  <p className="text-3xl font-semibold tracking-tight text-[#101828] mt-2">{age.primary}</p>
+                  <p className="text-3xl font-semibold tracking-tight text-foreground mt-2">{age.primary}</p>
                   <div className="mt-auto pt-3">
-                    <p className="text-xs text-[#667085]">{age.secondary}</p>
-                    <p className="text-xs text-[#667085] mt-0.5">Satış hızına göre hesaplandı</p>
+                    <p className="text-xs text-muted-foreground">{age.secondary}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Satış hızına göre hesaplandı</p>
                   </div>
                 </>
               );
             })() : (
               <>
-                <p className="text-3xl font-semibold tracking-tight text-[#101828] mt-2">—</p>
+                <p className="text-3xl font-semibold tracking-tight text-foreground mt-2">—</p>
                 <div className="mt-auto pt-3">
-                  <p className="text-xs text-[#667085]">Yeterli satış verisi yok</p>
+                  <p className="text-xs text-muted-foreground">Yeterli satış verisi yok</p>
                 </div>
               </>
             )}
@@ -518,17 +518,17 @@ export default function DashboardPage() {
       </section>
 
       {/* SECTION 2 — Stok Sağlığı */}
-      <section className="mb-4 rounded-xl border border-[#E4E7EC] bg-[#ffffff] p-5">
+      <section className="mb-4 rounded-xl border border-border bg-background p-5">
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-medium text-[#101828]">Stok Sağlığı</h2>
-            <p className="mt-0.5 text-xs text-[#667085]">
+            <h2 className="text-sm font-medium text-foreground">Stok Sağlığı</h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">
               Toplam {skuHealth.total} SKU&apos;nun stok durumu dağılımı
             </p>
           </div>
           <Link
             href="/dashboard/stok"
-            className="inline-flex items-center gap-1 text-xs font-medium text-[#667085] hover:text-[#101828] transition-colors"
+            className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
             Tüm stokları görüntüle
             <span>&rarr;</span>
@@ -541,32 +541,32 @@ export default function DashboardPage() {
           aria-label={`Sağlıklı ${skuHealth.healthy}, Az kalan ${skuHealth.warning}, Tükendi ${skuHealth.critical}`}
         >
           {skuHealth.healthy > 0 && (
-            <div className="bg-[#10b981]" style={{ width: `${skuHealth.segments.healthy}%` }} />
+            <div className="bg-emerald-500" style={{ width: `${skuHealth.segments.healthy}%` }} />
           )}
           {skuHealth.warning > 0 && (
-            <div className="bg-[#f59e0b]" style={{ width: `${skuHealth.segments.warning}%` }} />
+            <div className="bg-amber-500" style={{ width: `${skuHealth.segments.warning}%` }} />
           )}
           {skuHealth.critical > 0 && (
-            <div className="bg-[#ef4444]" style={{ width: `${skuHealth.segments.critical}%` }} />
+            <div className="bg-red-500" style={{ width: `${skuHealth.segments.critical}%` }} />
           )}
         </div>
 
         <div className="mt-4 grid grid-cols-3 gap-4">
           {[
-            { dot: '#10b981', label: 'Sağlıklı', count: skuHealth.healthy, pct: skuHealth.segments.healthy },
-            { dot: '#f59e0b', label: 'Az Kalan', count: skuHealth.warning, pct: skuHealth.segments.warning },
-            { dot: '#ef4444', label: 'Tükendi', count: skuHealth.critical, pct: skuHealth.segments.critical },
+            { dot: 'bg-emerald-500', label: 'Sağlıklı', count: skuHealth.healthy, pct: skuHealth.segments.healthy },
+            { dot: 'bg-amber-500', label: 'Az Kalan', count: skuHealth.warning, pct: skuHealth.segments.warning },
+            { dot: 'bg-red-500', label: 'Tükendi', count: skuHealth.critical, pct: skuHealth.segments.critical },
           ].map(item => (
             <div key={item.label} className="flex flex-col gap-1.5">
               <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: item.dot }} />
-                <span className="text-xs text-[#667085]">{item.label}</span>
+                <span className={`h-2 w-2 rounded-full ${item.dot}`} />
+                <span className="text-xs text-muted-foreground">{item.label}</span>
               </div>
               <p>
-                <span className="text-xl font-semibold tracking-tight text-[#101828]">{item.count}</span>
-                <span className="ml-1 text-xs text-[#667085]">SKU</span>
+                <span className="text-xl font-semibold tracking-tight text-foreground">{item.count}</span>
+                <span className="ml-1 text-xs text-muted-foreground">SKU</span>
               </p>
-              <p className="text-xs text-[#667085]">
+              <p className="text-xs text-muted-foreground">
                 %{item.pct.toLocaleString('tr-TR', { maximumFractionDigits: 1 })}
               </p>
             </div>
@@ -606,7 +606,7 @@ export default function DashboardPage() {
           subtitle={`Stok eşiği (${maxThreshold} adet) altına düşen ve tükenen ürünler`}
           badge={lowStockProducts.length > 0 ? {
             text: `${lowStockProducts.length} ürün`,
-            className: 'shrink-0 rounded-full bg-[#fef2f2] px-2.5 py-0.5 text-xs font-medium text-[#b30000]',
+            className: 'shrink-0 rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-destructive',
           } : undefined}
           items={lowStockListItems}
           emptyState={{

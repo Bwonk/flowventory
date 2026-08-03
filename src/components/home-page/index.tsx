@@ -25,14 +25,14 @@ const HomePage: React.FC<HomePageProps> = ({ token, products = [], analytics, vi
 
   if (!token) {
     return (
-      <div className="min-h-screen bg-[#ffffff] font-sans">
+      <div className="min-h-screen bg-background font-sans">
         <div className="mx-auto flex max-w-7xl items-center justify-center px-4 py-32 sm:px-6 lg:px-8">
           <div className="flex max-w-md flex-col items-center gap-4 text-center">
             <MonoLabel>Flowventory</MonoLabel>
-            <h1 className="text-4xl font-normal leading-none tracking-[-0.03em] text-[#17171c] sm:text-5xl">
+            <h1 className="text-4xl font-normal leading-none tracking-[-0.03em] text-primary sm:text-5xl">
               Kimlik Doğrulama Gerekli
             </h1>
-            <p className="text-[16px] leading-[1.5] text-[#616161]">
+            <p className="text-[16px] leading-[1.5] text-muted-foreground">
               Uygulama eylemlerini kullanmak için lütfen ikas üzerinden kimlik doğrulaması yapın.
             </p>
           </div>
@@ -44,19 +44,19 @@ const HomePage: React.FC<HomePageProps> = ({ token, products = [], analytics, vi
 
 
   return (
-    <div className="min-h-screen bg-[#ffffff] font-sans text-[#212121]">
+    <div className="min-h-screen bg-background font-sans text-foreground">
       <div className="mx-auto max-w-7xl px-6 py-8">
         {/* Başlık */}
         <header className="mb-6 flex items-center justify-between">
           <div>
-            <p className="mb-1 font-mono text-[10px] uppercase tracking-wider text-[#75758a]">
+            <p className="mb-1 font-mono text-[10px] uppercase tracking-wider text-slate">
               STOK YÖNETİMİ
             </p>
-            <h1 className="text-3xl font-normal tracking-[-0.03em] text-[#17171c]">Stok Takibi</h1>
+            <h1 className="text-3xl font-normal tracking-[-0.03em] text-primary">Stok Takibi</h1>
           </div>
           <Button
             onClick={() => downloadCSV(filters.displayedRows)}
-            className="h-auto gap-2 rounded-full bg-[#17171c] px-6 py-3 text-[14px] font-medium text-[#ffffff] shadow-none transition-colors hover:bg-[#000000]"
+            className="h-auto gap-2 rounded-full bg-primary px-6 py-3 text-[14px] font-medium text-primary-foreground shadow-none transition-colors hover:bg-black"
           >
             <Download className="h-4 w-4" />
             CSV İndir

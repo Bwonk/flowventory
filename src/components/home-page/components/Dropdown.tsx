@@ -30,10 +30,10 @@ export const Dropdown: React.FC<DropdownProps> = ({ label, active, align = 'star
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
-        className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[14px] whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#4c6ee6] ${
+        className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[14px] whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
           active
-            ? 'bg-[#eeece7] font-medium text-[#17171c]'
-            : 'text-[#75758a] hover:bg-[#f2f2f2] hover:text-[#17171c]'
+            ? 'bg-soft-stone font-medium text-primary'
+            : 'text-slate hover:bg-muted hover:text-primary'
         }`}
       >
         {label}
@@ -41,7 +41,7 @@ export const Dropdown: React.FC<DropdownProps> = ({ label, active, align = 'star
       </button>
       {open && (
         <div
-          className={`absolute z-50 mt-2 min-w-[200px] rounded-[12px] border border-[#e5e7eb] bg-[#ffffff] p-1.5 shadow-[0_10px_30px_rgba(23,23,28,0.10)] ${
+          className={`absolute z-50 mt-2 min-w-[200px] rounded-[12px] border border-border bg-background p-1.5 shadow-[0_10px_30px_rgba(23,23,28,0.10)] ${
             align === 'end' ? 'right-0' : 'left-0'
           } ${panelClassName ?? ''}`}
         >
@@ -60,9 +60,9 @@ export const OptionButton: React.FC<{ label: string; selected: boolean; onClick:
   <button
     type="button"
     onClick={onClick}
-    className="flex w-full items-center justify-between gap-3 rounded-[8px] px-3 py-2 text-left text-[14px] text-[#17171c] transition-colors hover:bg-[#f2f2f2]"
+    className="flex w-full items-center justify-between gap-3 rounded-[8px] px-3 py-2 text-left text-[14px] text-primary transition-colors hover:bg-muted"
   >
     <span className="truncate">{label}</span>
-    {selected && <Check className="h-4 w-4 shrink-0 text-[#1863dc]" />}
+    {selected && <Check className="h-4 w-4 shrink-0 text-action-blue" />}
   </button>
 );

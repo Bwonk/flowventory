@@ -35,8 +35,8 @@ const chartConfig = {
   desktop: {
     label: "Desktop",
     colors: {
-      light: ["#18181b"],
-      dark: ["#fafafa"],
+      light: ["var(--primary)"],
+      dark: ["var(--invert-foreground)"],
     },
   },
 } satisfies ChartConfig;

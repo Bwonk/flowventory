@@ -68,9 +68,9 @@ const QUICK_RANGES: { value: ChartPeriod; label: string }[] = [
 ];
 
 const chartConfig = {
-  revenue: { label: 'Ciro', colors: { light: ['#17171c'] as string[] } },
-  quantity: { label: 'Satış Adedi', colors: { light: ['#6366f1'] as string[] } },
-  views: { label: 'Görüntülenme', colors: { light: ['#10b981'] as string[] } },
+  revenue: { label: 'Ciro', colors: { light: ['var(--primary)'] as string[] } },
+  quantity: { label: 'Satış Adedi', colors: { light: ['var(--chart-2)'] as string[] } },
+  views: { label: 'Görüntülenme', colors: { light: ['var(--chart-1)'] as string[] } },
 } satisfies ChartConfig;
 
 function formatDayLabel(dateStr: string): string {
@@ -103,7 +103,7 @@ interface DateHoverLabelProps {
 function DateHoverLabel({ active, label }: DateHoverLabelProps) {
   if (!active || label === undefined || label === '') return null;
   return (
-    <div className="pointer-events-none rounded-md border border-[#e5e7eb] bg-[#ffffff] px-2 py-0.5 text-[10px] font-medium text-[#17171c] shadow-sm">
+    <div className="pointer-events-none rounded-md border border-border bg-background px-2 py-0.5 text-[10px] font-medium text-primary shadow-sm">
       {label}
     </div>
   );
@@ -388,7 +388,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({
           layout === 'default' ? "items-end" : "max-md:items-start max-md:w-full items-end"
         )}>
           {availableMetrics.length > 1 && (
-            <div className="inline-flex gap-0.5 rounded-2xl bg-[#f3f4f6] p-1">
+            <div className="inline-flex gap-0.5 rounded-2xl bg-muted p-1">
             {availableMetrics.map(m => (
               <button
                 key={m}
@@ -396,10 +396,10 @@ export const TrendChart: React.FC<TrendChartProps> = ({
                 onClick={() => setMetric(m)}
                 aria-pressed={effectiveMetric === m}
                 className={cn(
-                  'rounded-2xl px-3 h-9 text-xs transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#17171c] focus-visible:ring-offset-1',
+                  'rounded-2xl px-3 h-9 text-xs transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1',
                   effectiveMetric === m
-                    ? 'bg-[#ffffff] font-medium text-[#17171c] shadow-sm'
-                    : 'text-muted-foreground hover:text-[#17171c]',
+                    ? 'bg-background font-medium text-primary shadow-sm'
+                    : 'text-muted-foreground hover:text-primary',
                 )}
               >
                 {METRIC_LABELS[m]}
@@ -416,8 +416,8 @@ export const TrendChart: React.FC<TrendChartProps> = ({
                 aria-label="Tarih aralığı seç"
                 aria-expanded={open}
                 className={cn(
-                  'rounded-2xl h-9 gap-1.5 px-3 text-xs font-normal text-[#17171c]',
-                  period === 'custom' && 'border-[#17171c] bg-[#f3f4f6]',
+                  'rounded-2xl h-9 gap-1.5 px-3 text-xs font-normal text-primary',
+                  period === 'custom' && 'border-primary bg-muted',
                 )}
               >
                 <CalendarIcon className="size-3.5 shrink-0 text-muted-foreground" />
@@ -438,14 +438,14 @@ export const TrendChart: React.FC<TrendChartProps> = ({
                 {/* Left Blur */}
                 <div
                   className={cn(
-                    'pointer-events-none absolute bottom-0 left-0 top-0 z-10 w-6 bg-gradient-to-r from-[#ffffff] to-transparent transition-opacity duration-200',
+                    'pointer-events-none absolute bottom-0 left-0 top-0 z-10 w-6 bg-gradient-to-r from-background to-transparent transition-opacity duration-200',
                     showLeftFade ? 'opacity-100' : 'opacity-0'
                   )}
                 />
                 {/* Right Blur */}
                 <div
                   className={cn(
-                    'pointer-events-none absolute bottom-0 right-0 top-0 z-10 w-6 bg-gradient-to-l from-[#ffffff] to-transparent transition-opacity duration-200',
+                    'pointer-events-none absolute bottom-0 right-0 top-0 z-10 w-6 bg-gradient-to-l from-background to-transparent transition-opacity duration-200',
                     showRightFade ? 'opacity-100' : 'opacity-0'
                   )}
                 />
@@ -453,7 +453,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({
                 <div
                   ref={scrollRef}
                   onScroll={handleScroll}
-                  className="flex gap-0.5 overflow-x-auto scroll-smooth rounded-2xl bg-[#f3f4f6] p-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                  className="flex gap-0.5 overflow-x-auto scroll-smooth rounded-2xl bg-muted p-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
                   role="listbox"
                   aria-label="Hızlı aralıklar"
                 >
@@ -467,10 +467,10 @@ export const TrendChart: React.FC<TrendChartProps> = ({
                         aria-selected={active}
                         onClick={() => selectQuickRange(r.value)}
                         className={cn(
-                          'flex h-9 shrink-0 items-center justify-center rounded-2xl px-4 text-xs transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#17171c] focus-visible:ring-offset-1',
+                          'flex h-9 shrink-0 items-center justify-center rounded-2xl px-4 text-xs transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1',
                           active
-                            ? 'bg-[#ffffff] font-medium text-[#17171c] shadow-sm'
-                            : 'font-medium text-muted-foreground hover:text-[#17171c]'
+                            ? 'bg-background font-medium text-primary shadow-sm'
+                            : 'font-medium text-muted-foreground hover:text-primary'
                         )}
                       >
                         {r.label}
@@ -483,7 +483,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({
               {showCustom && (
                 <>
                   {/* DIVIDER */}
-                  <div className="my-4 -mx-4 border-t border-[#e5e7eb]" />
+                  <div className="my-4 -mx-4 border-t border-border" />
 
                   {/* SECTION 2 — Custom range */}
                   <p className="mb-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
@@ -495,12 +495,12 @@ export const TrendChart: React.FC<TrendChartProps> = ({
                       <p className="text-xs text-muted-foreground">Tarih aralığı seçin</p>
                     ) : !draftToLabel ? (
                       <div className="flex gap-1 text-xs">
-                        <span className="text-[#17171c]">Başlangıç: {draftFromLabel}</span>
-                        <span className="text-[#e5e7eb]">|</span>
+                        <span className="text-primary">Başlangıç: {draftFromLabel}</span>
+                        <span className="text-border">|</span>
                         <span className="text-muted-foreground">Bitiş tarihini seçin</span>
                       </div>
                     ) : (
-                      <p className="text-xs font-medium text-[#17171c]">
+                      <p className="text-xs font-medium text-primary">
                         {draftFromLabel} – {draftToLabel}
                       </p>
                     )}
@@ -521,11 +521,11 @@ export const TrendChart: React.FC<TrendChartProps> = ({
                       }}
                     />
                   </div>
-                  <div className="mt-3 -mx-4 border-t border-[#e5e7eb] px-4 pt-3 flex items-center justify-end gap-2">
+                  <div className="mt-3 -mx-4 border-t border-border px-4 pt-3 flex items-center justify-end gap-2">
                     <button
                       type="button"
                       onClick={() => handleOpenChange(false)}
-                      className="inline-flex h-9 items-center rounded-2xl px-3 text-xs font-medium text-[#374151] transition-colors hover:bg-[#f8f9fa] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#17171c] focus-visible:ring-offset-1"
+                      className="inline-flex h-9 items-center rounded-2xl px-3 text-xs font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
                     >
                       İptal
                     </button>
@@ -533,7 +533,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({
                       type="button"
                       onClick={applyCustomRange}
                       disabled={!canApplyCustom}
-                      className="inline-flex h-9 items-center rounded-2xl bg-[#17171c] px-4 text-xs font-medium text-[#ffffff] transition-colors hover:bg-[#000000] disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-[#17171c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#17171c] focus-visible:ring-offset-1"
+                      className="inline-flex h-9 items-center rounded-2xl bg-primary px-4 text-xs font-medium text-primary-foreground transition-colors hover:bg-black disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
                     >
                       Uygula
                     </button>
@@ -572,7 +572,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({
               axisLine={false}
               tickMargin={8}
               interval={xAxisInterval}
-              tick={{ fill: '#9ca3af', fontSize: 10 }}
+              tick={{ fill: 'var(--muted-foreground)', fontSize: 10 }}
             />
             <YAxis
               hide
@@ -598,7 +598,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({
       )}
 
       {!hasNoDataAtAll && !isAllZero && totalValue > 0 && (
-        <div className={cn("mt-4 border-t border-[#f3f4f6] pt-4", layout === 'modal' && "shrink-0 border-border")}>
+        <div className={cn("mt-4 border-t border-muted pt-4", layout === 'modal' && "shrink-0 border-border")}>
           <p className="text-xs text-muted-foreground">{formatSummary(totalValue, effectiveMetric, period)}</p>
         </div>
       )}

@@ -43,20 +43,20 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   hasActiveFilters,
   onClearAll,
 }) => (
-  <div className="mb-8 rounded-[12px] border border-[#e5e7eb] bg-[#ffffff]">
+  <div className="mb-8 rounded-[12px] border border-border bg-background">
     {/* Satır 1: arama solda, filtre dropdown'ları sağda */}
     <div className="flex flex-col gap-2 p-2 sm:flex-row sm:items-center">
       <div className="relative flex-1">
-        <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#93939f]" />
+        <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate" />
         <Input
           placeholder="Ürün veya varyant ara..."
           value={query}
           onChange={e => onQueryChange(e.target.value)}
-          className="h-10 w-full border-0 bg-transparent pl-10 text-[14px] text-[#212121] shadow-none placeholder:text-[#93939f] focus-visible:border-0 focus-visible:ring-0"
+          className="h-10 w-full border-0 bg-transparent pl-10 text-[14px] text-foreground shadow-none placeholder:text-slate focus-visible:border-0 focus-visible:ring-0"
         />
       </div>
 
-      <div className="flex flex-wrap items-center gap-1 sm:flex-nowrap sm:border-l sm:border-[#e5e7eb] sm:pl-2">
+      <div className="flex flex-wrap items-center gap-1 sm:flex-nowrap sm:border-l sm:border-border sm:pl-2">
         {/* Durum */}
         <Dropdown label={<>Durum: {STATUS_LABELS[statusFilter]}</>} active={statusFilter !== 'all'}>
           {close =>
@@ -118,7 +118,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
 
     {hasActiveFilters && (
       <>
-        <div className="h-px w-full bg-[#e5e7eb]" />
+        <div className="h-px w-full bg-border" />
         <div className="flex flex-wrap items-center gap-2 p-3">
           {query.trim() !== '' && (
             <FilterChip label={`Arama: “${query.trim()}”`} onRemove={() => onQueryChange('')} />
@@ -141,7 +141,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           <button
             type="button"
             onClick={onClearAll}
-            className="ml-auto text-[14px] text-[#1863dc] underline-offset-4 transition-colors hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#4c6ee6]"
+            className="ml-auto text-[14px] text-action-blue underline-offset-4 transition-colors hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           >
             Tümünü Temizle
           </button>

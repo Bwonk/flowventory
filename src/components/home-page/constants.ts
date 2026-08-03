@@ -60,9 +60,9 @@ export const STATUS_SEVERITY: Record<ProductStatus, number> = { critical: 0, war
 
 /** Cohere-token status treatment per durum. */
 export const STATUS_META: Record<ProductStatus, { label: string; className: string }> = {
-  critical: { label: 'Tükendi', className: 'border border-[#b30000] text-[#b30000] bg-transparent' },
-  warning: { label: 'Az Kalan', className: 'border border-[#ff7759] text-[#ff7759] bg-transparent' },
-  healthy: { label: 'Sağlıklı', className: 'border-transparent bg-[#edfce9] text-[#003c33]' },
+  critical: { label: 'Tükendi', className: 'border border-destructive text-destructive bg-transparent' },
+  warning: { label: 'Az Kalan', className: 'border border-coral text-coral bg-transparent' },
+  healthy: { label: 'Sağlıklı', className: 'border-transparent bg-pale-green text-deep-green' },
 };
 
 export const TR_MONTHS = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'] as const;
