@@ -1,4 +1,5 @@
 import { BaseGraphQLAPIClient, BaseGraphQLAPIClientOptions, APIResult } from '@ikas/admin-api-client';
+
 export type OrderStatusEnum = string;
 export type OrderPaymentStatusEnum = string;
 export type OrderPackageStatusEnum = string;
@@ -154,6 +155,14 @@ export type ListProductQueryData = {
   id: string;
   name: string;
 }>;
+  vendor?: {
+  id: string;
+  name: string;
+};
+  brand?: {
+  id: string;
+  name: string;
+};
   variants: Array<{
   id: string;
   sku?: string;
@@ -373,6 +382,14 @@ export class GeneratedQueries {
         id
         name
         categories {
+          id
+          name
+        }
+        vendor {
+          id
+          name
+        }
+        brand {
           id
           name
         }

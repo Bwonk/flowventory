@@ -98,6 +98,14 @@ export const LIST_PRODUCT = gql`
           id
           name
         }
+        vendor {
+          id
+          name
+        }
+        brand {
+          id
+          name
+        }
         variants {
           id
           sku

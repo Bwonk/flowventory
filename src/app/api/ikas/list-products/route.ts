@@ -17,6 +17,8 @@ export type ListProductsApiResponse = {
     id: string;
     name: string;
     categories?: Array<{ id: string; name: string }>;
+    vendor?: { id: string; name: string };
+    brand?: { id: string; name: string };
     variants: Array<{
       id: string;
       sku: string | null;
