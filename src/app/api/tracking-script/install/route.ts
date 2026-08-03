@@ -2,6 +2,7 @@ import { getUserFromRequest } from '@/lib/auth-helpers';
 import { AuthTokenManager } from '@/models/auth-token/manager';
 import {
   installOrUpdateTrackingScript,
+  resolvePublicApiUrl,
   TrackingScriptError,
   type TrackingScriptInstallResult,
 } from '@/lib/tracking-script';
@@ -25,7 +26,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Auth token not found' }, { status: 404 });
     }
 
-    const apiUrl = process.env.NEXT_PUBLIC_DEPLOY_URL || request.nextUrl.origin;
+    const apiUrl = resolvePublicApiUrl(request);
 
     const data = await installOrUpdateTrackingScript({
       merchantId: user.merchantId,

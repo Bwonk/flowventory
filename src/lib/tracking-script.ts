@@ -27,13 +27,43 @@ export type TrackingScriptInstallResult = {
 
 /**
  * tracker.js'i okuyup API_URL + MERCHANT_ID placeholder'larını doldurur.
+ * ikas ValidateScriptContent: içerik <script> tag'leri içinde olmalı.
  */
 export function buildTrackerScript(apiUrl: string, merchantId: string): string {
   const trackerPath = join(process.cwd(), 'public', 'tracker.js');
   const rawScript = readFileSync(trackerPath, 'utf-8');
-  return rawScript
+  const body = rawScript
     .replace(/var API_URL = '.*?'/, `var API_URL = '${apiUrl}'`)
     .replace(/var MERCHANT_ID = '.*?'/, `var MERCHANT_ID = '${merchantId}'`);
+
+  const trimmed = body.trim();
+  if (/^<script[\s>]/i.test(trimmed)) {
+    return trimmed;
+  }
+  return `<script>\n${trimmed}\n</script>`;
+}
+
+/**
+ * Install isteğinden public app URL'ini çıkar.
+ * Tunnel localhost'a forward ettiği için nextUrl.origin çoğu zaman
+ * http://localhost:3000 olur; x-forwarded-host tercih edilir.
+ */
+export function resolvePublicApiUrl(request: {
+  nextUrl: { origin: string };
+  headers: Headers;
+}): string {
+  if (process.env.NEXT_PUBLIC_DEPLOY_URL) {
+    return process.env.NEXT_PUBLIC_DEPLOY_URL.replace(/\/$/, '');
+  }
+
+  const forwardedHost = request.headers.get('x-forwarded-host') || request.headers.get('host');
+  const forwardedProto = request.headers.get('x-forwarded-proto') || 'https';
+
+  if (forwardedHost && !forwardedHost.includes('localhost') && !forwardedHost.startsWith('127.')) {
+    return `${forwardedProto}://${forwardedHost.split(',')[0].trim()}`;
+  }
+
+  return request.nextUrl.origin;
 }
 
 /**
@@ -111,7 +141,18 @@ function formatIkasMutationError(errors: unknown): string {
   try {
     const list = Array.isArray(errors) ? errors : [];
     for (const err of list) {
-      const extensions = (err as { extensions?: Record<string, unknown> })?.extensions;
+      const item = err as {
+        message?: string;
+        property?: string;
+        constraints?: Record<string, string>;
+        extensions?: Record<string, unknown>;
+      };
+
+      if (item.constraints && typeof item.constraints === 'object') {
+        return Object.values(item.constraints).join('; ');
+      }
+
+      const extensions = item.extensions;
       const exception = extensions?.exception as
         | { response?: { message?: string | string[] } }
         | undefined;
@@ -119,11 +160,7 @@ function formatIkasMutationError(errors: unknown): string {
       if (Array.isArray(msg) && msg.length) return msg.join('; ');
       if (typeof msg === 'string' && msg) return msg;
 
-      const validation = extensions?.validationErrors;
-      if (validation) return JSON.stringify(validation);
-
-      const message = (err as { message?: string })?.message;
-      if (message) return message;
+      if (item.message) return item.message;
     }
     return JSON.stringify(errors);
   } catch {
@@ -136,7 +173,13 @@ function throwCreateScriptError(errors: unknown): never {
   console.error('createStorefrontJSScript failed', detail);
 
   const lower = detail.toLowerCase();
-  if (lower.includes('saleschannel') || lower.includes('sales channel') || lower.includes('storefront')) {
+  if (lower.includes('enclosed in <script') || lower.includes('validatescriptcontent')) {
+    throw new TrackingScriptError(
+      'Script içeriği <script> etiketleri içinde olmalı. Lütfen tekrar deneyin.',
+      500,
+    );
+  }
+  if (lower.includes('saleschannel') || lower.includes('sales channel')) {
     throw new TrackingScriptError(
       'Vitrin/satış kanalı doğrulanamadı. Partners panelinde uygulamaya satış kanalı bağlayın, sonra tekrar deneyin.',
       500,
