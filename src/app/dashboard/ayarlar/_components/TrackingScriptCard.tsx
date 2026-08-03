@@ -43,8 +43,16 @@ export function TrackingScriptCard() {
       }
       setErrorMessage('Kurulum durumu alınamadı');
       setPhase('error');
-    } catch {
-      setErrorMessage('Kurulum durumu alınamadı');
+    } catch (err: unknown) {
+      const axiosErr = err as {
+        response?: { data?: { error?: string | { message?: string } } };
+      };
+      const raw = axiosErr.response?.data?.error;
+      const message =
+        typeof raw === 'string'
+          ? raw
+          : raw?.message || 'Kurulum durumu alınamadı';
+      setErrorMessage(message);
       setPhase('error');
     }
   }, []);
@@ -86,7 +94,11 @@ export function TrackingScriptCard() {
     try {
       const res = await ApiRequests.trackingScript.install(token);
       if (res.status === 200 && res.data?.data) {
-        setSuccessMessage(res.data.data.message);
+        setSuccessMessage(
+          res.data.data.updated
+            ? 'Takip scripti güncellendi'
+            : 'Takip scripti kuruldu',
+        );
         setStatus({
           installed: true,
           scriptId: res.data.data.scriptId,
@@ -99,8 +111,16 @@ export function TrackingScriptCard() {
       }
       setErrorMessage('Script kurulumu başarısız');
       setPhase('error');
-    } catch {
-      setErrorMessage('Script kurulumu başarısız');
+    } catch (err: unknown) {
+      const axiosErr = err as {
+        response?: { data?: { error?: string | { message?: string } } };
+      };
+      const raw = axiosErr.response?.data?.error;
+      const message =
+        typeof raw === 'string'
+          ? raw
+          : raw?.message || 'Script kurulumu başarısız';
+      setErrorMessage(message);
       setPhase('error');
     }
   }, [token, phase]);

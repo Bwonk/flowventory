@@ -39,6 +39,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
     console.error('Tracking script install error:', error);
-    return NextResponse.json({ error: 'Failed to setup tracking script' }, { status: 500 });
+    const message =
+      error instanceof Error && error.message.includes('trackingScriptInstall')
+        ? 'Veritabanı istemcisi güncel değil. ikas app dev’i yeniden başlatın.'
+        : 'Takip scripti kurulamadı';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

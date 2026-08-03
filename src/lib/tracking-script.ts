@@ -43,12 +43,20 @@ export async function resolveStorefrontId(authToken: AuthToken): Promise<string>
 
   const authorizedAppResponse = await ikasClient.queries.getAuthorizedApp();
   if (!authorizedAppResponse.isSuccess || !authorizedAppResponse.data?.getAuthorizedApp) {
-    throw new TrackingScriptError('Failed to get authorized app', 500);
+    throw new TrackingScriptError(
+      'Yetkili uygulama bilgisi alınamadı. Uygulamayı yeniden yüklemeyi deneyin.',
+      500,
+    );
   }
 
-  const salesChannelId = authorizedAppResponse.data.getAuthorizedApp.salesChannelId;
+  const salesChannelId =
+    authorizedAppResponse.data.getAuthorizedApp.salesChannelId || authToken.salesChannelId || null;
+
   if (!salesChannelId) {
-    throw new TrackingScriptError('Sales channel not found', 404);
+    throw new TrackingScriptError(
+      'Satış kanalı bulunamadı. Uygulamayı App Store’dan kaldırıp yeniden kurun.',
+      404,
+    );
   }
 
   const storefrontResponse = await ikasClient.queries.listStorefront({
@@ -56,7 +64,10 @@ export async function resolveStorefrontId(authToken: AuthToken): Promise<string>
   });
 
   if (!storefrontResponse.isSuccess || !storefrontResponse.data?.listStorefront?.length) {
-    throw new TrackingScriptError('Storefront not found', 404);
+    throw new TrackingScriptError(
+      'Storefront bulunamadı. Mağazada aktif bir vitrin olduğundan emin olun.',
+      404,
+    );
   }
 
   return storefrontResponse.data.listStorefront[0].id;
@@ -115,6 +126,10 @@ export async function installOrUpdateTrackingScript(params: {
 
     if (!result.isSuccess || !result.data?.updateStorefrontJSScript) {
       // Kayıtlı id ikas'ta yoksa (silinmiş olabilir) create'e düş.
+      console.warn('updateStorefrontJSScript failed, falling back to create', {
+        errors: result.errors,
+        scriptId: existing.scriptId,
+      });
       const created = await ikasClient.mutations.createStorefrontJSScript({
         input: {
           contentType: StorefrontJSScriptContentTypeEnum.SCRIPT,
@@ -125,11 +140,17 @@ export async function installOrUpdateTrackingScript(params: {
         },
       });
 
-      if (!created.isSuccess || !created.data?.createStorefrontJSScript) {
-        throw new TrackingScriptError('Failed to save tracking script', 500);
+      if (!created.isSuccess || !created.data?.createStorefrontJSScript?.id) {
+        console.error('createStorefrontJSScript failed after update miss', {
+          errors: created.errors,
+        });
+        throw new TrackingScriptError(
+          'Takip scripti kaydedilemedi. Vitrin JS script izninizi kontrol edin.',
+          500,
+        );
       }
 
-      scriptId = created.data.createStorefrontJSScript.id!;
+      scriptId = created.data.createStorefrontJSScript.id;
       updated = false;
     } else {
       scriptId = result.data.updateStorefrontJSScript.id!;
@@ -146,11 +167,15 @@ export async function installOrUpdateTrackingScript(params: {
       },
     });
 
-    if (!created.isSuccess || !created.data?.createStorefrontJSScript) {
-      throw new TrackingScriptError('Failed to save tracking script', 500);
+    if (!created.isSuccess || !created.data?.createStorefrontJSScript?.id) {
+      console.error('createStorefrontJSScript failed', { errors: created.errors });
+      throw new TrackingScriptError(
+        'Takip scripti kaydedilemedi. Vitrin JS script izninizi kontrol edin.',
+        500,
+      );
     }
 
-    scriptId = created.data.createStorefrontJSScript.id!;
+    scriptId = created.data.createStorefrontJSScript.id;
     updated = false;
   }
 

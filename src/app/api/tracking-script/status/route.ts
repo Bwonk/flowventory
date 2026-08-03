@@ -28,6 +28,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ data });
   } catch (error) {
     console.error('Tracking script status error:', error);
-    return NextResponse.json({ error: 'Failed to fetch tracking script status' }, { status: 500 });
+    const message =
+      error instanceof TypeError && String(error).includes('findUnique')
+        ? 'Veritabanı istemcisi güncel değil. ikas app dev’i yeniden başlatın.'
+        : 'Kurulum durumu alınamadı';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
