@@ -86,16 +86,24 @@ export const ProductDetailContent: React.FC<{
     return map;
   }, [viewDetail]);
 
-  const dailySeries = useMemo<DaySeriesPoint[]>(
-    () =>
-      dailyRevenue.map(d => ({
-        date: d.date,
-        revenue: Math.round(d.revenue * share * 100) / 100,
-        units: sumDaily > 0 ? soldCount * (d.revenue / sumDaily) : 0,
-        views: viewMap.get(d.date) ?? 0,
-      })),
-    [dailyRevenue, share, soldCount, sumDaily, viewMap],
-  );
+  // Dashboard ile aynı: view tarihleri + revenue tarihlerini birleştir.
+  // Sadece dailyRevenue kullanılırsa, o gün satış yokken view chart'ta kaybolur.
+  const dailySeries = useMemo<DaySeriesPoint[]>(() => {
+    const revMap = new Map(dailyRevenue.map(d => [d.date, d.revenue]));
+    const allDates = new Set<string>([...viewMap.keys(), ...revMap.keys()]);
+
+    return Array.from(allDates)
+      .sort()
+      .map(date => {
+        const revenue = revMap.get(date) ?? 0;
+        return {
+          date,
+          revenue: Math.round(revenue * share * 100) / 100,
+          units: sumDaily > 0 ? soldCount * (revenue / sumDaily) : 0,
+          views: viewMap.get(date) ?? 0,
+        };
+      });
+  }, [dailyRevenue, share, soldCount, sumDaily, viewMap]);
 
   const productTrendData: TrendDataPoint[] = useMemo(
     () => dailySeries.map(d => ({
@@ -124,9 +132,9 @@ export const ProductDetailContent: React.FC<{
 
   const fetchHourlyViews = useCallback(async (date: string) => {
     if (!token) return [];
-    const res = await ApiRequests.productView.getHourlyViewStats(token, date);
+    const res = await ApiRequests.productView.getHourlyViewStats(token, date, product.id);
     return res.data?.data?.hourlyViews ?? [];
-  }, [token]);
+  }, [token, product.id]);
 
   const handleVariantKeyDown = useCallback((e: React.KeyboardEvent) => {
     const container = e.currentTarget;

@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useEffect, useCallback, useState } from "react";
-import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { BrandLogo } from "@/components/shared/BrandLogo";
 
 /**
  * AuthorizeStorePage
@@ -42,8 +42,9 @@ const AuthorizeStorePage: React.FC = () => {
   return (
     <main className="min-h-[100vh] flex flex-col items-center justify-center p-6">
       <div className="flex w-full max-w-md flex-col items-center gap-8">
-        <div className="flex items-center justify-center">
-          <Image src="/logo.svg" alt="ikas Logo" width={192} height={48} priority className="h-auto w-[12rem] object-contain" />
+        <div className="flex flex-col items-center gap-3">
+          <BrandLogo variant="mark" priority className="h-20 w-20 rounded-2xl" />
+          <p className="text-[15px] font-semibold tracking-tight text-primary">Flowventory</p>
         </div>
         <Card className="w-full">
           <CardHeader>

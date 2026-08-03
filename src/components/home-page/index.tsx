@@ -25,7 +25,7 @@ const HomePage: React.FC<HomePageProps> = ({ token, products = [], analytics, vi
 
   if (!token) {
     return (
-      <div className="min-h-screen bg-background font-sans">
+      <div className="font-sans">
         <div className="mx-auto flex max-w-7xl items-center justify-center px-4 py-32 sm:px-6 lg:px-8">
           <div className="flex max-w-md flex-col items-center gap-4 text-center">
             <MonoLabel>Flowventory</MonoLabel>
@@ -44,7 +44,7 @@ const HomePage: React.FC<HomePageProps> = ({ token, products = [], analytics, vi
 
 
   return (
-    <div className="min-h-screen bg-background font-sans text-foreground">
+    <div className="font-sans text-foreground">
       <div className="mx-auto max-w-7xl px-6 py-8">
         {/* Başlık */}
         <header className="mb-6 flex items-center justify-between">

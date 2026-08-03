@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Package, Settings, Store, Zap, type LucideIcon } from 'lucide-react';
+import { LayoutDashboard, Package, Settings, Store, type LucideIcon } from 'lucide-react';
+import { BrandLogo } from '@/components/shared/BrandLogo';
 
 interface SidebarProps {
   storeName: string;
@@ -37,10 +38,16 @@ export default function Sidebar({ storeName }: SidebarProps) {
 
   return (
     <aside className="sticky top-0 flex h-screen w-16 shrink-0 flex-col border-r border-border bg-background md:w-[220px]">
-      {/* Logo alanı */}
-      <div className="flex h-16 items-center gap-2 border-b border-border px-4 md:px-5">
-        <Zap className="h-5 w-5 shrink-0 text-primary" />
-        <span className="hidden text-[16px] font-semibold tracking-tight text-primary md:inline">Flowventory</span>
+      {/* Logo alanı — PNG'de fazla boşluk var; object-cover ile kırpıp büyütüyoruz */}
+      <div className="flex h-20 items-center overflow-hidden border-b border-border px-1 md:px-2">
+        <Link href="/dashboard" aria-label="Flowventory" className="flex w-full min-w-0 items-center overflow-hidden">
+          <BrandLogo variant="mark" priority className="h-12 w-12 md:hidden" />
+          <BrandLogo
+            variant="full"
+            priority
+            className="hidden h-14 w-full object-cover md:block"
+          />
+        </Link>
       </div>
 
       {/* Navigasyon öğeleri */}

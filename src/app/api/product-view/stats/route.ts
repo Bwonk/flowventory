@@ -35,10 +35,15 @@ export async function GET(request: NextRequest) {
 
     if (searchParams.get('hourly') === 'true') {
       const date = searchParams.get('date') ?? new Date().toISOString().split('T')[0];
+      const hourlyProductId = searchParams.get('productId');
 
       const rows = await prisma.productViewHourly.groupBy({
         by: ['hour'],
-        where: { merchantId, date },
+        where: {
+          merchantId,
+          date,
+          ...(hourlyProductId ? { productId: hourlyProductId } : {}),
+        },
         _sum: { viewCount: true },
         orderBy: { hour: 'asc' },
       });

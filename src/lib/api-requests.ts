@@ -55,11 +55,15 @@ export const ApiRequests = {
         token,
         data: { daily: 'true' },
       }),
-    getHourlyViewStats: (token: string, date?: string) =>
+    getHourlyViewStats: (token: string, date?: string, productId?: string) =>
       makeGetRequest<HourlyViewStatsResponse>({
         url: '/api/product-view/stats',
         token,
-        data: { hourly: 'true', ...(date ? { date } : {}) },
+        data: {
+          hourly: 'true',
+          ...(date ? { date } : {}),
+          ...(productId ? { productId } : {}),
+        },
       }),
   },
   trackingScript: {
