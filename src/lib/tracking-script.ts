@@ -4,6 +4,7 @@ import { getIkas } from '@/helpers/api-helpers';
 import { StorefrontJSScriptContentTypeEnum } from '@/lib/ikas-client/generated/graphql';
 import { prisma } from '@/lib/prisma';
 import { AuthToken } from '@/models/auth-token';
+import { AuthTokenManager } from '@/models/auth-token/manager';
 
 export const TRACKING_SCRIPT_NAME = 'flowventory-product-view-tracking';
 
@@ -36,41 +37,58 @@ export function buildTrackerScript(apiUrl: string, merchantId: string): string {
 }
 
 /**
- * Authorized app → sales channel → ilk storefront id.
+ * Storefront id çözümlemesi.
+ * getAuthorizedApp bazen salesChannelId vermez; o durumda listStorefront
+ * filtresiz çağrılır ve ilk uygun vitrin seçilir.
  */
 export async function resolveStorefrontId(authToken: AuthToken): Promise<string> {
   const ikasClient = getIkas(authToken);
 
-  const authorizedAppResponse = await ikasClient.queries.getAuthorizedApp();
-  if (!authorizedAppResponse.isSuccess || !authorizedAppResponse.data?.getAuthorizedApp) {
-    throw new TrackingScriptError(
-      'Yetkili uygulama bilgisi alınamadı. Uygulamayı yeniden yüklemeyi deneyin.',
-      500,
-    );
+  let salesChannelId: string | null =
+    authToken.salesChannelId || null;
+
+  try {
+    const authorizedAppResponse = await ikasClient.queries.getAuthorizedApp();
+    if (authorizedAppResponse.isSuccess && authorizedAppResponse.data?.getAuthorizedApp) {
+      salesChannelId =
+        authorizedAppResponse.data.getAuthorizedApp.salesChannelId || salesChannelId;
+    }
+  } catch (error) {
+    console.warn('getAuthorizedApp failed while resolving storefront', error);
   }
 
-  const salesChannelId =
-    authorizedAppResponse.data.getAuthorizedApp.salesChannelId || authToken.salesChannelId || null;
+  const storefrontResponse = salesChannelId
+    ? await ikasClient.queries.listStorefront({ salesChannelId: { eq: salesChannelId } })
+    : await ikasClient.queries.listStorefront({});
 
-  if (!salesChannelId) {
-    throw new TrackingScriptError(
-      'Satış kanalı bulunamadı. Uygulamayı App Store’dan kaldırıp yeniden kurun.',
-      404,
-    );
-  }
+  const storefronts = storefrontResponse.data?.listStorefront ?? [];
 
-  const storefrontResponse = await ikasClient.queries.listStorefront({
-    salesChannelId: { eq: salesChannelId },
-  });
-
-  if (!storefrontResponse.isSuccess || !storefrontResponse.data?.listStorefront?.length) {
+  if (!storefrontResponse.isSuccess || storefronts.length === 0) {
     throw new TrackingScriptError(
       'Storefront bulunamadı. Mağazada aktif bir vitrin olduğundan emin olun.',
       404,
     );
   }
 
-  return storefrontResponse.data.listStorefront[0].id;
+  // STOREFRONT tipini tercih et; yoksa ilk kaydı al.
+  const preferred =
+    storefronts.find((sf) => String(sf.type).toUpperCase() === 'STOREFRONT') ?? storefronts[0];
+
+  const resolvedSalesChannelId = preferred.salesChannelId || salesChannelId;
+  if (resolvedSalesChannelId && resolvedSalesChannelId !== authToken.salesChannelId) {
+    // Sonraki kurulumlar için AuthToken'a yaz.
+    try {
+      await AuthTokenManager.put({
+        ...authToken,
+        salesChannelId: resolvedSalesChannelId,
+      });
+      authToken.salesChannelId = resolvedSalesChannelId;
+    } catch (error) {
+      console.warn('Failed to backfill salesChannelId on AuthToken', error);
+    }
+  }
+
+  return preferred.id;
 }
 
 export async function getTrackingScriptStatus(merchantId: string): Promise<TrackingScriptStatus> {
