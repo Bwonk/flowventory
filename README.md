@@ -7,12 +7,10 @@ Modern Next.js 15 App Router starter app for building ikas Admin apps with OAuth
 - **Next.js 15 + App Router** with React 19 and TypeScript
 - **OAuth for ikas**: end-to-end flow (authorize → callback → session/JWT)
 - **Admin GraphQL client**: `@ikas/admin-api-client` with codegen
-- **App Actions**: API and IFRAME actions for order management
 - **Prisma**: local dev DB to store tokens (via `AuthTokenManager`)
 - **Tailwind CSS v4 + shadcn/ui** components
 - **Iron Session** server-side session management
 - **Frontend ↔ Backend bridge** via typed API helpers
-- **Internationalization**: Multi-language support (EN/TR)
 
 ## 📁 Project Structure
 
@@ -21,20 +19,13 @@ src/
 ├─ app/
 │  ├─ api/
 │  │  ├─ ikas/
-│  │  │  ├─ actions/
-│  │  │  │  ├─ order-detail/route.ts    # API action: single order
-│  │  │  │  └─ order-list/route.ts      # API action: multiple orders
-│  │  │  ├─ get-merchant/route.ts       # Example secure API route (JWT required)
-│  │  │  └─ get-order/route.ts          # Backend API for iframe order fetching
+│  │  │  └─ get-merchant/route.ts       # Example secure API route (JWT required)
 │  │  └─ oauth/
 │  │     ├─ authorize/ikas/route.ts     # Starts OAuth authorization (GET)
 │  │     └─ callback/ikas/route.ts      # Handles OAuth callback, saves token
 │  ├─ authorize-store/page.tsx           # Manual store authorization page
 │  ├─ callback/page.tsx                  # Client handler for OAuth callback redirect
 │  ├─ dashboard/page.tsx                 # Authenticated page using JWT + API bridge
-│  ├─ ikas/actions/
-│  │  ├─ order-detail/page.tsx          # IFRAME action: single order
-│  │  └─ order-list/page.tsx            # IFRAME action: multiple orders
 │  ├─ page.tsx                           # Entry, decides auth flow
 │  └─ hooks/use-base-home-page.ts        # Auth/bootstrap logic
 │
@@ -54,7 +45,6 @@ src/
 ├─ lib/
 │  ├─ api-requests.ts                    # Frontend → backend bridge (axios)
 │  ├─ auth-helpers.ts                    # getUserFromRequest() (JWT)
-│  ├─ i18n.ts                            # Internationalization (EN/TR)
 │  ├─ ikas-client/
 │  │  ├─ graphql-requests.ts             # gql documents (queries/mutations)
 │  │  ├─ codegen.ts                      # GraphQL Codegen config
@@ -150,142 +140,6 @@ The OAuth callback endpoint requires a `signature` query parameter to validate t
 - **Validation**: `TokenHelpers.validateCodeSignature(code, signature, clientSecret)`
 - **State Parameter**: Optional but recommended for additional CSRF protection
 
-## 🎯 App Actions
-
-This starter includes two types of **ikas App Actions** for order management:
-
-### Action Types
-
-1. **API Actions** — Direct server-to-server calls with signature validation
-2. **IFRAME Actions** — Embedded UI pages that fetch data via backend APIs
-
-### Order Detail Action (Single Order)
-
-Fetches and displays comprehensive details for a single order.
-
-**API Endpoint:** `POST /api/ikas/actions/order-detail`
-
-```json
-{
-  "signature": "hmac-sha256-signature",
-  "authorizedAppId": "app-id",
-  "merchantId": "merchant-id",
-  "data": "{\"actionRunId\":\"uuid\",\"idList\":[\"order-id\"],\"userLocale\":\"en\"}"
-}
-```
-
-**IFRAME Page:** `/ikas/actions/order-detail?actionRunId=uuid&idList=order-id&userLocale=en`
-
-Shows:
-- Order number and date
-- Order status (order, payment, package)
-- Total amount
-- Customer information
-- Billing/shipping addresses
-- Line items with quantities and prices
-
-### Order List Action (Multiple Orders)
-
-Fetches and displays multiple orders in a single request/page.
-
-**API Endpoint:** `POST /api/ikas/actions/order-list`
-
-```json
-{
-  "signature": "hmac-sha256-signature",
-  "authorizedAppId": "app-id",
-  "merchantId": "merchant-id",
-  "data": "{\"actionRunId\":\"uuid\",\"idList\":[\"order-id-1\",\"order-id-2\",\"order-id-3\"],\"userLocale\":\"en\"}"
-}
-```
-
-**IFRAME Page:** `/ikas/actions/order-list?actionRunId=uuid&idList=order-id-1,order-id-2,order-id-3&userLocale=en`
-
-Shows:
-- Summary of all requested orders
-- Card-based list layout
-- Order status indicators
-- Customer information
-- Total amounts
-- Success/failure counts
-
-### Signature Validation (API Actions)
-
-All API actions validate the request signature using HMAC-SHA256:
-
-```ts
-const signature = crypto
-  .createHmac('sha256', appSecret)
-  .update(dataString, 'utf8')
-  .digest('hex');
-```
-
-The `data` field contains JSON with `actionRunId`, `idList`, and optional `userLocale`.
-
-### Localization Support
-
-Both actions support multiple languages via the `userLocale` parameter:
-
-- **Supported locales:** `en` (English), `tr` (Turkish)
-- **Default:** `en`
-- **Implementation:** Centralized in `src/lib/i18n.ts`
-
-All UI text, error messages, and API responses are localized.
-
-### File Structure
-
-```
-src/app/
-├─ api/ikas/
-│  ├─ actions/
-│  │  ├─ order-detail/route.ts     # API: single order
-│  │  └─ order-list/route.ts       # API: multiple orders
-│  └─ get-order/route.ts            # Backend API for iframe pages
-│
-└─ ikas/actions/
-   ├─ order-detail/page.tsx         # IFRAME: single order
-   └─ order-list/page.tsx           # IFRAME: multiple orders
-```
-
-### Testing Actions
-
-**API Method (using curl):**
-
-```bash
-curl -X POST http://localhost:3000/api/ikas/actions/order-detail \
-  -H "Content-Type: application/json" \
-  -d '{
-    "signature": "your-signature",
-    "authorizedAppId": "your-app-id",
-    "merchantId": "your-merchant-id",
-    "data": "{\"actionRunId\":\"test-123\",\"idList\":[\"order-id\"],\"userLocale\":\"en\"}"
-  }'
-```
-
-**IFRAME Method:**
-
-Open in browser (must be embedded in ikas Admin for full functionality):
-
-```
-http://localhost:3000/ikas/actions/order-detail?actionRunId=test-123&idList=order-id&userLocale=en
-```
-
-### Key Features
-
-- ✅ Secure signature validation (API)
-- ✅ JWT token authentication (IFRAME)
-- ✅ Parallel order fetching (Order List)
-- ✅ Comprehensive error handling
-- ✅ Audit logging
-- ✅ Localization (EN/TR)
-- ✅ Responsive UI design
-- ✅ Type-safe GraphQL integration
-- ✅ Graceful partial failure handling
-
-**📚 Documentation:**
-- **[App Actions Guide](./APP_ACTIONS_GUIDE.md)** — Complete guide for implementing app actions
-- **[Action API Reference](./ACTION_ENDPOINT.md)** — Detailed API specifications and examples
-
 ## 🔑 Auth and API Calls
 
 - Browser obtains JWT via AppBridge or OAuth callback and stores it in `sessionStorage`.
@@ -296,7 +150,6 @@ Frontend bridge (`src/lib/api-requests.ts`):
 
 ```ts
 ApiRequests.ikas.getMerchant(token) // -> GET /api/ikas/get-merchant
-ApiRequests.ikas.getOrder(token, orderId) // -> GET /api/ikas/get-order
 ```
 
 ## 🧠 GraphQL Workflow (ikas Admin)
