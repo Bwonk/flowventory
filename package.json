@@ -16,6 +16,8 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
+    "views:export": "tsx prisma/views-transfer.ts export",
+    "views:import": "tsx prisma/views-transfer.ts import",
     "apply:ai-rules": "npx @intellectronica/ruler apply"
   },
   "packageManager": "pnpm@10.4.1",
