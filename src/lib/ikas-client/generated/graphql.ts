@@ -1,15 +1,11 @@
 import { BaseGraphQLAPIClient, BaseGraphQLAPIClientOptions, APIResult } from '@ikas/admin-api-client';
 
-export type OrderStatusEnum = string;
-export type OrderPaymentStatusEnum = string;
-export type OrderPackageStatusEnum = string;
-export type StorefrontTypeEnum = string;
-
 export enum SalesChannelTypeEnum {
   ADMIN = "ADMIN",
   APP = "APP",
   B2B_STOREFRONT = "B2B_STOREFRONT",
   FACEBOOK = "FACEBOOK",
+  FIRSAT = "FIRSAT",
   GOOGLE = "GOOGLE",
   POS = "POS",
   STOREFRONT = "STOREFRONT",
@@ -41,6 +37,11 @@ export type DateFilterInput = {
   nin?: Array<number>;
 }
 
+export type PaginationInput = {
+  limit?: number;
+  page?: number;
+}
+
 export type SaveVariantStockInput = {
   deleted?: boolean;
   productId: string;
@@ -68,6 +69,12 @@ export type UpdateStorefrontJSScriptInput = {
   name?: string;
   scriptContent?: string;
   storefrontId?: string;
+}
+
+export type WebhookInput = {
+  endpoint: string;
+  salesChannelIds?: Array<string>;
+  scopes: Array<string>;
 }
 
 export type GetMerchantQueryVariables = {}
@@ -105,82 +112,16 @@ export interface GetSalesChannelQuery {
   getSalesChannel: GetSalesChannelQueryData;
 }
 
-export type ListOrderQueryVariables = {
+export type ListProductQueryVariables = {
+  pagination?: PaginationInput;
   id?: StringFilterInput;
 }
 
-export type ListOrderQueryData = {
-  data: Array<{
-  id: string;
-  orderNumber?: string;
-  orderedAt?: number;
-  status: OrderStatusEnum;
-  orderPaymentStatus?: OrderPaymentStatusEnum;
-  orderPackageStatus?: OrderPackageStatusEnum;
-  totalFinalPrice: number;
-  currencyCode: string;
-  customer?: {
-  id?: string;
-  firstName?: string;
-  lastName?: string;
-  email?: string;
-  phone?: string;
-  fullName?: string;
-};
-  billingAddress?: {
-  firstName: string;
-  lastName: string;
-  phone?: string;
-  addressLine1: string;
-  addressLine2?: string;
-  city: {
-  name: string;
-};
-  state?: {
-  name?: string;
-};
-  country: {
-  name: string;
-};
-  postalCode?: string;
-};
-  shippingAddress?: {
-  firstName: string;
-  lastName: string;
-  phone?: string;
-  addressLine1: string;
-  addressLine2?: string;
-  city: {
-  name: string;
-};
-  state?: {
-  name?: string;
-};
-  country: {
-  name: string;
-};
-  postalCode?: string;
-};
-  orderLineItems: Array<{
-  id: string;
-  quantity: number;
-  finalPrice?: number;
-  variant: {
-  id?: string;
-  name: string;
-  sku?: string;
-};
-}>;
-}>;
-}
-
-export interface ListOrderQuery {
-  listOrder: ListOrderQueryData;
-}
-
-export type ListProductQueryVariables = {}
-
 export type ListProductQueryData = {
+  count: number;
+  hasNext: boolean;
+  page: number;
+  limit: number;
   data: Array<{
   id: string;
   name: string;
@@ -216,6 +157,8 @@ export type ListProductQueryData = {
 }>;
   prices: Array<{
   sellPrice: number;
+  buyPrice?: number;
+  currencyCode?: string;
 }>;
 }>;
 }>;
@@ -251,7 +194,6 @@ export type ListStorefrontQueryVariables = {
 export type ListStorefrontQueryData = Array<{
   id: string;
   name: string;
-  type: StorefrontTypeEnum;
   salesChannelId: string;
 }>
 
@@ -295,15 +237,33 @@ export interface UpdateStorefrontJSScriptMutation {
   updateStorefrontJSScript: UpdateStorefrontJSScriptMutationData;
 }
 
+export type SaveWebhooksMutationVariables = {
+  input: WebhookInput;
+}
+
+export type SaveWebhooksMutationData = Array<{
+  id: string;
+  scope: string;
+  endpoint: string;
+}>
+
+export interface SaveWebhooksMutation {
+  saveWebhooks: SaveWebhooksMutationData;
+}
+
 export type ListOrderForAnalyticsQueryVariables = {
   orderedAt?: DateFilterInput;
+  pagination?: PaginationInput;
 }
 
 export type ListOrderForAnalyticsQueryData = {
+  count: number;
+  hasNext: boolean;
+  page: number;
+  limit: number;
   data: Array<{
   id: string;
   orderedAt?: number;
-  status: OrderStatusEnum;
   totalFinalPrice: number;
   currencyCode: string;
   orderLineItems: Array<{
@@ -366,82 +326,14 @@ export class GeneratedQueries {
     return this.client.query<Partial<GetSalesChannelQuery>>({ query });
   }
 
-  async listOrder(variables: ListOrderQueryVariables): Promise<APIResult<Partial<ListOrderQuery>>> {
+  async listProduct(variables: ListProductQueryVariables): Promise<APIResult<Partial<ListProductQuery>>> {
     const query = `
-  query listOrder($id: StringFilterInput) {
-    listOrder(id: $id) {
-      data {
-        id
-        orderNumber
-        orderedAt
-        status
-        orderPaymentStatus
-        orderPackageStatus
-        totalFinalPrice
-        currencyCode
-        customer {
-          id
-          firstName
-          lastName
-          email
-          phone
-          fullName
-        }
-        billingAddress {
-          firstName
-          lastName
-          phone
-          addressLine1
-          addressLine2
-          city {
-            name
-          }
-          state {
-            name
-          }
-          country {
-            name
-          }
-          postalCode
-        }
-        shippingAddress {
-          firstName
-          lastName
-          phone
-          addressLine1
-          addressLine2
-          city {
-            name
-          }
-          state {
-            name
-          }
-          country {
-            name
-          }
-          postalCode
-        }
-        orderLineItems {
-          id
-          quantity
-          finalPrice
-          variant {
-            id
-            name
-            sku
-          }
-        }
-      }
-    }
-  }
-`;
-    return this.client.query<Partial<ListOrderQuery>>({ query, variables });
-  }
-
-  async listProduct(): Promise<APIResult<Partial<ListProductQuery>>> {
-    const query = `
-  query listProduct {
-    listProduct {
+  query listProduct($pagination: PaginationInput, $id: StringFilterInput) {
+    listProduct(pagination: $pagination, id: $id) {
+      count
+      hasNext
+      page
+      limit
       data {
         id
         name
@@ -477,13 +369,15 @@ export class GeneratedQueries {
           }
           prices {
             sellPrice
+            buyPrice
+            currencyCode
           }
         }
       }
     }
   }
 `;
-    return this.client.query<Partial<ListProductQuery>>({ query });
+    return this.client.query<Partial<ListProductQuery>>({ query, variables });
   }
 
   async listStorefront(variables: ListStorefrontQueryVariables): Promise<APIResult<Partial<ListStorefrontQuery>>> {
@@ -492,7 +386,6 @@ export class GeneratedQueries {
     listStorefront(salesChannelId: $salesChannelId) {
       id
       name
-      type
       salesChannelId
     }
   }
@@ -502,12 +395,15 @@ export class GeneratedQueries {
 
   async listOrderForAnalytics(variables: ListOrderForAnalyticsQueryVariables): Promise<APIResult<Partial<ListOrderForAnalyticsQuery>>> {
     const query = `
-  query listOrderForAnalytics($orderedAt: DateFilterInput) {
-    listOrder(orderedAt: $orderedAt) {
+  query listOrderForAnalytics($orderedAt: DateFilterInput, $pagination: PaginationInput) {
+    listOrder(orderedAt: $orderedAt, pagination: $pagination) {
+      count
+      hasNext
+      page
+      limit
       data {
         id
         orderedAt
-        status
         totalFinalPrice
         currencyCode
         orderLineItems {
@@ -583,6 +479,19 @@ export class GeneratedMutations {
   }
 `;
     return this.client.mutate<Partial<UpdateStorefrontJSScriptMutation>>({ mutation, variables });
+  }
+
+  async saveWebhooks(variables: SaveWebhooksMutationVariables): Promise<APIResult<Partial<SaveWebhooksMutation>>> {
+    const mutation = `
+  mutation saveWebhooks($input: WebhookInput!) {
+    saveWebhooks(input: $input) {
+      id
+      scope
+      endpoint
+    }
+  }
+`;
+    return this.client.mutate<Partial<SaveWebhooksMutation>>({ mutation, variables });
   }
 }
 

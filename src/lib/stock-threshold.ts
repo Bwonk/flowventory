@@ -1,10 +1,18 @@
 import { useCallback, useEffect, useState } from 'react';
+import { TokenHelpers } from '@/helpers/token-helpers';
+import { ApiRequests } from '@/lib/api-requests';
 
 /**
  * Stok eşiği ayarı (mağaza geneli, kullanıcı tarafından ayarlanır).
  * - `min`: kritik eşiği — stok 1..min arası "Kritik" sayılır.
  * - `max`: az kalan eşiği — stok min+1..max arası "Az Kalan" sayılır.
  * Stok 0 ise "Tükendi", max üzeri ise "Sağlıklı".
+ *
+ * Kaynak hiyerarşisi:
+ * 1. Sunucu (MerchantSettings tablosu) — tek doğru kaynak.
+ * 2. localStorage — hızlı ilk boyama + sekmeler arası senkron cache'i.
+ * Sunucudan gelen değer localStorage'a yazılır; değişiklik önce localStorage'a
+ * (anında UI) sonra sunucuya (fire-and-forget) gider.
  */
 export interface StockThreshold {
   min: number;
@@ -46,6 +54,13 @@ export function readStockThreshold(): StockThreshold {
  * event ile senkronize olur. Hydration uyuşmazlığını önlemek için ilk
  * render'da her zaman varsayılan değerle başlar, sonra effect'te okur.
  */
+/** Eşiği localStorage'a yazıp aynı sekmedeki dinleyicilere haber verir. */
+function writeLocalThreshold(next: StockThreshold) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  window.dispatchEvent(new Event(CHANGE_EVENT));
+}
+
 export function useStockThreshold(): {
   threshold: StockThreshold;
   setThreshold: (value: Partial<StockThreshold>) => void;
@@ -57,7 +72,32 @@ export function useStockThreshold(): {
     const sync = () => setState(readStockThreshold());
     window.addEventListener(CHANGE_EVENT, sync);
     window.addEventListener('storage', sync);
+
+    // Sunucudaki değeri çek — varsa cache'i ve state'i güncelle.
+    let cancelled = false;
+    (async () => {
+      try {
+        const token = await TokenHelpers.getTokenForIframeApp();
+        if (!token || cancelled) return;
+        const res = await ApiRequests.merchantSettings.get(token);
+        const settings = res.data?.data;
+        if (!settings || cancelled) return;
+        const server = normalizeThreshold({
+          min: settings.criticalThreshold,
+          max: settings.warningThreshold,
+        });
+        const local = readStockThreshold();
+        if (server.min !== local.min || server.max !== local.max) {
+          writeLocalThreshold(server);
+          setState(server);
+        }
+      } catch {
+        // Sunucuya ulaşılamazsa cache/varsayılan ile devam.
+      }
+    })();
+
     return () => {
+      cancelled = true;
       window.removeEventListener(CHANGE_EVENT, sync);
       window.removeEventListener('storage', sync);
     };
@@ -66,10 +106,22 @@ export function useStockThreshold(): {
   const setThreshold = useCallback((value: Partial<StockThreshold>) => {
     setState(prev => {
       const next = normalizeThreshold({ ...prev, ...value });
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-        window.dispatchEvent(new Event(CHANGE_EVENT));
-      }
+      writeLocalThreshold(next);
+
+      // Sunucuya kalıcı yaz (fire-and-forget; hata UI'ı bloklamaz).
+      void (async () => {
+        try {
+          const token = await TokenHelpers.getTokenForIframeApp();
+          if (!token) return;
+          await ApiRequests.merchantSettings.update(token, {
+            criticalThreshold: next.min,
+            warningThreshold: next.max,
+          });
+        } catch (error) {
+          console.error('Stok eşiği sunucuya kaydedilemedi:', error);
+        }
+      })();
+
       return next;
     });
   }, []);

@@ -3,6 +3,7 @@ import { join } from 'path';
 import { getIkas } from '@/helpers/api-helpers';
 import { StorefrontJSScriptContentTypeEnum } from '@/lib/ikas-client/generated/graphql';
 import { prisma } from '@/lib/prisma';
+import { buildTrackToken } from '@/lib/track-token';
 import { AuthToken } from '@/models/auth-token';
 import { AuthTokenManager } from '@/models/auth-token/manager';
 
@@ -26,7 +27,7 @@ export type TrackingScriptInstallResult = {
 };
 
 /**
- * tracker.js'i okuyup API_URL + MERCHANT_ID placeholder'larını doldurur.
+ * tracker.js'i okuyup API_URL + MERCHANT_ID + TRACK_TOKEN placeholder'larını doldurur.
  * ikas ValidateScriptContent: içerik <script> tag'leri içinde olmalı.
  */
 export function buildTrackerScript(apiUrl: string, merchantId: string): string {
@@ -34,7 +35,8 @@ export function buildTrackerScript(apiUrl: string, merchantId: string): string {
   const rawScript = readFileSync(trackerPath, 'utf-8');
   const body = rawScript
     .replace(/var API_URL = '.*?'/, `var API_URL = '${apiUrl}'`)
-    .replace(/var MERCHANT_ID = '.*?'/, `var MERCHANT_ID = '${merchantId}'`);
+    .replace(/var MERCHANT_ID = '.*?'/, `var MERCHANT_ID = '${merchantId}'`)
+    .replace(/var TRACK_TOKEN = '.*?'/, `var TRACK_TOKEN = '${buildTrackToken(merchantId)}'`);
 
   const trimmed = body.trim();
   if (/^<script[\s>]/i.test(trimmed)) {
@@ -118,8 +120,9 @@ export async function resolveStorefrontId(authToken: AuthToken): Promise<string>
     );
   }
 
-  const preferred =
-    storefronts.find((sf) => String(sf.type).toUpperCase() === 'STOREFRONT') ?? storefronts[0];
+  // Storefront.type şemadan kaldırıldı; salesChannelId filtresi zaten daraltıyor,
+  // ilk sonucu kullanıyoruz.
+  const preferred = storefronts[0];
 
   const resolvedSalesChannelId = preferred.salesChannelId || salesChannelId;
   if (resolvedSalesChannelId && resolvedSalesChannelId !== authToken.salesChannelId) {

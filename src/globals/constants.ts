@@ -14,5 +14,7 @@ export type ApiResponseType<T> =
   | {
       data?: T;
       error?: ApiErrorResponse;
+      /** Endpoint sentetik (mock) veri döndürdüyse işaretlenir — UI banner gösterir. */
+      meta?: { mocked?: boolean };
     }
   | undefined;

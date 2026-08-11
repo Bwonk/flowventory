@@ -29,78 +29,13 @@ export const GET_SALES_CHANNEL = gql`
   }
 `;
 
-export const LIST_ORDER = gql`
-  query listOrder($id: StringFilterInput) {
-    listOrder(id: $id) {
-      data {
-        id
-        orderNumber
-        orderedAt
-        status
-        orderPaymentStatus
-        orderPackageStatus
-        totalFinalPrice
-        currencyCode
-        customer {
-          id
-          firstName
-          lastName
-          email
-          phone
-          fullName
-        }
-        billingAddress {
-          firstName
-          lastName
-          phone
-          addressLine1
-          addressLine2
-          city {
-            name
-          }
-          state {
-            name
-          }
-          country {
-            name
-          }
-          postalCode
-        }
-        shippingAddress {
-          firstName
-          lastName
-          phone
-          addressLine1
-          addressLine2
-          city {
-            name
-          }
-          state {
-            name
-          }
-          country {
-            name
-          }
-          postalCode
-        }
-        orderLineItems {
-          id
-          quantity
-          finalPrice
-          variant {
-            id
-            name
-            sku
-          }
-        }
-      }
-    }
-  }
-`;
-
 export const LIST_PRODUCT = gql`
-  query listProduct {
-    listProduct {
+  query listProduct($pagination: PaginationInput, $id: StringFilterInput) {
+    listProduct(pagination: $pagination, id: $id) {
+      count
+      hasNext
+      page
+      limit
       data {
         id
         name
@@ -136,6 +71,8 @@ export const LIST_PRODUCT = gql`
           }
           prices {
             sellPrice
+            buyPrice
+            currencyCode
           }
         }
       }
@@ -163,7 +100,6 @@ export const LIST_STOREFRONT = gql`
     listStorefront(salesChannelId: $salesChannelId) {
       id
       name
-      type
       salesChannelId
     }
   }
@@ -197,13 +133,26 @@ export const UPDATE_STOREFRONT_JS_SCRIPT = gql`
   }
 `;
 
+export const SAVE_WEBHOOKS = gql`
+  mutation saveWebhooks($input: WebhookInput!) {
+    saveWebhooks(input: $input) {
+      id
+      scope
+      endpoint
+    }
+  }
+`;
+
 export const LIST_ORDER_FOR_ANALYTICS = gql`
-  query listOrderForAnalytics($orderedAt: DateFilterInput) {
-    listOrder(orderedAt: $orderedAt) {
+  query listOrderForAnalytics($orderedAt: DateFilterInput, $pagination: PaginationInput) {
+    listOrder(orderedAt: $orderedAt, pagination: $pagination) {
+      count
+      hasNext
+      page
+      limit
       data {
         id
         orderedAt
-        status
         totalFinalPrice
         currencyCode
         orderLineItems {
