@@ -60,7 +60,6 @@ prisma/*.db
 .crush.json
 .codex
 .gemini
-.github
 .goosehints
 .idx
 .junie
