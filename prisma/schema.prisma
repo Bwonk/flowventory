@@ -61,6 +61,114 @@ model ProductViewHourly {
   @@index([merchantId, productId, date])
 }
 
+// Merchant bazlı uygulama ayarları — tek kaynak.
+// Daha önce stok eşiği localStorage'daydı: cihaz değişince kayboluyordu,
+// aynı mağazanın iki kullanıcısı farklı değer görüyordu ve sunucu tarafı
+// (rapor/alarm) eşiği bilemiyordu.
+model MerchantSettings {
+  id                String   @id @default(cuid())
+  merchantId        String   @unique
+  criticalThreshold Int      @default(5)   // stok 1..critical → Kritik
+  warningThreshold  Int      @default(10)  // stok critical+1..warning → Az Kalan
+  timezone          String   @default("Europe/Istanbul")
+  currencyCode      String   @default("TRY")
+  leadTimeDays      Int      @default(7)   // tedarik süresi (satın alma raporu için)
+  targetStockDays   Int      @default(30)  // hedef stok gün sayısı
+  /** Alarm e-postalarının gideceği adres (boşsa e-posta gönderilmez). */
+  notificationEmail String?
+  /** E-posta bildirimleri açık mı? */
+  emailNotifications Boolean @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+// Uygulama içi bildirimler (kritik stok, ölü stok, satış artışı).
+// Sync sonrası kurallar değerlendirilir; dedupeKey aynı olayın aynı
+// periyotta tekrar bildirilmesini engeller.
+model Notification {
+  id         String    @id @default(cuid())
+  merchantId String
+  type       String    // "critical-stock" | "dead-stock" | "sales-spike"
+  title      String
+  body       String
+  productId  String?
+  dedupeKey  String
+  readAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@unique([merchantId, dedupeKey])
+  @@index([merchantId, createdAt])
+}
+
+// ── Sync katmanı ─────────────────────────────────────────────────────────
+// Read-through modelin (her istekte ikas'a sor) sorunları: sayfalama yükü,
+// yavaş dashboard, rate-limit riski, tarihsel veri yokluğu. Çözüm: ikas'tan
+// periyodik tam sync + webhook ile artımlı güncelleme; API route'ları
+// öncelikle bu tablolardan okur.
+
+// Varyant bazlı ürün anlık görüntüsü (katalog + stok + fiyat).
+model ProductSnapshot {
+  id                String   @id @default(cuid())
+  merchantId        String
+  productId         String
+  productName       String
+  vendorId          String?
+  vendorName        String?
+  brandId           String?
+  brandName         String?
+  categoriesJson    String?  // [{id,name}] — SQLite'ta Json tipi yok, string tutuyoruz
+  variantId         String
+  sku               String?
+  imageUrl          String?
+  variantValuesJson String?  // [{typeName,valueName}]
+  totalStock        Int      @default(0)
+  sellPrice         Float    @default(0)
+  buyPrice          Float?
+  currencyCode      String?
+  syncedAt          DateTime
+
+  @@unique([merchantId, variantId])
+  @@index([merchantId, productId])
+}
+
+// Varyant × gün bazlı satış özeti (merchant TZ'sinde gün anahtarı).
+model SalesDaily {
+  id         String @id @default(cuid())
+  merchantId String
+  variantId  String
+  sku        String?
+  date       String // "2026-08-11"
+  quantity   Int    @default(0)
+  revenue    Float  @default(0)
+
+  @@unique([merchantId, variantId, date])
+  @@index([merchantId, date])
+}
+
+// Sync çalışmalarının kaydı — staleness kontrolü + gözlemlenebilirlik.
+model SyncLog {
+  id         String   @id @default(cuid())
+  merchantId String
+  type       String   // "products" | "orders" | "full"
+  status     String   // "success" | "error"
+  itemCount  Int      @default(0)
+  message    String?
+  startedAt  DateTime
+  finishedAt DateTime @default(now())
+
+  @@index([merchantId, type, finishedAt])
+}
+
+// İşlenmiş webhook event kaydı — idempotency (ikas retry'ları çift işlenmesin).
+model WebhookEvent {
+  id          String   @id // ikas webhook event id'si
+  merchantId  String
+  scope       String
+  processedAt DateTime @default(now())
+
+  @@index([merchantId, scope])
+}
+
 // Storefront takip scripti kurulumu — ikas'ta listStorefrontJSScript
 // olmadığı için scriptId'yi burada tutup update-or-create yapıyoruz.
 model TrackingScriptInstall {
