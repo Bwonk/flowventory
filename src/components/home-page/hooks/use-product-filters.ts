@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useStockThreshold } from '@/lib/stock-threshold';
-import type { Product, ProductRow, SortBy, StatusFilter, StockRange, TopProduct } from '../types';
+import type { Product, ProductRow, SortBy, StatusFilter, StockRange, VariantSales } from '../types';
 import { DEFAULT_SORT, ITEMS_PER_PAGE } from '../constants';
 import { flattenToProducts, filterRows } from '../lib/filtering';
 
@@ -32,7 +32,7 @@ export interface UseProductFilters {
 export function useProductFilters(
   products: Product[],
   viewStats?: Record<string, number> | null,
-  topProducts?: TopProduct[],
+  salesByVariant?: VariantSales[],
   initialStatusFilter?: StatusFilter,
   initialViewMode?: ViewMode,
 ): UseProductFilters {
@@ -47,8 +47,8 @@ export function useProductFilters(
   const [loadingMore, setLoadingMore] = useState(false);
 
   const productRows = useMemo(
-    () => flattenToProducts(products, threshold.min, threshold.max, viewStats, topProducts),
-    [products, threshold.min, threshold.max, viewStats, topProducts],
+    () => flattenToProducts(products, threshold.min, threshold.max, viewStats, salesByVariant),
+    [products, threshold.min, threshold.max, viewStats, salesByVariant],
   );
 
   const filteredRows = useMemo(

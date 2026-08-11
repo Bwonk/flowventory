@@ -2,8 +2,9 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Package, Settings, Store, type LucideIcon } from 'lucide-react';
+import { ChartPie, ClipboardList, LayoutDashboard, Package, Settings, Store, type LucideIcon } from 'lucide-react';
 import { BrandLogo } from '@/components/shared/BrandLogo';
+import { NotificationBell } from './NotificationBell';
 
 interface SidebarProps {
   storeName: string;
@@ -20,6 +21,8 @@ interface NavItem {
 const NAV_ITEMS: ReadonlyArray<NavItem> = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, exact: true },
   { label: 'Stok Takibi', href: '/dashboard/stok', icon: Package },
+  { label: 'Satın Alma', href: '/dashboard/rapor', icon: ClipboardList },
+  { label: 'Analiz', href: '/dashboard/analiz', icon: ChartPie },
   { label: 'Ayarlar', href: '/dashboard/ayarlar', icon: Settings },
 ];
 
@@ -37,7 +40,7 @@ export default function Sidebar({ storeName }: SidebarProps) {
   const pathname = usePathname();
 
   return (
-    <aside className="sticky top-0 flex h-screen w-16 shrink-0 flex-col border-r border-border bg-background md:w-[220px]">
+    <aside className="sticky top-0 flex h-screen w-16 shrink-0 flex-col border-r border-border bg-background print:hidden md:w-[220px]">
       {/* Logo alanı — PNG'de fazla boşluk var; object-cover ile kırpıp büyütüyoruz */}
       <div className="flex h-20 items-center overflow-hidden border-b border-border px-1 md:px-2">
         <Link href="/dashboard" aria-label="Flowventory" className="flex w-full min-w-0 items-center overflow-hidden">
@@ -73,6 +76,11 @@ export default function Sidebar({ storeName }: SidebarProps) {
           );
         })}
       </nav>
+
+      {/* Bildirimler */}
+      <div className="px-3 pb-2">
+        <NotificationBell />
+      </div>
 
       {/* Alt alan — mağaza adı */}
       <div className="flex items-center gap-2 border-t border-border p-4">

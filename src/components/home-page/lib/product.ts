@@ -1,4 +1,4 @@
-import type { Product, Variant, ProductStatus, TopProduct } from '../types';
+import type { Product, Variant, ProductStatus, VariantSales } from '../types';
 
 export function getProductStatus(
   product: Product,
@@ -53,11 +53,11 @@ export function stockToStatus(
 }
 
 /** Satış hızına göre stoğun kaç gün yeteceğini hesaplar. */
-export function getDaysRemaining(product: Product, topProducts: TopProduct[]): number | null {
+export function getDaysRemaining(product: Product, salesByVariant: VariantSales[]): number | null {
   const totalStock = getTotalStock(product);
   if (totalStock === 0) return 0;
 
-  const soldQuantity = topProducts
+  const soldQuantity = salesByVariant
     .filter(tp => product.variants.some(v => v.id === tp.variantId))
     .reduce((sum, tp) => sum + tp.quantity, 0);
 

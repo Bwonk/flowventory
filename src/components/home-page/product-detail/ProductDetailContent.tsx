@@ -23,8 +23,10 @@ import {
   getVariantRevenue,
 } from '../lib/analytics';
 import { formatPrice } from '../lib/format';
+import { CategoryBadge } from '@/components/shared/badges/CategoryBadge';
 import { StatusBadge } from '@/components/shared/badges/StatusBadge';
 import { ModalProductImage } from './atoms';
+import { StockEditor } from './StockEditor';
 import { VariantCard } from './VariantCard';
 import { TrendChart, type TrendDataPoint } from '@/components/shared/TrendChart';
 
@@ -48,18 +50,18 @@ export const ProductDetailContent: React.FC<{
   const productImage = getProductThumbnail(product);
 
   const totalRevenue = analytics?.totalRevenue ?? 0;
-  const dailyRevenue = analytics?.dailyRevenue ?? [];
-  const topProducts = useMemo(() => analytics?.topProducts ?? [], [analytics]);
+  const dailyRevenue = useMemo(() => analytics?.dailyRevenue ?? [], [analytics]);
+  const salesByVariant = useMemo(() => analytics?.salesByVariant ?? [], [analytics]);
   const sumDaily = useMemo(() => dailyRevenue.reduce((s, d) => s + d.revenue, 0), [dailyRevenue]);
 
-  const productRevenue = useMemo(() => getProductRevenue(product, topProducts), [product, topProducts]);
-  const productQuantity = useMemo(() => getProductQuantity(product, topProducts), [product, topProducts]);
+  const productRevenue = useMemo(() => getProductRevenue(product, salesByVariant), [product, salesByVariant]);
+  const productQuantity = useMemo(() => getProductQuantity(product, salesByVariant), [product, salesByVariant]);
 
   const selectedVariant =
     selectedVariantId === 'all' ? null : variants.find(v => v.id === selectedVariantId) ?? null;
 
-  const targetRevenue = selectedVariant ? getVariantRevenue(selectedVariant.id, topProducts) : productRevenue;
-  const soldCount = selectedVariant ? getVariantQuantity(selectedVariant.id, topProducts) : productQuantity;
+  const targetRevenue = selectedVariant ? getVariantRevenue(selectedVariant.id, salesByVariant) : productRevenue;
+  const soldCount = selectedVariant ? getVariantQuantity(selectedVariant.id, salesByVariant) : productQuantity;
   const share = totalRevenue > 0 ? targetRevenue / totalRevenue : 0;
 
   useEffect(() => {
@@ -188,11 +190,7 @@ export const ProductDetailContent: React.FC<{
             {product.name} ürününün varyant ve satış detayları
           </DialogDescription>
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-            {category && (
-              <span className="inline-flex items-center rounded-full bg-accent px-2 py-0.5 text-xs font-medium text-accent-foreground">
-                {category}
-              </span>
-            )}
+            {category && <CategoryBadge name={category} />}
             <span>{variants.length} varyant</span>
             <span>{totalStock} adet stok</span>
           </div>
@@ -253,7 +251,16 @@ export const ProductDetailContent: React.FC<{
               </div>
             </div>
           </div>
-          <div className="min-w-0 p-4 flex flex-col min-h-0">
+          <div className="min-w-0 p-4 flex flex-col min-h-0 gap-3">
+            {selectedVariant && (
+              <StockEditor
+                token={token}
+                productId={product.id}
+                variantId={selectedVariant.id}
+                stockLocationId={selectedVariant.stocks?.[0]?.stockLocationId ?? null}
+                currentStock={getVariantStock(selectedVariant)}
+              />
+            )}
             <TrendChart
               title="Satış Grafiği"
               subtitle={selectedVariant ? getVariantName(selectedVariant) : 'Tüm Varyantlar'}

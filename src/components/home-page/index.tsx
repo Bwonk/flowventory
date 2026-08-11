@@ -13,8 +13,8 @@ import { downloadCSV } from './lib/csv';
 
 const HomePage: React.FC<HomePageProps> = ({ token, products = [], analytics, viewStats, loading, initialStatusFilter, initialViewMode, initialSelectedProductId }) => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const topProducts = analytics?.topProducts ?? [];
-  const filters = useProductFilters(products, viewStats, topProducts, initialStatusFilter, initialViewMode);
+  const salesByVariant = analytics?.salesByVariant ?? [];
+  const filters = useProductFilters(products, viewStats, salesByVariant, initialStatusFilter, initialViewMode);
 
   useEffect(() => {
     if (initialSelectedProductId && products.length > 0) {

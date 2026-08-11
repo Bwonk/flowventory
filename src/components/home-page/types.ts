@@ -48,4 +48,4 @@ export interface DaySeriesPoint {
   views: number;
 }
 
-export type TopProduct = AnalyticsApiResponse['topProducts'][number];
+export type VariantSales = AnalyticsApiResponse['salesByVariant'][number];

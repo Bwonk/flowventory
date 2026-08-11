@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import {
   AlertTriangle,
@@ -10,383 +10,138 @@ import {
   Clock,
   DollarSign,
   Package,
-  TrendingDown,
-  TrendingUp,
 } from 'lucide-react';
-import { TokenHelpers } from '@/helpers/token-helpers';
 import { ApiRequests } from '@/lib/api-requests';
-import { ListProductsApiResponse } from '../api/ikas/list-products/route';
-import { AnalyticsApiResponse } from '../api/ikas/analytics/route';
-import type { DailyViewStatsResponse } from '../api/product-view/stats/route';
 import { useStockThreshold } from '@/lib/stock-threshold';
-import { getTotalStock, getDaysRemaining } from '@/components/home-page/lib/product';
+import { formatPrice } from '@/components/home-page/lib/format';
+import { getTotalStock } from '@/components/home-page/lib/product';
 import { ProductListCard, type ProductListItem } from './components/ProductListCard';
+import { ConversionInsightCard } from './components/ConversionInsightCard';
+import { OnboardingCard } from './components/OnboardingCard';
 import { TrendChart, type TrendDataPoint } from '@/components/shared/TrendChart';
 import { StatusBadge } from '@/components/shared/badges/StatusBadge';
+import { TrendBadge } from '@/components/shared/badges/TrendBadge';
+import { ErrorState } from '@/components/shared/ErrorState';
 import { DashboardSkeleton } from './_components/DashboardSkeleton';
-
-type Product = NonNullable<ListProductsApiResponse['products']>[0];
-type Variant = Product['variants'][number];
-function formatPrice(value: number): string {
-  return `₺${value.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}`;
-}
-
-function formatStockAge(days: number): { primary: string; secondary: string } {
-  const years = days / 365;
-  if (years >= 1) {
-    return {
-      primary: `${years.toFixed(1).replace('.', ',')} yıl`,
-      secondary: `${days.toLocaleString('tr-TR')} gün ortalama`,
-    };
-  }
-  return {
-    primary: `${days} gün`,
-    secondary: `${days} gün ortalama`,
-  };
-}
-
-function minStock(product: Product): number {
-  if (product.variants.length === 0) return 0;
-  return Math.min(...product.variants.map(v => v.stocks?.[0]?.stockCount ?? 0));
-}
-
-function getProductThumbnail(product: Product): string | undefined {
-  return product.variants.find(v => v.imageUrl)?.imageUrl;
-}
+import { useDashboardData } from './hooks/use-dashboard-data';
+import {
+  buildDashboardTrendData,
+  buildVariantIndex,
+  computeAvgDaysRemaining,
+  computeDeadStock,
+  computeLockedCapital,
+  computeLowStockProducts,
+  computePreviousRevenue,
+  computeSkuHealth,
+  computeTopSellers,
+  countCritical,
+  countWarning,
+  formatStockAge,
+  minStock,
+} from './lib/metrics';
+import { getProductThumbnail } from '@/components/home-page/lib/product';
 
 export default function DashboardPage() {
-  const [token, setToken] = useState<string | null>(null);
-  const [, setStoreName] = useState('');
-  const [products, setProducts] = useState<Product[]>([]);
-  const [analytics, setAnalytics] = useState<AnalyticsApiResponse | null>(null);
-  const [dailyViewStats, setDailyViewStats] = useState<DailyViewStatsResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+  const {
+    token,
+    products,
+    analytics,
+    dailyViewStats,
+    conversionInsight,
+    isMockData,
+    loading,
+    error,
+    reload,
+  } = useDashboardData();
 
   const { threshold } = useStockThreshold();
-  const { min: minThreshold, max: maxThreshold } = threshold;
+  const { max: maxThreshold } = threshold;
 
-  const fetchStoreName = useCallback(async (currentToken: string) => {
-    try {
-      const res = await ApiRequests.ikas.getMerchant(currentToken);
-      if (res.status === 200 && res.data?.data?.merchantInfo?.storeName) {
-        setStoreName(res.data.data.merchantInfo.storeName);
-      }
-    } catch (error) {
-      console.error('Error fetching store name:', error);
-    }
-  }, []);
+  const salesByVariant = useMemo(() => analytics?.salesByVariant ?? [], [analytics]);
 
-  const fetchProducts = useCallback(async (currentToken: string) => {
-    try {
-      const res = await ApiRequests.ikas.listProducts(currentToken);
-      if (res.status === 200 && res.data?.data?.products) {
-        setProducts(res.data.data.products);
-      }
-    } catch (error) {
-      console.error('Error fetching products:', error);
-    }
-  }, []);
-
-  const fetchAnalytics = useCallback(async (currentToken: string) => {
-    try {
-      const res = await ApiRequests.ikas.getAnalytics(currentToken);
-      if (res.status === 200 && res.data?.data) {
-        setAnalytics(res.data.data);
-      }
-    } catch (error) {
-      console.error('Error fetching analytics:', error);
-    }
-  }, []);
-
-  const fetchDailyViewStats = useCallback(async (currentToken: string) => {
-    try {
-      const res = await ApiRequests.productView.getDailyViewStats(currentToken);
-      if (res.status === 200 && res.data?.data) {
-        setDailyViewStats(res.data.data);
-      }
-    } catch (error) {
-      console.error('Error fetching daily view stats:', error);
-    }
-  }, []);
-
-  const fetchHourly = useCallback(async (date: string) => {
-    if (!token) return [];
-    const res = await ApiRequests.ikas.getHourlyAnalytics(token, date);
-    return res.data?.data?.hourlyData ?? [];
-  }, [token]);
-
-  const fetchHourlyViews = useCallback(async (date: string) => {
-    if (!token) return [];
-    const res = await ApiRequests.productView.getHourlyViewStats(token, date);
-    return res.data?.data?.hourlyViews ?? [];
-  }, [token]);
-
-  const initialize = useCallback(async () => {
-    try {
-      const fetchedToken = await TokenHelpers.getTokenForIframeApp();
-      setToken(fetchedToken || null);
-      if (fetchedToken) {
-        await Promise.all([
-          fetchStoreName(fetchedToken),
-          fetchProducts(fetchedToken),
-          fetchAnalytics(fetchedToken),
-          fetchDailyViewStats(fetchedToken),
-        ]);
-      }
-    } catch (error) {
-      console.error('Error initializing dashboard:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [fetchStoreName, fetchProducts, fetchAnalytics, fetchDailyViewStats]);
-
-  useEffect(() => {
-    initialize();
-  }, [initialize]);
-
-  const totalStock = useMemo(
-    () =>
-      products.reduce(
-        (sum, p) => sum + p.variants.reduce((s, v) => s + (v.stocks?.[0]?.stockCount ?? 0), 0),
-        0,
-      ),
-    [products],
-  );
-
-  const criticalCount = useMemo(
-    () => products.filter(p => p.variants.some(v => (v.stocks?.[0]?.stockCount ?? 0) === 0)).length,
-    [products],
-  );
-
-  const warningCount = useMemo(
-    () =>
-      products.filter(
-        p =>
-          !p.variants.some(v => (v.stocks?.[0]?.stockCount ?? 0) === 0) &&
-          p.variants.some(v => {
-            const s = v.stocks?.[0]?.stockCount ?? 0;
-            return s > 0 && s <= maxThreshold;
-          }),
-      ).length,
-    [products, maxThreshold],
-  );
-
-  // Eşik altındaki (biten + azalan) tüm ürünler; en kritikten (0 stok) başlayarak sıralı.
+  // ── Metrikler (saf fonksiyonlar ./lib/metrics.ts içinde) ──
+  const criticalCount = useMemo(() => countCritical(products), [products]);
+  const warningCount = useMemo(() => countWarning(products, maxThreshold), [products, maxThreshold]);
   const lowStockProducts = useMemo(
-    () =>
-      products
-        .filter(p => minStock(p) <= maxThreshold)
-        .sort((a, b) => minStock(a) - minStock(b)),
+    () => computeLowStockProducts(products, maxThreshold),
     [products, maxThreshold],
+  );
+  const skuHealth = useMemo(() => computeSkuHealth(products, maxThreshold), [products, maxThreshold]);
+  const deadStock = useMemo(() => computeDeadStock(products, salesByVariant), [products, salesByVariant]);
+  const lockedCapital = useMemo(() => computeLockedCapital(deadStock), [deadStock]);
+  const variantIndex = useMemo(() => buildVariantIndex(products), [products]);
+  const topSellers = useMemo(
+    () => computeTopSellers(salesByVariant, variantIndex),
+    [salesByVariant, variantIndex],
+  );
+  const avgDaysRemaining = useMemo(
+    () => computeAvgDaysRemaining(products, salesByVariant),
+    [products, salesByVariant],
   );
 
   const totalRevenue = analytics?.totalRevenue ?? 0;
   const revenueChange = analytics?.revenueChange ?? 0;
-  const isPositive = revenueChange >= 0;
-  const topProducts = analytics?.topProducts ?? [];
+  const previousRevenue = useMemo(
+    () => computePreviousRevenue(totalRevenue, revenueChange),
+    [totalRevenue, revenueChange],
+  );
 
   const dailyViewMap = useMemo(() => {
     const map = new Map<string, number>();
-    if (dailyViewStats) {
-      for (const d of dailyViewStats.dailyViews) {
-        map.set(d.date, d.viewCount);
-      }
-    }
+    for (const d of dailyViewStats?.dailyViews ?? []) map.set(d.date, d.viewCount);
     return map;
   }, [dailyViewStats]);
 
-  const dashboardTrendData: TrendDataPoint[] = useMemo(() => {
-    const dailyRev = analytics?.dailyRevenue ?? [];
-    const totalQty = topProducts.reduce((s, tp) => s + tp.quantity, 0);
-    const totalDailyRev = dailyRev.reduce((s, d) => s + d.revenue, 0);
+  const dashboardTrendData: TrendDataPoint[] = useMemo(
+    () => buildDashboardTrendData(analytics, dailyViewMap),
+    [analytics, dailyViewMap],
+  );
 
-    const allDates = new Set<string>();
-    
-    for (const date of dailyViewMap.keys()) {
-      allDates.add(date);
-    }
-    
-    for (const d of dailyRev) {
-      allDates.add(d.date);
-    }
-    
-    const revMap = new Map<string, number>();
-    for (const d of dailyRev) {
-      revMap.set(d.date, d.revenue);
-    }
+  // ── Saatlik chart veri kaynakları ──
+  const fetchHourly = useCallback(
+    async (date: string) => {
+      if (!token) return [];
+      const res = await ApiRequests.ikas.getHourlyAnalytics(token, date);
+      return res.data?.data?.hourlyData ?? [];
+    },
+    [token],
+  );
 
-    return Array.from(allDates).sort().map(date => {
-      const revenue = revMap.get(date) ?? 0;
-      return {
-        date,
-        revenue,
-        quantity: totalDailyRev > 0 ? Math.round((revenue / totalDailyRev) * totalQty) : 0,
-        views: dailyViewMap.get(date) ?? 0,
-      };
-    });
-  }, [analytics, topProducts, dailyViewMap]);
+  const fetchHourlyViews = useCallback(
+    async (date: string) => {
+      if (!token) return [];
+      const res = await ApiRequests.productView.getHourlyViewStats(token, date);
+      return res.data?.data?.hourlyViews ?? [];
+    },
+    [token],
+  );
 
-  // Ölü stok: satışı olmayan veya stok ömrü >180 gün olan ürünler.
-  const deadStock = useMemo(() => {
-    return products.filter(p => {
-      const total = getTotalStock(p);
-      if (total === 0) return false;
-      const soldQty = topProducts
-        .filter(tp => p.variants.some(v => v.id === tp.variantId))
-        .reduce((s, tp) => s + tp.quantity, 0);
-      if (soldQty === 0) return true;
-      return Math.round(total / (soldQty / 30)) > 180;
-    });
-  }, [products, topProducts]);
-
-  const deadStockCount = deadStock.length;
-
-  const lockedCapital = useMemo(() => {
-    return deadStock.reduce((sum, p) => {
-      return sum + p.variants.reduce((s, v) => {
-        const stock = v.stocks?.[0]?.stockCount ?? 0;
-        const price = v.prices?.[0]?.sellPrice ?? 0;
-        return s + stock * price;
-      }, 0);
-    }, 0);
-  }, [deadStock]);
-
-  // Varyant id -> ürün/varyant eşlemesi (isim, görsel, varyant değerleri için).
-  const variantIndex = useMemo(() => {
-    const map = new Map<string, { product: Product; variant: Variant }>();
-    for (const product of products) {
-      for (const variant of product.variants) {
-        map.set(variant.id, { product, variant });
-      }
-    }
-    return map;
-  }, [products]);
-
-  /**
-   * En çok satanlar: satışları ürün bazında toplar, en çok satan varyantı seçer,
-   * satılan adede (eşitlikte ciroya) göre sıralar ve ilk 10'u döndürür.
-   */
-  const topSellers = useMemo(() => {
-    interface Aggregate {
-      productName: string;
-      quantity: number;
-      revenue: number;
-      best: { variantId: string; quantity: number; revenue: number } | null;
-    }
-    const byProduct = new Map<string, Aggregate>();
-
-    for (const tp of topProducts) {
-      const entry = variantIndex.get(tp.variantId);
-      const productId = entry?.product.id ?? tp.variantId;
-      const productName = entry?.product.name ?? tp.sku;
-      const agg = byProduct.get(productId) ?? {
-        productName,
-        quantity: 0,
-        revenue: 0,
-        best: null,
-      };
-      agg.quantity += tp.quantity;
-      agg.revenue += tp.revenue;
-      if (
-        !agg.best ||
-        tp.quantity > agg.best.quantity ||
-        (tp.quantity === agg.best.quantity && tp.revenue > agg.best.revenue)
-      ) {
-        agg.best = { variantId: tp.variantId, quantity: tp.quantity, revenue: tp.revenue };
-      }
-      byProduct.set(productId, agg);
-    }
-
-    return Array.from(byProduct.entries())
-      .map(([key, agg]) => {
-        const bestEntry = agg.best ? variantIndex.get(agg.best.variantId) : undefined;
-        const variantName = bestEntry
-          ? (bestEntry.variant.variantValues ?? [])
-              .map(vv => vv.variantValueName)
-              .filter((name): name is string => Boolean(name))
-              .join(' · ') || null
-          : null;
-        const imageUrl =
-          bestEntry?.variant.imageUrl ??
-          (bestEntry ? getProductThumbnail(bestEntry.product) : undefined);
-        return {
-          key,
-          productName: agg.productName,
-          variantName,
-          imageUrl,
-          quantity: agg.quantity,
-          revenue: agg.revenue,
-        };
-      })
-      .sort((a, b) => b.quantity - a.quantity || b.revenue - a.revenue)
-      .slice(0, 10);
-  }, [topProducts, variantIndex]);
-
-  const avgDaysRemaining = useMemo(() => {
-    const validDays = products
-      .map(p => getDaysRemaining(p, topProducts))
-      .filter((d): d is number => d !== null && d > 0 && d < 3650);
-    return validDays.length > 0
-      ? Math.round(validDays.reduce((a, b) => a + b, 0) / validDays.length)
-      : null;
-  }, [products, topProducts]);
-
-  const previousRevenue = useMemo(() => {
-    if (totalRevenue === 0) return 0;
-    if (revenueChange === 0) return totalRevenue;
-    return Math.round((totalRevenue / (1 + revenueChange / 100)) * 100) / 100;
-  }, [totalRevenue, revenueChange]);
-
-  const skuHealth = useMemo(() => {
-    let critical = 0;
-    let warning = 0;
-    let healthy = 0;
-    for (const product of products) {
-      for (const variant of product.variants) {
-        const s = variant.stocks?.[0]?.stockCount ?? 0;
-        if (s === 0) critical++;
-        else if (s <= maxThreshold) warning++;
-        else healthy++;
-      }
-    }
-    const total = critical + warning + healthy;
-    const denominator = total || 1;
-    return {
-      total,
-      critical,
-      warning,
-      healthy,
-      segments: {
-        healthy: (healthy / denominator) * 100,
-        warning: (warning / denominator) * 100,
-        critical: (critical / denominator) * 100,
-      },
-    };
-  }, [products, maxThreshold]);
-
+  // ── Liste görünümleri ──
   const topSellerItems: ProductListItem[] = useMemo(
-    () => topSellers.map((s, i) => ({
-      productId: s.key,
-      index: i + 1,
-      image: s.imageUrl,
-      name: s.productName,
-      meta: s.variantName ? `${s.variantName} • ${s.quantity} adet satıldı` : `${s.quantity} adet satıldı`,
-    })),
+    () =>
+      topSellers.map((s, i) => ({
+        productId: s.key,
+        index: i + 1,
+        image: s.imageUrl,
+        name: s.productName,
+        meta: s.variantName ? `${s.variantName} • ${s.quantity} adet satıldı` : `${s.quantity} adet satıldı`,
+      })),
     [topSellers],
   );
 
   const lowStockListItems: ProductListItem[] = useMemo(
-    () => lowStockProducts.slice(0, 10).map((p, i) => {
-      const stock = minStock(p);
-      return {
-        productId: p.id,
-        index: i + 1,
-        image: getProductThumbnail(p),
-        name: p.name,
-        meta: `${p.variants.length} varyant • ${getTotalStock(p)} adet`,
-        status: stock === 0 ? 'critical' : 'warning',
-      };
-    }),
+    () =>
+      lowStockProducts.slice(0, 10).map((p, i) => {
+        const stock = minStock(p);
+        return {
+          productId: p.id,
+          index: i + 1,
+          image: getProductThumbnail(p),
+          name: p.name,
+          meta: `${p.variants.length} varyant • ${getTotalStock(p)} adet`,
+          status: stock === 0 ? 'critical' : 'warning',
+        };
+      }),
     [lowStockProducts],
   );
 
@@ -394,8 +149,26 @@ export default function DashboardPage() {
     return <DashboardSkeleton />;
   }
 
+  if (error) {
+    return <ErrorState description={error} onRetry={reload} />;
+  }
+
   return (
     <div className="mx-auto max-w-7xl p-6">
+      {/* Onboarding — kurulum adımları tamamlanana kadar görünür */}
+      <OnboardingCard token={token} />
+
+      {/* Mock veri uyarısı — sadece development'ta, sipariş yokken görünür */}
+      {isMockData && (
+        <div className="mb-4 rounded-xl border border-border bg-muted px-4 py-2.5">
+          <p className="text-xs text-muted-foreground">
+            <span className="font-medium text-foreground">Demo verisi:</span> Mağazada henüz sipariş
+            olmadığı için satış grafikleri sentetik veriyle dolduruldu. Gerçek sipariş geldiğinde
+            otomatik olarak kaybolur.
+          </p>
+        </div>
+      )}
+
       {/* SECTION 1 — KPI Metrikleri */}
       <section className="mb-4 rounded-xl border border-border bg-background overflow-hidden">
         <div className="grid grid-cols-2 lg:grid-cols-5">
@@ -407,21 +180,7 @@ export default function DashboardPage() {
             </div>
             <p className="text-3xl font-semibold tracking-tight text-foreground mt-2">{formatPrice(totalRevenue)}</p>
             <div className="mt-auto pt-3">
-              {revenueChange === 0 ? (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground">
-                  %0
-                </span>
-              ) : (
-                <span
-                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    isPositive ? 'bg-green-100 text-green-800' : 'bg-red-50 text-red-800'
-                  }`}
-                >
-                  {isPositive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                  {isPositive ? '+' : ''}
-                  {revenueChange}%
-                </span>
-              )}
+              <TrendBadge value={revenueChange} size="sm" />
               <p className="text-xs text-muted-foreground mt-1.5">
                 {revenueChange === 0 ? 'Geçen döneme göre değişmedi' : `Geçen ay: ${formatPrice(previousRevenue)}`}
               </p>
@@ -478,9 +237,16 @@ export default function DashboardPage() {
               <Archive className="h-3 w-3 text-muted-foreground" />
               <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">ÖLÜ STOK</p>
             </div>
-            <p className="text-3xl font-semibold tracking-tight text-foreground mt-2">{formatPrice(lockedCapital)}</p>
+            <p className="text-3xl font-semibold tracking-tight text-foreground mt-2">
+              {formatPrice(lockedCapital.total)}
+              {lockedCapital.isEstimate && (
+                <span className="ml-1 align-top text-xs font-normal text-muted-foreground" title="Bazı ürünlerde alış fiyatı tanımlı değil; satış fiyatı kullanıldı">
+                  ~tahmini
+                </span>
+              )}
+            </p>
             <div className="mt-auto pt-3">
-              <p className="text-xs text-muted-foreground mb-2">{deadStockCount} ürün · 180+ gündür satılmıyor</p>
+              <p className="text-xs text-muted-foreground mb-2">{deadStock.length} ürün · 180+ gündür satılmıyor</p>
               <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors">
                 Ölü stokları görüntüle
                 <span className="inline-block transition-transform duration-200 group-hover:translate-x-0.5">&rarr;</span>
@@ -541,21 +307,21 @@ export default function DashboardPage() {
           aria-label={`Sağlıklı ${skuHealth.healthy}, Az kalan ${skuHealth.warning}, Tükendi ${skuHealth.critical}`}
         >
           {skuHealth.healthy > 0 && (
-            <div className="bg-emerald-500" style={{ width: `${skuHealth.segments.healthy}%` }} />
+            <div className="bg-status-healthy" style={{ width: `${skuHealth.segments.healthy}%` }} />
           )}
           {skuHealth.warning > 0 && (
-            <div className="bg-amber-500" style={{ width: `${skuHealth.segments.warning}%` }} />
+            <div className="bg-status-warning" style={{ width: `${skuHealth.segments.warning}%` }} />
           )}
           {skuHealth.critical > 0 && (
-            <div className="bg-red-500" style={{ width: `${skuHealth.segments.critical}%` }} />
+            <div className="bg-status-critical" style={{ width: `${skuHealth.segments.critical}%` }} />
           )}
         </div>
 
         <div className="mt-4 grid grid-cols-3 gap-4">
           {[
-            { dot: 'bg-emerald-500', label: 'Sağlıklı', count: skuHealth.healthy, pct: skuHealth.segments.healthy },
-            { dot: 'bg-amber-500', label: 'Az Kalan', count: skuHealth.warning, pct: skuHealth.segments.warning },
-            { dot: 'bg-red-500', label: 'Tükendi', count: skuHealth.critical, pct: skuHealth.segments.critical },
+            { dot: 'bg-status-healthy', label: 'Sağlıklı', count: skuHealth.healthy, pct: skuHealth.segments.healthy },
+            { dot: 'bg-status-warning', label: 'Az Kalan', count: skuHealth.warning, pct: skuHealth.segments.warning },
+            { dot: 'bg-status-critical', label: 'Tükendi', count: skuHealth.critical, pct: skuHealth.segments.critical },
           ].map(item => (
             <div key={item.label} className="flex flex-col gap-1.5">
               <div className="flex items-center gap-2">
@@ -615,6 +381,11 @@ export default function DashboardPage() {
             description: 'Stok eşiği altında ürün bulunmuyor.',
           }}
         />
+      </div>
+
+      {/* SECTION 6 — Görüntülenme → Satış Dönüşümü */}
+      <div className="mt-4">
+        <ConversionInsightCard insight={conversionInsight} />
       </div>
     </div>
   );

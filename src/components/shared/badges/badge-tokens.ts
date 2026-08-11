@@ -12,17 +12,17 @@ export const BADGE_COLORS = {
   green: {
     bg: 'bg-pale-green', // #edfce9
     text: 'text-deep-green', // #003c33
-    dot: 'bg-emerald-500',
+    dot: 'bg-status-healthy',
   },
   amber: {
     bg: 'bg-amber-50',
     text: 'text-amber-800',
-    dot: 'bg-amber-500',
+    dot: 'bg-status-warning',
   },
   red: {
     bg: 'bg-red-50',
     text: 'text-destructive', // #b30000
-    dot: 'bg-red-500',
+    dot: 'bg-status-critical',
   },
   indigo: {
     bg: 'bg-indigo-50',

@@ -1,4 +1,4 @@
-import type { Product, ProductRow, StatusFilter, StockRange, SortBy, TopProduct } from '../types';
+import type { Product, ProductRow, StatusFilter, StockRange, SortBy, VariantSales } from '../types';
 import { STATUS_SEVERITY } from '../constants';
 import { getDaysRemaining, getProductCategory, getProductStatus, getProductThumbnail, getTotalStock } from './product';
 
@@ -8,7 +8,7 @@ export function flattenToProducts(
   criticalThreshold: number,
   warningThreshold: number,
   viewStats?: Record<string, number> | null,
-  topProducts?: TopProduct[],
+  salesByVariant?: VariantSales[],
 ): ProductRow[] {
   return products.map(product => ({
     productId: product.id,
@@ -19,7 +19,7 @@ export function flattenToProducts(
     totalStock: getTotalStock(product),
     variantCount: product.variants.length,
     viewCount: viewStats?.[product.id],
-    daysRemaining: getDaysRemaining(product, topProducts ?? []),
+    daysRemaining: getDaysRemaining(product, salesByVariant ?? []),
   }));
 }
 

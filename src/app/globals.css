@@ -60,6 +60,10 @@
   --color-coral-soft: var(--coral-soft);
   --color-action-blue: var(--action-blue);
   --color-slate: var(--slate);
+  /* Stok durumu göstergeleri (bar/dot) — tek kaynak */
+  --color-status-healthy: var(--status-healthy);
+  --color-status-warning: var(--status-warning);
+  --color-status-critical: var(--status-critical);
 }
 
 :root {
@@ -120,6 +124,10 @@
   --destructive-foreground: #ffffff;
   --success: #edfce9; /* pale-green */
   --success-foreground: #003c33; /* deep-green */
+  /* stok durumu bar/dot renkleri */
+  --status-healthy: #10b981;
+  --status-warning: #f59e0b;
+  --status-critical: #ef4444;
   --info: #f1f5ff; /* pale-blue */
   --info-foreground: #1863dc; /* action-blue */
   --warning: #fffbeb;
