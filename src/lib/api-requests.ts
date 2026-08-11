@@ -7,9 +7,24 @@ import { HourlyAnalyticsApiResponse } from '../app/api/ikas/analytics/hourly/rou
 import { DailyViewStatsResponse, ViewStatsApiResponse, HourlyViewStatsResponse } from '../app/api/product-view/stats/route';
 import { TrackingScriptStatusApiResponse } from '../app/api/tracking-script/status/route';
 import { TrackingScriptInstallApiResponse } from '../app/api/tracking-script/install/route';
+import { MerchantSettingsApiResponse } from '../app/api/merchant-settings/route';
+import { PurchaseReportApiResponse } from '../app/api/reports/purchase/route';
+import { ConversionInsightApiResponse } from '../app/api/insights/conversion/route';
+import { InventoryInsightApiResponse } from '../app/api/insights/inventory/route';
+import { NotificationsApiResponse } from '../app/api/notifications/route';
 
 export async function makePostRequest<T>({ url, data, token }: { url: string; data?: Record<string, unknown>; token?: string }) {
   return axios.post<ApiResponseType<T>>(url, data, {
+    headers: token
+      ? {
+          Authorization: `JWT ${token}`,
+        }
+      : undefined,
+  });
+}
+
+export async function makePutRequest<T>({ url, data, token }: { url: string; data?: Record<string, unknown>; token?: string }) {
+  return axios.put<ApiResponseType<T>>(url, data, {
     headers: token
       ? {
           Authorization: `JWT ${token}`,
@@ -35,6 +50,10 @@ export const ApiRequests = {
     getMerchant: (token: string) => makeGetRequest<GetMerchantApiResponse>({ url: '/api/ikas/get-merchant', token }),
     listProducts: (token: string) => makeGetRequest<ListProductsApiResponse>({ url: '/api/ikas/list-products', token }),
     getAnalytics: (token: string) => makeGetRequest<AnalyticsApiResponse>({ url: '/api/ikas/analytics', token }),
+    updateStock: (
+      token: string,
+      input: { productId: string; variantId: string; stockLocationId: string; stockCount: number },
+    ) => makePostRequest<{ ok: boolean }>({ url: '/api/ikas/update-stock', token, data: input }),
     getHourlyAnalytics: (token: string, date?: string) =>
       makeGetRequest<HourlyAnalyticsApiResponse>({
         url: '/api/ikas/analytics/hourly',
@@ -65,6 +84,28 @@ export const ApiRequests = {
           ...(productId ? { productId } : {}),
         },
       }),
+  },
+  reports: {
+    purchase: (token: string) =>
+      makeGetRequest<PurchaseReportApiResponse>({ url: '/api/reports/purchase', token }),
+  },
+  insights: {
+    conversion: (token: string) =>
+      makeGetRequest<ConversionInsightApiResponse>({ url: '/api/insights/conversion', token }),
+    inventory: (token: string) =>
+      makeGetRequest<InventoryInsightApiResponse>({ url: '/api/insights/inventory', token }),
+  },
+  notifications: {
+    list: (token: string) =>
+      makeGetRequest<NotificationsApiResponse>({ url: '/api/notifications', token }),
+    markRead: (token: string, ids?: string[]) =>
+      makePostRequest<{ ok: boolean }>({ url: '/api/notifications', token, data: ids ? { ids } : {} }),
+  },
+  merchantSettings: {
+    get: (token: string) =>
+      makeGetRequest<MerchantSettingsApiResponse>({ url: '/api/merchant-settings', token }),
+    update: (token: string, settings: Partial<MerchantSettingsApiResponse>) =>
+      makePutRequest<MerchantSettingsApiResponse>({ url: '/api/merchant-settings', token, data: settings }),
   },
   trackingScript: {
     getStatus: (token: string) =>

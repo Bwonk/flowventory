@@ -1,75 +1,125 @@
 /**
- * GEÇİCİ SEED — chart testi için sahte görüntülenme verisi.
- * Son 365 gün için random view üretir.
+ * GEÇİCİ SEED — chart / tablo testi için sahte görüntülenme verisi.
+ * Son 365 gün (günlük) + bugün (saatlik) için random view üretir.
  * Production'a gitmeden önce silinecek.
  *
- * Çalıştırma: pnpm prisma db seed
+ * Çalıştırma:
+ *   pnpm db:seed
+ *   SEED_MERCHANT_ID=<id> SEED_PRODUCT_IDS=<id1,id2> pnpm db:seed
+ *
+ * Merchant / ürün ID verilmezse AuthToken + mevcut ProductView kayıtlarından çözülür.
  */
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-// Seed verisi tek bir merchant'a scope'lanır. Dashboard giriş yapan
-// merchant'ın merchantId'sine göre filtrelediği için, verinin görünmesi
-// isteniyorsa SEED_MERCHANT_ID env ile kendi merchantId'nizi verin.
-const MERCHANT_ID = process.env.SEED_MERCHANT_ID ?? 'seed-merchant';
+const DAYS = 365;
 
-const PRODUCT_IDS = [
-  '6f594145-7602-4c63-8c03-f97f04ff46b2',
-  '7463bce1-fae0-4ce3-88cd-903e5af0e59a',
-  'd28e2656-a808-48fa-999d-c7f4b9a4c19a',
-];
+async function resolveMerchantId(): Promise<string> {
+  if (process.env.SEED_MERCHANT_ID?.trim()) {
+    return process.env.SEED_MERCHANT_ID.trim();
+  }
 
-const DAYS = 365; // son 1 yıl
+  const token = await prisma.authToken.findFirst({
+    where: { deleted: false },
+    select: { merchantId: true },
+    orderBy: { updatedAt: 'desc' },
+  });
+
+  if (token?.merchantId) return token.merchantId;
+
+  throw new Error(
+    'Merchant bulunamadı. SEED_MERCHANT_ID verin veya uygulamaya giriş yapıp AuthToken oluşturun.',
+  );
+}
+
+async function resolveProductIds(merchantId: string): Promise<string[]> {
+  if (process.env.SEED_PRODUCT_IDS?.trim()) {
+    return process.env.SEED_PRODUCT_IDS.split(',')
+      .map((id) => id.trim())
+      .filter(Boolean);
+  }
+
+  const existing = await prisma.productView.groupBy({
+    by: ['productId'],
+    where: { merchantId },
+  });
+
+  if (existing.length > 0) {
+    return existing.map((row) => row.productId);
+  }
+
+  // Fallback — ikas'taki gerçek ürünlerle eşleşmeyebilir; SEED_PRODUCT_IDS kullanın
+  return [
+    '6f594145-7602-4c63-8c03-f97f04ff46b2',
+    '7463bce1-fae0-4ce3-88cd-903e5af0e59a',
+    'd28e2656-a808-48fa-999d-c7f4b9a4c19a',
+  ];
+}
 
 async function main() {
-  console.log(`Seed başlıyor — son ${DAYS} gün için sahte görüntülenme verisi...`);
+  const merchantId = await resolveMerchantId();
+  const productIds = await resolveProductIds(merchantId);
+
+  console.log(`Seed başlıyor`);
+  console.log(`  merchantId: ${merchantId}`);
+  console.log(`  products:   ${productIds.length} adet`);
+  console.log(`  gün:        son ${DAYS} gün + bugün saatlik`);
 
   const today = new Date();
-  let total = 0;
+  let dailyTotal = 0;
 
-  for (const productId of PRODUCT_IDS) {
+  for (const productId of productIds) {
     for (let i = 0; i < DAYS; i++) {
       const date = new Date(today);
       date.setDate(today.getDate() - i);
       const dateStr = date.toISOString().split('T')[0];
 
-      // Rastgele 0-60 arası — bazı günler 0 olsun (gerçekçi)
+      // Rastgele 0-60 — bazı günler 0 (gerçekçi dağılım)
       const viewCount = Math.floor(Math.random() * 61);
 
       await prisma.productView.upsert({
         where: {
-          merchantId_productId_date: { merchantId: MERCHANT_ID, productId, date: dateStr },
+          merchantId_productId_date: { merchantId, productId, date: dateStr },
         },
         update: { viewCount },
-        create: { merchantId: MERCHANT_ID, productId, date: dateStr, viewCount },
+        create: { merchantId, productId, date: dateStr, viewCount },
       });
-      total++;
+      dailyTotal++;
     }
   }
 
-  console.log(`Seed tamamlandı. ${PRODUCT_IDS.length} ürün × ${DAYS} gün = ${total} kayıt.`);
+  console.log(`Günlük seed: ${productIds.length} ürün × ${DAYS} gün = ${dailyTotal} kayıt`);
 
-  const todayStr = new Date().toISOString().split('T')[0];
-  for (const productId of PRODUCT_IDS) {
-    for (let hour = 0; hour < 24; hour++) {
-      const viewCount = Math.floor(Math.random() * 15); // 0-14 arası
-      await prisma.productViewHourly.upsert({
-        where: {
-          merchantId_productId_date_hour: {
-            merchantId: MERCHANT_ID,
-            productId,
-            date: todayStr,
-            hour,
+  // Son 7 gün için saatlik veri (son 24 saat grafiği + tarih seçici)
+  let hourlyTotal = 0;
+  for (let d = 0; d < 7; d++) {
+    const date = new Date(today);
+    date.setDate(today.getDate() - d);
+    const dateStr = date.toISOString().split('T')[0];
+
+    for (const productId of productIds) {
+      for (let hour = 0; hour < 24; hour++) {
+        const viewCount = Math.floor(Math.random() * 15);
+        await prisma.productViewHourly.upsert({
+          where: {
+            merchantId_productId_date_hour: {
+              merchantId,
+              productId,
+              date: dateStr,
+              hour,
+            },
           },
-        },
-        update: { viewCount },
-        create: { merchantId: MERCHANT_ID, productId, date: todayStr, hour, viewCount },
-      });
+          update: { viewCount },
+          create: { merchantId, productId, date: dateStr, hour, viewCount },
+        });
+        hourlyTotal++;
+      }
     }
   }
 
-  console.log('Saatlik seed de eklendi.');
+  console.log(`Saatlik seed: ${hourlyTotal} kayıt (son 7 gün × 24 saat)`);
+  console.log('Seed tamamlandı.');
 }
 
 main()

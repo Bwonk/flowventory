@@ -1,6 +1,11 @@
+import { logger } from '@/lib/logger';
 import { getIkas } from '@/helpers/api-helpers';
 import { getUserFromRequest } from '@/lib/auth-helpers';
+import { fetchAllPages } from '@/lib/ikas-client/pagination';
 import { AuthTokenManager } from '@/models/auth-token/manager';
+import { buildMockHourlyAnalytics } from '@/lib/mock-analytics';
+import { getMerchantTimezone } from '@/lib/merchant-settings';
+import { dateKeyInTz, dayRangeInTz, hourInTz } from '@/lib/timezone';
 import { NextRequest, NextResponse } from 'next/server';
 
 export type HourlyAnalyticsApiResponse = {
@@ -22,23 +27,35 @@ export async function GET(request: NextRequest) {
     if (!authToken) return NextResponse.json({ error: 'Auth token not found' }, { status: 404 });
 
     const { searchParams } = new URL(request.url);
-    const dateParam = searchParams.get('date');
-    const targetDate = dateParam ? new Date(dateParam) : new Date();
-
-    const dayStart = new Date(targetDate);
-    dayStart.setHours(0, 0, 0, 0);
-    const dayEnd = new Date(targetDate);
-    dayEnd.setHours(23, 59, 59, 999);
+    // Gün sınırları merchant TZ'de hesaplanır ("2026-08-11" = o TZ'nin günü).
+    const timezone = await getMerchantTimezone(user.merchantId);
+    const dateStr = searchParams.get('date') ?? dateKeyInTz(new Date(), timezone);
+    const { startMs, endMs } = dayRangeInTz(dateStr, timezone);
 
     const ikasClient = getIkas(authToken);
-    const ordersResponse = await ikasClient.queries.listOrderForAnalytics({
-      orderedAt: {
-        gte: dayStart.getTime(),
-        lte: dayEnd.getTime(),
-      },
+    const { items: orders } = await fetchAllPages(async pagination => {
+      const res = await ikasClient.queries.listOrderForAnalytics({
+        orderedAt: {
+          gte: startMs,
+          lte: endMs,
+        },
+        pagination,
+      });
+      return res.isSuccess ? res.data?.listOrder : null;
     });
 
-    const orders = ordersResponse.data?.listOrder?.data || [];
+    const useMock =
+      process.env.NODE_ENV !== 'production' &&
+      (searchParams.get('mock') === '1' ||
+        process.env.MOCK_ANALYTICS === '1' ||
+        orders.length === 0);
+
+    if (useMock) {
+      return NextResponse.json({
+        data: { date: dateStr, hourlyData: buildMockHourlyAnalytics(dateStr) },
+        meta: { mocked: true },
+      });
+    }
 
     const hourlyMap = new Map<number, { revenue: number; quantity: number }>();
     for (let h = 0; h < 24; h++) {
@@ -46,9 +63,9 @@ export async function GET(request: NextRequest) {
     }
 
     orders.forEach((order) => {
-      if (!order.orderedAt) return; // orderedAt yoksa atla
-      const orderDate = new Date(order.orderedAt);
-      const hour = orderDate.getHours();
+      if (!order.orderedAt) return;
+      // Saat bucket'ı merchant TZ'de (sunucu yerel saati değil).
+      const hour = hourInTz(order.orderedAt, timezone);
       const existing = hourlyMap.get(hour)!;
       existing.revenue += order.totalFinalPrice || 0;
 
@@ -68,12 +85,12 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       data: {
-        date: dayStart.toISOString().split('T')[0],
+        date: dateStr,
         hourlyData,
       },
     });
   } catch (error) {
-    console.error('Hourly analytics error:', error);
+    logger.error('Hourly analytics error:', { error });
     return NextResponse.json({ error: 'Failed to fetch hourly analytics' }, { status: 500 });
   }
 }

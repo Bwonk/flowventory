@@ -8,6 +8,8 @@ import { JwtHelpers } from '@/helpers/jwt-helpers';
 import { TokenHelpers } from '@/helpers/token-helpers';
 import { AuthToken } from '@/models/auth-token';
 import { AuthTokenManager } from '@/models/auth-token/manager';
+import { resolvePublicApiUrl } from '@/lib/tracking-script';
+import { registerWebhooks } from '@/lib/sync/register-webhooks';
 import { NextRequest, NextResponse } from 'next/server';
 import z from 'zod';
 
@@ -122,6 +124,12 @@ export async function GET(request: NextRequest) {
 
     // Store the token for future use
     await AuthTokenManager.put(token);
+
+    // Stok/ürün/sipariş webhook'larını kaydet — sync katmanını taze tutar.
+    // Hata kurulum akışını kırmaz (registerWebhooks içeride loglar).
+    await registerWebhooks(token, resolvePublicApiUrl(request)).catch(error => {
+      console.error('Webhook registration error (non-fatal):', error);
+    });
 
     // Update session with new merchant and app IDs, clear state, and set expiration
     session.expiresAt = new Date(Date.now() + 3600 * 1000);

@@ -1,4 +1,6 @@
-import { getIkas } from '@/helpers/api-helpers';
+import { logger } from '@/lib/logger';
+import { prisma } from '@/lib/prisma';
+import { invalidateSync, refreshProductSnapshot } from '@/lib/sync/ikas-sync';
 import { AuthTokenManager } from '@/models/auth-token/manager';
 import { validateIkasWebhookSignature, type IkasWebhook } from '@ikas/admin-api-client';
 import { NextRequest, NextResponse } from 'next/server';
@@ -6,37 +8,30 @@ import { NextRequest, NextResponse } from 'next/server';
 /** App client secret used to verify the HMAC-SHA256 webhook signature. */
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
 
-/** ikas stock webhook scopes handled by this endpoint. */
-const STOCK_SCOPES = ['store/stock/created', 'store/stock/updated'];
-
-/**
- * Shape of the parsed `data` payload for stock webhooks.
- *
- * ikas serializes the event body as a JSON string in `IkasWebhook.data`.
- * We parse it defensively because the stock payload may expose the location
- * id either as `stockLocationId` or `locationId` depending on the event.
- */
-type StockWebhookData = {
+/** Stok/ürün payload'larından productId çıkarımı için gevşek tip. */
+type ProductishWebhookData = {
   id?: string;
   productId?: string;
-  variantId?: string;
-  stockLocationId?: string;
-  locationId?: string;
-  stockCount?: number;
 };
 
 /**
  * POST /api/ikas/webhook
  *
- * Receives ikas webhook events. When a stock change arrives
- * (`store/stock/created` | `store/stock/updated`) the corresponding product
- * variant stock is updated in ikas via the `saveVariantStocks` mutation.
+ * ikas webhook event'lerini işler. Akış:
+ * 1. İmza doğrulaması (HMAC-SHA256, CLIENT_SECRET).
+ * 2. Idempotency: event id WebhookEvent tablosuna yazılır; daha önce
+ *    işlendiyse (ikas retry) hiçbir şey yapılmadan 200 dönülür.
+ * 3. Scope'a göre yerel sync katmanı güncellenir:
+ *    - store/stock/*, store/product/created|updated → ilgili ürünün
+ *      snapshot'ı ikas'tan tazelenir (tek ürünlük sorgu).
+ *    - store/product/deleted → snapshot satırları silinir.
+ *    - store/order/*  → sipariş verisi "kirli" işaretlenir; bir sonraki
+ *      analytics okuması yeniden sync yapar (çift sayma riski yok).
+ *    - store/app/deleted → merchant'ın tüm verisi silinir (KVKK/GDPR).
  *
- * Flow:
- * 1. Read the raw body and parse the ikas webhook envelope.
- * 2. Verify the HMAC-SHA256 signature with the app client secret.
- * 3. Resolve the merchant's auth token from the webhook `authorizedAppId`.
- * 4. Parse the stock payload and update the relevant product variant.
+ * Not (eski davranış): stok webhook'u gelen değeri saveVariantStocks ile
+ * ikas'a GERİ yazıyordu — bu bir no-op'tu ve kaldırıldı. ikas stok verisinin
+ * kaynağıdır; biz yalnızca yerel kopyamızı güncelleriz.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -45,7 +40,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 });
     }
 
-    // 1. Parse the webhook envelope from the raw request body.
     const rawBody = await request.text();
     let webhook: IkasWebhook;
     try {
@@ -54,79 +48,92 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
     }
 
-    // 2. Verify the signature before trusting any payload data.
     if (!validateIkasWebhookSignature(webhook, CLIENT_SECRET)) {
       return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 401 });
     }
 
-    // Acknowledge non-stock events so ikas does not retry them.
-    if (!STOCK_SCOPES.includes(webhook.scope)) {
-      return NextResponse.json({ success: true, skipped: webhook.scope });
+    // Idempotency — aynı event id ikinci kez gelirse işlem yapma.
+    if (webhook.id) {
+      try {
+        await prisma.webhookEvent.create({
+          data: { id: webhook.id, merchantId: webhook.merchantId, scope: webhook.scope },
+        });
+      } catch {
+        // Unique ihlali = daha önce işlendi (ikas retry). Başarı dön ki retry dursun.
+        return NextResponse.json({ success: true, deduped: true });
+      }
     }
 
-    // 3. Resolve the merchant's stored auth token for this installation.
-    const authToken = await AuthTokenManager.get(webhook.authorizedAppId);
-    if (!authToken) {
-      return NextResponse.json({ error: 'Auth token not found' }, { status: 404 });
+    switch (webhook.scope) {
+      case 'store/stock/created':
+      case 'store/stock/updated':
+      case 'store/product/created':
+      case 'store/product/updated': {
+        const authToken = await AuthTokenManager.get(webhook.authorizedAppId);
+        if (!authToken) {
+          return NextResponse.json({ error: 'Auth token not found' }, { status: 404 });
+        }
+        let payload: ProductishWebhookData;
+        try {
+          payload = JSON.parse(webhook.data) as ProductishWebhookData;
+        } catch {
+          return NextResponse.json({ error: 'Invalid webhook data' }, { status: 400 });
+        }
+        // Ürün event'inde id, stok event'inde productId gelir.
+        const productId =
+          webhook.scope.startsWith('store/product/') ? payload.id : payload.productId;
+        if (!productId) {
+          return NextResponse.json({ success: true, message: 'No product id in payload' });
+        }
+        await refreshProductSnapshot(webhook.merchantId, authToken, productId);
+        return NextResponse.json({ success: true });
+      }
+
+      case 'store/product/deleted': {
+        let payload: ProductishWebhookData;
+        try {
+          payload = JSON.parse(webhook.data) as ProductishWebhookData;
+        } catch {
+          return NextResponse.json({ error: 'Invalid webhook data' }, { status: 400 });
+        }
+        if (payload.id) {
+          await prisma.productSnapshot.deleteMany({
+            where: { merchantId: webhook.merchantId, productId: payload.id },
+          });
+        }
+        return NextResponse.json({ success: true });
+      }
+
+      case 'store/order/created':
+      case 'store/order/updated': {
+        await invalidateSync(webhook.merchantId);
+        return NextResponse.json({ success: true });
+      }
+
+      case 'store/app/deleted': {
+        // Uygulama kaldırıldı — merchant'a ait TÜM veriyi temizle.
+        const { merchantId } = webhook;
+        await prisma.$transaction([
+          prisma.productSnapshot.deleteMany({ where: { merchantId } }),
+          prisma.salesDaily.deleteMany({ where: { merchantId } }),
+          prisma.syncLog.deleteMany({ where: { merchantId } }),
+          prisma.productView.deleteMany({ where: { merchantId } }),
+          prisma.productViewHourly.deleteMany({ where: { merchantId } }),
+          prisma.trackingScriptInstall.deleteMany({ where: { merchantId } }),
+          prisma.merchantSettings.deleteMany({ where: { merchantId } }),
+          prisma.webhookEvent.deleteMany({ where: { merchantId } }),
+          prisma.authToken.deleteMany({ where: { merchantId } }),
+        ]);
+        logger.info('App uninstalled, merchant data purged:', { merchantId });
+        return NextResponse.json({ success: true });
+      }
+
+      default:
+        // Bilinmeyen/ilgilenilmeyen scope — retry olmasın diye 200.
+        return NextResponse.json({ success: true, skipped: webhook.scope });
     }
-
-    // 4. Parse the stock payload (signature already verified above).
-    let stock: StockWebhookData;
-    try {
-      stock = JSON.parse(webhook.data) as StockWebhookData;
-    } catch {
-      return NextResponse.json({ error: 'Invalid webhook data' }, { status: 400 });
-    }
-
-    const productId = stock.productId;
-    const variantId = stock.variantId;
-    const stockLocationId = stock.stockLocationId ?? stock.locationId;
-    const stockCount = stock.stockCount;
-
-    // Without full identifiers we cannot target a variant; acknowledge and stop.
-    if (!productId || !variantId || !stockLocationId || typeof stockCount !== 'number') {
-      return NextResponse.json({ success: true, message: 'Insufficient stock payload' });
-    }
-
-    // Apply the incoming stock to the related product variant. Setting the same
-    // value is idempotent, so re-processing a delivery will not diverge state.
-    const ikasClient = getIkas(authToken);
-    const response = await ikasClient.mutations.saveVariantStocks({
-      input: {
-        stockInputs: [
-          {
-            productId,
-            variantId,
-            stockLocationId,
-            stockCount,
-          },
-        ],
-      },
-    });
-
-    if (!response.isSuccess || !response.data?.saveVariantStocks) {
-      return NextResponse.json({ error: 'Failed to update product stock' }, { status: 500 });
-    }
-
-    const errors = response.data.saveVariantStocks.errors;
-    if (errors && errors.length > 0) {
-      console.error('saveVariantStocks returned errors:', errors);
-      return NextResponse.json({ error: 'Failed to update product stock', details: errors }, { status: 502 });
-    }
-
-    console.log('Product stock updated via ikas webhook:', {
-      scope: webhook.scope,
-      merchantId: webhook.merchantId,
-      productId,
-      variantId,
-      stockLocationId,
-      stockCount,
-      timestamp: new Date().toISOString(),
-    });
-
-    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error processing ikas webhook:', error);
+    logger.error('Error processing ikas webhook:', { error });
     return NextResponse.json({ error: 'Webhook processing failed' }, { status: 500 });
   }
 }

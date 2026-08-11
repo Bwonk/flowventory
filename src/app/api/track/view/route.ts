@@ -1,35 +1,65 @@
+import { logger } from '@/lib/logger';
+import { getMerchantTimezone } from '@/lib/merchant-settings';
 import { prisma } from '@/lib/prisma';
+import { checkRateLimit } from '@/lib/rate-limit';
+import { dateKeyInTz, hourInTz } from '@/lib/timezone';
+import { verifyTrackToken } from '@/lib/track-token';
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 
 /**
  * POST /api/track/view
  *
  * Storefront'tan gelen ürün görüntülenme event'ini kaydeder.
- * Admin panelinden değil, müşterinin tarayıcısından çağrılır — token yok.
+ * Admin panelinden değil, müşterinin tarayıcısından çağrılır — JWT yok.
  *
- * Body: { productId: string, merchantId: string }
+ * Güvenlik katmanları:
+ * - `token`: kurulumda tracker'a gömülen, CLIENT_SECRET ile imzalı
+ *   merchant token'ı. Başka mağaza adına yazma (cross-tenant) engellenir.
+ * - Rate limit: IP başına dakikada 60 istek.
+ * - zod ile body validasyonu.
  *
  * Aynı merchant + ürün + gün için tek satır tutuyoruz, viewCount'u artırıyoruz.
- * merchantId, kurulum sırasında tracker script'ine gömülür ve multi-tenant
- * izolasyonu sağlar (her mağazanın verisi ayrı).
  */
+
+const trackViewSchema = z.object({
+  productId: z.string().min(1).max(100),
+  merchantId: z.string().min(1).max(100),
+  token: z.string().min(1).max(200),
+});
+
+const RATE_LIMIT_PER_MINUTE = 60;
+
+function jsonWithCors(body: unknown, status = 200) {
+  return NextResponse.json(body, { status, headers: corsHeaders() });
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { productId, merchantId } = body;
-
-    if (!productId || typeof productId !== 'string') {
-      return NextResponse.json({ error: 'productId gerekli' }, { status: 400 });
+    // Rate limit — IP bazlı (proxy arkasında x-forwarded-for ilk değer).
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+    if (!checkRateLimit(`track:${ip}`, RATE_LIMIT_PER_MINUTE, 60_000)) {
+      return jsonWithCors({ error: 'Too many requests' }, 429);
     }
 
-    if (!merchantId || typeof merchantId !== 'string') {
-      return NextResponse.json({ error: 'merchantId gerekli' }, { status: 400 });
+    const parsed = trackViewSchema.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) {
+      return jsonWithCors({ error: 'Geçersiz istek gövdesi' }, 400);
+    }
+    const { productId, merchantId, token } = parsed.data;
+
+    // İmza doğrulaması — token yalnızca kurulum sırasında bizim ürettiğimiz
+    // değerse geçerli. Eski (token'sız) script kurulumları reddedilir;
+    // Ayarlar sayfasından script'in yeniden kurulması gerekir.
+    if (!verifyTrackToken(merchantId, token)) {
+      return jsonWithCors({ error: 'Geçersiz token' }, 401);
     }
 
-    // Bugünün tarihi — "2026-07-16" formatında
+    // Bugünün tarihi + saati — merchant'ın kendi timezone'unda
+    const timezone = await getMerchantTimezone(merchantId);
     const now = new Date();
-    const today = now.toISOString().split('T')[0];
-    const hour = now.getHours();
+    const today = dateKeyInTz(now, timezone);
+    const hour = hourInTz(now, timezone);
 
     // Upsert: varsa artır, yoksa oluştur
     await prisma.productView.upsert({
@@ -47,17 +77,17 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // YENİ: saatlik upsert
+    // Saatlik kırılım
     await prisma.productViewHourly.upsert({
       where: { merchantId_productId_date_hour: { merchantId, productId, date: today, hour } },
       update: { viewCount: { increment: 1 } },
       create: { merchantId, productId, date: today, hour, viewCount: 1 },
     });
 
-    return NextResponse.json({ ok: true }, { headers: corsHeaders() });
+    return jsonWithCors({ ok: true });
   } catch (error) {
-    console.error('Track view error:', error);
-    return NextResponse.json({ error: 'Kaydedilemedi' }, { status: 500 });
+    logger.error('Track view error:', { error });
+    return jsonWithCors({ error: 'Kaydedilemedi' }, 500);
   }
 }
 

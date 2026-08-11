@@ -1,5 +1,8 @@
+import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth-helpers';
+import { getMerchantTimezone } from '@/lib/merchant-settings';
+import { dateKeyInTz } from '@/lib/timezone';
 import { NextRequest, NextResponse } from 'next/server';
 
 export type SingleProductViewStats = {
@@ -34,7 +37,9 @@ export async function GET(request: NextRequest) {
     const daily = searchParams.get('daily');
 
     if (searchParams.get('hourly') === 'true') {
-      const date = searchParams.get('date') ?? new Date().toISOString().split('T')[0];
+      // Varsayılan "bugün" merchant TZ'de — track/view ile aynı takvim.
+      const date =
+        searchParams.get('date') ?? dateKeyInTz(new Date(), await getMerchantTimezone(merchantId));
       const hourlyProductId = searchParams.get('productId');
 
       const rows = await prisma.productViewHourly.groupBy({
@@ -110,7 +115,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ data });
   } catch (error) {
-    console.error('Product view stats error:', error);
+    logger.error('Product view stats error:', { error });
     return NextResponse.json({ error: 'Failed to fetch stats' }, { status: 500 });
   }
 }

@@ -1,5 +1,7 @@
+import { logger } from '@/lib/logger';
 import { getIkas } from '@/helpers/api-helpers';
 import { getUserFromRequest } from '@/lib/auth-helpers';
+import { fetchAllPages } from '@/lib/ikas-client/pagination';
 import { AuthTokenManager } from '@/models/auth-token/manager';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -36,7 +38,7 @@ export type ListProductsApiResponse = {
         variantValueName: string | null;
       }> | null;
       stocks: Array<{ stockCount: number; stockLocationId: string }> | null;
-      prices: Array<{ sellPrice: number }>;
+      prices: Array<{ sellPrice: number; buyPrice?: number | null; currencyCode?: string | null }>;
     }>;
   }>;
 };
@@ -67,34 +69,36 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Auth token not found' }, { status: 404 });
     }
 
-    // 3. ikas GraphQL client'ını başlat ve sorguyu çalıştır
+    // 3. ikas GraphQL client'ını başlat ve TÜM sayfaları çek
     const ikasClient = getIkas(authToken);
-    const productResponse = await ikasClient.queries.listProduct();
+    const { items: rawProducts, complete } = await fetchAllPages(async pagination => {
+      const res = await ikasClient.queries.listProduct({ pagination });
+      return res.isSuccess ? res.data?.listProduct : null;
+    });
 
-    // 4. Veriyi kontrol et, görsel URL'lerini üret ve döndür
-    if (productResponse.isSuccess && productResponse.data?.listProduct) {
-      const rawProducts = productResponse.data.listProduct.data;
-      const products = rawProducts.map(product => ({
-        ...product,
-        variants: product.variants.map(variant => {
-          const images = variant.images ?? [];
-          // Ana görsel; yoksa videonun olmadığı ilk görsel (order'a göre).
-          const main =
-            images.find(img => img.isMain && !img.isVideo) ??
-            images
-              .filter(img => !img.isVideo && img.imageId)
-              .sort((a, b) => a.order - b.order)[0];
-          const imageUrl =
-            main?.imageId ? buildImageUrl(user.merchantId, main.imageId) : undefined;
-          return { ...variant, imageUrl };
-        }),
-      }));
-      return NextResponse.json({ data: { products } });
-    } else {
-      return NextResponse.json({ error: 'Failed to fetch products' }, { status: 500 });
+    if (!complete) {
+      logger.warn('list-products: pagination cap reached, product list truncated');
     }
+
+    // 4. Görsel URL'lerini üret ve döndür
+    const products = rawProducts.map(product => ({
+      ...product,
+      variants: product.variants.map(variant => {
+        const images = variant.images ?? [];
+        // Ana görsel; yoksa videonun olmadığı ilk görsel (order'a göre).
+        const main =
+          images.find(img => img.isMain && !img.isVideo) ??
+          images
+            .filter(img => !img.isVideo && img.imageId)
+            .sort((a, b) => a.order - b.order)[0];
+        const imageUrl =
+          main?.imageId ? buildImageUrl(user.merchantId, main.imageId) : undefined;
+        return { ...variant, imageUrl };
+      }),
+    }));
+    return NextResponse.json({ data: { products } });
   } catch (error) {
-    console.error('Error fetching products:', error);
+    logger.error('Error fetching products:', { error });
     return NextResponse.json({ error: 'Failed to fetch products' }, { status: 500 });
   }
 }

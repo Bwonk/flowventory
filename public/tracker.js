@@ -10,6 +10,7 @@
 (function () {
   var API_URL = 'https://tap-bit-accordance-bolt.trycloudflare.com'; // ikas app dev başlayınca güncellenecek
   var MERCHANT_ID = '__MERCHANT_ID__'; // kurulum sırasında merchant'a göre doldurulur
+  var TRACK_TOKEN = '__TRACK_TOKEN__'; // kurulumda üretilen imzalı merchant token'ı
   var COOLDOWN_MS = 30 * 60 * 1000;      // aynı ürün için 30 dakika
 
   /**
@@ -37,12 +38,13 @@
 
   function sendView(productId) {
     if (!productId || !MERCHANT_ID || MERCHANT_ID === '__MERCHANT_ID__') return;
+    if (!TRACK_TOKEN || TRACK_TOKEN === '__TRACK_TOKEN__') return;
     if (!shouldTrack(productId)) return;
 
     fetch(API_URL + '/api/track/view', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ productId: productId, merchantId: MERCHANT_ID }),
+      body: JSON.stringify({ productId: productId, merchantId: MERCHANT_ID, token: TRACK_TOKEN }),
     }).catch(function (err) {
       // Storefront'u bozmamak için sessizce geç
       console.warn('[Flowventory] view gönderilemedi:', err.message);
