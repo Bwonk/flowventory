@@ -183,7 +183,7 @@ export default function RaporPage() {
           ].map(item => (
             <div key={item.label} className="border-b border-r border-border p-4 last:border-r-0 lg:border-b-0">
               <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{item.label}</p>
-              <p className={`mt-1 font-mono text-2xl font-medium tabular-nums ${item.highlight ? 'text-destructive' : 'text-foreground'}`}>
+              <p className={`mt-1 font-mono text-xl font-medium tabular-nums xl:text-2xl ${item.highlight ? 'text-destructive' : 'text-foreground'}`}>
                 {item.value}
               </p>
             </div>

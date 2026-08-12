@@ -189,7 +189,7 @@ export default function DashboardPage() {
               <DollarSign className="h-3 w-3 text-muted-foreground" />
               <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">SON 30 GÜN CİRO</p>
             </div>
-            <p className="mt-2 font-mono text-2xl font-medium tabular-nums text-foreground">{formatPrice(totalRevenue)}</p>
+            <p className="mt-2 font-mono text-xl font-medium tabular-nums xl:text-2xl text-foreground">{formatPrice(totalRevenue)}</p>
             <div className="mt-auto pt-3">
               <TrendBadge value={revenueChange} size="sm" />
               <p className="text-xs text-muted-foreground mt-1.5">
@@ -204,7 +204,7 @@ export default function DashboardPage() {
               <Package className="h-3 w-3 text-muted-foreground" />
               <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">AKTİF ÜRÜN</p>
             </div>
-            <p className="mt-2 font-mono text-2xl font-medium tabular-nums text-foreground">{products.length} ürün</p>
+            <p className="mt-2 font-mono text-xl font-medium tabular-nums xl:text-2xl text-foreground">{products.length} ürün</p>
             <div className="mt-auto pt-3">
               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-muted text-muted-foreground">
                 {skuHealth.total} SKU
@@ -222,7 +222,7 @@ export default function DashboardPage() {
               <AlertTriangle className="h-3 w-3 text-muted-foreground" />
               <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">KRİTİK STOK</p>
             </div>
-            <p className="mt-2 font-mono text-2xl font-medium tabular-nums text-foreground">{criticalCount + warningCount} ürün</p>
+            <p className="mt-2 font-mono text-xl font-medium tabular-nums xl:text-2xl text-foreground">{criticalCount + warningCount} ürün</p>
             <div className="mt-auto pt-3">
               <div className="flex flex-wrap gap-1.5 mb-2">
                 {criticalCount > 0 && (
@@ -248,10 +248,10 @@ export default function DashboardPage() {
               <Archive className="h-3 w-3 text-muted-foreground" />
               <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">ÖLÜ STOK</p>
             </div>
-            <p className="mt-2 font-mono text-2xl font-medium tabular-nums text-foreground">
+            <p className="mt-2 font-mono text-xl font-medium tabular-nums xl:text-2xl text-foreground">
               {formatPrice(lockedCapital.total)}
               {lockedCapital.isEstimate && (
-                <span className="ml-1 align-top text-xs font-normal text-muted-foreground" title="Bazı ürünlerde alış fiyatı tanımlı değil; satış fiyatı kullanıldı">
+                <span className="block font-sans text-xs font-normal text-muted-foreground" title="Bazı ürünlerde alış fiyatı tanımlı değil; satış fiyatı kullanıldı">
                   ~tahmini
                 </span>
               )}
@@ -275,7 +275,7 @@ export default function DashboardPage() {
               const age = formatStockAge(avgDaysRemaining);
               return (
                 <>
-                  <p className="mt-2 font-mono text-2xl font-medium tabular-nums text-foreground">{age.primary}</p>
+                  <p className="mt-2 font-mono text-xl font-medium tabular-nums xl:text-2xl text-foreground">{age.primary}</p>
                   <div className="mt-auto pt-3">
                     <p className="text-xs text-muted-foreground">{age.secondary}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">Satış hızına göre hesaplandı</p>
@@ -284,7 +284,7 @@ export default function DashboardPage() {
               );
             })() : (
               <>
-                <p className="mt-2 font-mono text-2xl font-medium tabular-nums text-foreground">—</p>
+                <p className="mt-2 font-mono text-xl font-medium tabular-nums xl:text-2xl text-foreground">—</p>
                 <div className="mt-auto pt-3">
                   <p className="text-xs text-muted-foreground">Yeterli satış verisi yok</p>
                 </div>

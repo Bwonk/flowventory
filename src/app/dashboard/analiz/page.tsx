@@ -134,7 +134,7 @@ export default function AnalizPage() {
                 </span>
                 <p className="text-sm font-medium text-foreground">{ABC_LABELS[row.class].title}</p>
               </div>
-              <p className="mt-3 font-mono text-2xl font-medium tabular-nums text-foreground">{row.productCount} ürün</p>
+              <p className="mt-3 font-mono text-xl font-medium tabular-nums xl:text-2xl text-foreground">{row.productCount} ürün</p>
               <p className="mt-1 text-xs text-muted-foreground">
                 Ciro payı %{(row.revenueShare * 100).toLocaleString('tr-TR', { maximumFractionDigits: 1 })} ·
                 bağlı stok {formatPrice(row.stockValue)}
@@ -155,7 +155,7 @@ export default function AnalizPage() {
         <div className="mt-4 grid gap-6 md:grid-cols-3">
           <div>
             <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">SELL-THROUGH</p>
-            <p className="mt-1 font-mono text-2xl font-medium tabular-nums text-foreground">
+            <p className="mt-1 font-mono text-xl font-medium tabular-nums xl:text-2xl text-foreground">
               {sellThrough.overall === null ? '—' : formatPercent(sellThrough.overall, 0)}
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -171,7 +171,7 @@ export default function AnalizPage() {
 
           <div>
             <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">YILLIK DEVİR</p>
-            <p className="mt-1 font-mono text-2xl font-medium tabular-nums text-foreground">
+            <p className="mt-1 font-mono text-xl font-medium tabular-nums xl:text-2xl text-foreground">
               {sellThrough.turnoverRate === null
                 ? '—'
                 : `~${sellThrough.turnoverRate.toLocaleString('tr-TR', { maximumFractionDigits: 1 })}×`}
