@@ -63,8 +63,14 @@ pnpm dev                    # (veya ikas CLI dev komutu)
 
 ### C) Tracking güvenliği
 - [ ] Script yeniden kurulduktan sonra storefront'ta ürün gezince view sayacı artıyor mu
-- [ ] curl ile token'sız `POST /api/track/view` → 401 dönmeli
-- [ ] 60+ hızlı istek → 429 dönmeli (rate limit)
+- [x] ~~curl ile token'sız `POST /api/track/view` → 401 dönmeli~~ → otomatik test
+- [x] ~~60+ hızlı istek → 429 dönmeli (rate limit)~~ → otomatik test
+
+> Son iki madde `src/app/api/track/view/__tests__/route.test.ts` ile kapatıldı:
+> yanlış token → 401, token alanı yok / bozuk JSON → 400, başka mağazanın
+> token'ıyla yazma (cross-tenant) → 401, 61. istek → 429, rate limit'in token
+> doğrulamasından önce çalışması ve OPTIONS preflight. `pnpm test` ile koşuyor,
+> curl gerekmiyor. İlk madde storefront gerektirdiği için manuel kalıyor.
 
 ### D) Satın Alma Raporu (`/dashboard/rapor`)
 - [ ] Tedarikçili/tedarikçisiz ürünler doğru gruplanıyor mu
@@ -102,7 +108,7 @@ pnpm dev                    # (veya ikas CLI dev komutu)
 ### K) Regresyon
 - [ ] Stok Takibi sayfası: filtreler, deep link'ler (`?filter=tukendi`, `?view=dead`, `?product=...`)
 - [ ] Ürün modal'ı: chart periyotları (24s/7g/30g/1y/özel), varyant seçince "Görüntülenme" gizlenmesi
-- [x] `pnpm test` (80 test) + `pnpm build` + `pnpm lint` yeni makinede geçiyor
+- [x] `pnpm test` (88 test) + `pnpm build` + `pnpm lint` yeni makinede geçiyor
 - [x] GitHub Actions: CI yeşil (teknik borç commit'lerinde de geçti)
 
 ### L) Teknik borç düzeltmelerinin QA'i (B11/B16/B20 sonrası)
