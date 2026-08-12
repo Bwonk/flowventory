@@ -9,6 +9,8 @@ import { ApiRequests } from '@/lib/api-requests';
 import type { InventoryInsightApiResponse, InventoryInsightItem } from '@/app/api/insights/inventory/route';
 import type { AbcClass } from '@/lib/reports/abc';
 import type { SellThroughBand } from '@/lib/reports/sell-through';
+import { PageContainer } from '@/components/layout/PageContainer';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { ErrorState } from '@/components/shared/ErrorState';
 import { SellThroughBadge } from '@/components/shared/badges/SellThroughBadge';
 import { StockLifeBadge } from '@/components/shared/badges/StockLifeBadge';
@@ -33,14 +35,14 @@ const SELL_THROUGH_BAND_LABEL: Record<SellThroughBand, string> = {
 
 const SELL_THROUGH_BAND_DOT: Record<SellThroughBand, string> = {
   yüksek: 'bg-status-healthy',
-  normal: 'bg-blue-500',
+  normal: 'bg-accent-blue',
   düşük: 'bg-status-warning',
   satışsız: 'bg-status-critical',
 };
 
 const ABC_BADGE_CLASS: Record<AbcClass, string> = {
-  A: 'bg-emerald-50 text-emerald-800',
-  B: 'bg-amber-50 text-amber-800',
+  A: 'bg-success text-success-foreground',
+  B: 'bg-warning text-warning-foreground',
   C: 'bg-muted text-muted-foreground',
 };
 
@@ -57,13 +59,13 @@ function stockoutLabel(item: InventoryInsightItem): string {
 
 function AnalizSkeleton() {
   return (
-    <div className="mx-auto max-w-7xl p-6">
+    <PageContainer>
       <Skeleton className="mb-2 h-3 w-24" />
       <Skeleton className="mb-8 h-10 w-56" />
-      <Skeleton className="mb-4 h-32 rounded-xl" />
-      <Skeleton className="mb-4 h-40 rounded-xl" />
-      <Skeleton className="h-72 rounded-xl" />
-    </div>
+      <Skeleton className="mb-4 h-32 rounded-lg" />
+      <Skeleton className="mb-4 h-40 rounded-lg" />
+      <Skeleton className="h-72 rounded-lg" />
+    </PageContainer>
   );
 }
 
@@ -114,16 +116,15 @@ export default function AnalizPage() {
   const sellThrough = insight.sellThroughSummary;
 
   return (
-    <div className="mx-auto max-w-7xl p-6">
-      <p className="mb-1 font-mono text-[10px] uppercase tracking-wider text-slate">ANALİZ</p>
-      <h1 className="mb-2 text-4xl font-normal tracking-[-0.04em] text-primary">Envanter Analizi</h1>
-      <p className="mb-6 text-xs text-muted-foreground">
-        Son {insight.windowDays} günün satışına göre ABC sınıflandırması, satış hızı ve stok yaşlandırma
-        {hasEstimate && ' · ~ işaretli değerler alış fiyatı yerine satış fiyatıyla hesaplandı'}
-      </p>
+    <PageContainer>
+      <PageHeader
+        eyebrow="ANALİZ"
+        title="Envanter Analizi"
+        description={`Son ${insight.windowDays} günün satışına göre ABC sınıflandırması, satış hızı ve stok yaşlandırma${hasEstimate ? ' · ~ işaretli değerler alış fiyatı yerine satış fiyatıyla hesaplandı' : ''}`}
+      />
 
       {/* ABC özeti */}
-      <section className="mb-4 overflow-hidden rounded-xl border border-border bg-background">
+      <section className="mb-4 overflow-hidden rounded-lg border border-hairline bg-card">
         <div className="grid grid-cols-1 md:grid-cols-3">
           {insight.abcSummary.map(row => (
             <div key={row.class} className="border-b border-r border-border p-5 last:border-b-0 md:border-b-0 md:last:border-r-0">
@@ -133,7 +134,7 @@ export default function AnalizPage() {
                 </span>
                 <p className="text-sm font-medium text-foreground">{ABC_LABELS[row.class].title}</p>
               </div>
-              <p className="mt-3 text-2xl font-semibold tracking-tight text-foreground">{row.productCount} ürün</p>
+              <p className="mt-3 font-mono text-2xl font-medium tabular-nums text-foreground">{row.productCount} ürün</p>
               <p className="mt-1 text-xs text-muted-foreground">
                 Ciro payı %{(row.revenueShare * 100).toLocaleString('tr-TR', { maximumFractionDigits: 1 })} ·
                 bağlı stok {formatPrice(row.stockValue)}
@@ -145,7 +146,7 @@ export default function AnalizPage() {
       </section>
 
       {/* Satış hızı */}
-      <section className="mb-4 rounded-xl border border-border bg-background p-5">
+      <section className="mb-4 rounded-lg border border-hairline bg-card p-5">
         <h2 className="text-sm font-medium text-foreground">Satış Hızı</h2>
         <p className="mt-0.5 text-xs text-muted-foreground">
           Son {insight.windowDays} günde satılan mal, eldeki mala oranla ne kadar eridi
@@ -154,7 +155,7 @@ export default function AnalizPage() {
         <div className="mt-4 grid gap-6 md:grid-cols-3">
           <div>
             <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">SELL-THROUGH</p>
-            <p className="mt-1 text-3xl font-semibold tracking-tight text-foreground tabular-nums">
+            <p className="mt-1 font-mono text-2xl font-medium tabular-nums text-foreground">
               {sellThrough.overall === null ? '—' : formatPercent(sellThrough.overall, 0)}
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -170,7 +171,7 @@ export default function AnalizPage() {
 
           <div>
             <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">YILLIK DEVİR</p>
-            <p className="mt-1 text-3xl font-semibold tracking-tight text-foreground tabular-nums">
+            <p className="mt-1 font-mono text-2xl font-medium tabular-nums text-foreground">
               {sellThrough.turnoverRate === null
                 ? '—'
                 : `~${sellThrough.turnoverRate.toLocaleString('tr-TR', { maximumFractionDigits: 1 })}×`}
@@ -227,7 +228,7 @@ export default function AnalizPage() {
       </section>
 
       {/* Yaşlandırma */}
-      <section className="mb-4 rounded-xl border border-border bg-background p-5">
+      <section className="mb-4 rounded-lg border border-hairline bg-card p-5">
         <h2 className="text-sm font-medium text-foreground">Stok Yaşlandırma</h2>
         <p className="mt-0.5 text-xs text-muted-foreground">
           Mevcut stok kaç günlük satışa yetiyor — kova başına bağlı sermaye
@@ -241,7 +242,7 @@ export default function AnalizPage() {
                 <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
                   {bucket.bucket === 'satışsız' ? 'SATIŞSIZ' : `${bucket.bucket} GÜN`}
                 </p>
-                <p className={`text-xl font-semibold tracking-tight ${risky && bucket.stockValue > 0 ? 'text-destructive' : 'text-foreground'}`}>
+                <p className={`font-mono text-xl font-medium tabular-nums ${risky && bucket.stockValue > 0 ? 'text-destructive' : 'text-foreground'}`}>
                   {formatPrice(bucket.stockValue)}
                 </p>
                 <p className="text-xs text-muted-foreground">{bucket.productCount} ürün</p>
@@ -258,7 +259,7 @@ export default function AnalizPage() {
       </section>
 
       {/* Ürün tablosu */}
-      <section className="overflow-hidden rounded-xl border border-border bg-background">
+      <section className="overflow-hidden rounded-lg border border-hairline bg-card">
         <div className="border-b border-border px-5 py-3">
           <h2 className="text-sm font-medium text-foreground">Ürün Detayı</h2>
           <p className="text-xs text-muted-foreground">Ciroya göre sıralı</p>
@@ -339,6 +340,6 @@ export default function AnalizPage() {
           </table>
         </div>
       </section>
-    </div>
+    </PageContainer>
   );
 }
