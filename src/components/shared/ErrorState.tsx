@@ -20,7 +20,7 @@ export function ErrorState({
 }) {
   return (
     <div className="mx-auto max-w-7xl p-6">
-      <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-border bg-background px-6 py-16 text-center">
+      <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-hairline bg-card px-6 py-16 text-center">
         <AlertTriangle className="h-8 w-8 text-muted-foreground" aria-hidden />
         <div>
           <p className="text-sm font-medium text-foreground">{title}</p>

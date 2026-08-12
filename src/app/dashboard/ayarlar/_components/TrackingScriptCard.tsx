@@ -130,14 +130,14 @@ export function TrackingScriptCard() {
   const updatedLabel = formatDate(status?.updatedAt);
 
   return (
-    <section className="rounded-xl border border-border bg-background p-6">
+    <section className="rounded-lg border border-hairline bg-card p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1">
-          <p className="mb-1 font-mono text-[10px] uppercase tracking-wider text-slate">
+          <p className="mb-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
             STOREFRONT
           </p>
           <h2 className="text-lg font-medium text-primary">Ürün görüntülenme takibi</h2>
-          <p className="mt-1 max-w-xl text-sm text-slate">
+          <p className="mt-1 max-w-xl text-sm text-muted-foreground">
             Müşteri vitrinine takip scriptini yerleştirir. Ürün sayfası açıldığında görüntülenme
             sayıları Flowventory&apos;ye yazılır.
           </p>
@@ -146,8 +146,8 @@ export function TrackingScriptCard() {
         <div
           className={
             installed
-              ? 'inline-flex shrink-0 items-center rounded-full bg-pale-green px-2.5 py-1 text-xs font-medium text-deep-green'
-              : 'inline-flex shrink-0 items-center rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-slate'
+              ? 'inline-flex shrink-0 items-center rounded-full bg-success px-2.5 py-1 text-xs font-medium text-success-foreground'
+              : 'inline-flex shrink-0 items-center rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground'
           }
         >
           {phase === 'loadingStatus' ? 'Kontrol ediliyor…' : installed ? 'Kurulu' : 'Kurulu değil'}
@@ -158,7 +158,7 @@ export function TrackingScriptCard() {
         <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
           {status?.apiUrl && (
             <div>
-              <dt className="text-xs text-slate">Kayıtlı API URL</dt>
+              <dt className="text-xs text-muted-foreground">Kayıtlı API URL</dt>
               <dd className="mt-0.5 truncate font-mono text-xs text-foreground" title={status.apiUrl}>
                 {status.apiUrl}
               </dd>
@@ -166,14 +166,14 @@ export function TrackingScriptCard() {
           )}
           {updatedLabel && (
             <div>
-              <dt className="text-xs text-slate">Son güncelleme</dt>
+              <dt className="text-xs text-muted-foreground">Son güncelleme</dt>
               <dd className="mt-0.5 text-foreground">{updatedLabel}</dd>
             </div>
           )}
         </dl>
       )}
 
-      <p className="mt-4 text-xs text-slate">
+      <p className="mt-4 text-xs text-muted-foreground">
         Dev ortamında tünel URL&apos;si değişirse scripti yeniden kurman gerekir. Daha önce elle
         oluşturulmuş eski scriptler otomatik silinmez.
       </p>
@@ -190,7 +190,7 @@ export function TrackingScriptCard() {
         </Button>
 
         {phase === 'success' && successMessage && (
-          <p className="text-sm text-deep-green">{successMessage}</p>
+          <p className="text-sm text-success-foreground">{successMessage}</p>
         )}
         {phase === 'error' && errorMessage && (
           <p className="text-sm text-destructive">{errorMessage}</p>

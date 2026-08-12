@@ -78,7 +78,7 @@ export function NotificationBell() {
         <button
           type="button"
           aria-label={unreadCount > 0 ? `Bildirimler (${unreadCount} okunmamış)` : 'Bildirimler'}
-          className="relative flex h-9 w-full items-center rounded-lg px-3 text-[14px] text-slate transition-colors duration-100 hover:bg-muted hover:text-primary"
+          className="relative flex h-9 w-full items-center rounded-lg px-3 text-[14px] text-muted-foreground transition-colors duration-100 hover:bg-muted hover:text-primary"
         >
           <Bell className="h-4 w-4 shrink-0 md:mr-3" aria-hidden />
           <span className="hidden truncate md:inline">Bildirimler</span>

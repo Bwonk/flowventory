@@ -67,7 +67,7 @@ export function NotificationSettingsCard() {
   if (loading) return null;
 
   return (
-    <section className="mt-6 max-w-xl rounded-xl border border-border bg-background p-5">
+    <section className="mt-6 max-w-xl rounded-lg border border-hairline bg-card p-5">
       <div className="flex items-center gap-2">
         <Mail className="h-4 w-4 text-muted-foreground" aria-hidden />
         <h2 className="text-sm font-medium text-foreground">E-posta Bildirimleri</h2>
