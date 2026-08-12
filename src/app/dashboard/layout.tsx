@@ -5,10 +5,16 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { AppBridgeHelper } from '@ikas/app-helpers';
 import { TokenHelpers } from '@/helpers/token-helpers';
 import { ApiRequests } from '@/lib/api-requests';
-import Sidebar from '@/components/layout/Sidebar';
+import { AppSidebar } from '@/components/layout/AppSidebar';
+import { BrandLogo } from '@/components/shared/BrandLogo';
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from '@/components/animate-ui/components/radix/sidebar';
 
 /**
- * Tüm dashboard sayfalarını Sidebar ile saran düzen.
+ * Tüm dashboard sayfalarını sidebar shell'i ile saran düzen.
  * storeName, kimliği doğrulanmış merchant verisinden çekilir (dashboard/page.tsx ile aynı desen).
  */
 export default function DashboardLayout({ children }: { children: ReactNode }) {
@@ -37,9 +43,16 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   }, [fetchStoreName]);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
-      <Sidebar storeName={storeName} />
-      <main className="flex-1 overflow-y-auto bg-muted">{children}</main>
-    </div>
+    <SidebarProvider>
+      <AppSidebar storeName={storeName} />
+      <SidebarInset className="h-svh overflow-y-auto">
+        {/* Dar iframe genişliği: sidebar Sheet'e düşer, tetikleyici bu barda yaşar. */}
+        <header className="flex h-12 shrink-0 items-center gap-2 border-b border-hairline bg-card px-4 print:hidden md:hidden">
+          <SidebarTrigger />
+          <BrandLogo variant="mark" className="h-7 w-7" />
+        </header>
+        {children}
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
