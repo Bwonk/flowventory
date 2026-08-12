@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { getUserFromRequest } from '@/lib/auth-helpers';
 import { AuthTokenManager } from '@/models/auth-token/manager';
 import {
@@ -27,7 +28,7 @@ export async function GET(request: NextRequest) {
     const data = await getTrackingScriptStatus(user.merchantId);
     return NextResponse.json({ data });
   } catch (error) {
-    console.error('Tracking script status error:', error);
+    logger.error('Tracking script status error', { error });
     const message =
       error instanceof TypeError && String(error).includes('findUnique')
         ? 'Veritabanı istemcisi güncel değil. ikas app dev’i yeniden başlatın.'

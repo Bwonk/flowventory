@@ -1,5 +1,6 @@
 'use client';
 
+import { logger } from '@/lib/logger';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { AppBridgeHelper } from '@ikas/app-helpers';
 import { TokenHelpers } from '@/helpers/token-helpers';
@@ -22,7 +23,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         setStoreName(res.data.data.merchantInfo.storeName);
       }
     } catch (error) {
-      console.error('Error fetching store name:', error);
+      logger.error('Error fetching store name', { error });
     }
   }, []);
 

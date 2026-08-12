@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { ApiRequests } from '@/lib/api-requests';
 import { useStockThreshold } from '@/lib/stock-threshold';
-import { formatPrice } from '@/components/home-page/lib/format';
+import { formatPrice, useMerchantCurrency } from '@/lib/currency';
 import { getTotalStock } from '@/components/home-page/lib/product';
 import { ProductListCard, type ProductListItem } from './components/ProductListCard';
 import { ConversionInsightCard } from './components/ConversionInsightCard';
@@ -56,6 +56,9 @@ export default function DashboardPage() {
 
   const { threshold } = useStockThreshold();
   const { max: maxThreshold } = threshold;
+
+  // Mağaza para birimini tazeler; formatPrice aktif kodu okur.
+  useMerchantCurrency();
 
   const salesByVariant = useMemo(() => analytics?.salesByVariant ?? [], [analytics]);
 

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { AppBridgeHelper } from '@ikas/app-helpers';
 import { useRouter } from 'next/navigation';
 import crypto from 'crypto';
@@ -68,7 +69,7 @@ export class TokenHelpers {
         }
         
       } catch (error) {
-        console.error('Error retrieving token from AppBridge:', error);
+        logger.error('Error retrieving token from AppBridge', { error });
       }
     }
     

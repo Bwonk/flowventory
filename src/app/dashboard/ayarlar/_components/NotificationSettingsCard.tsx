@@ -1,5 +1,6 @@
 'use client';
 
+import { logger } from '@/lib/logger';
 import { useCallback, useEffect, useState } from 'react';
 import { Mail } from 'lucide-react';
 import { TokenHelpers } from '@/helpers/token-helpers';
@@ -32,7 +33,7 @@ export function NotificationSettingsCard() {
           setEnabled(settings.emailNotifications);
         }
       } catch (error) {
-        console.error('Error loading notification settings:', error);
+        logger.error('Error loading notification settings', { error });
       } finally {
         if (!cancelled) setLoading(false);
       }

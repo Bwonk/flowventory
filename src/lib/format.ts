@@ -1,0 +1,100 @@
+/**
+ * Sayı/para biçimlendirme — tek kaynak.
+ *
+ * Daha önce `₺${value.toLocaleString('tr-TR')}` kalıbı 4 ayrı dosyada
+ * kopyalanmıştı (B11). ikas çok pazarlı: mağazanın para birimi sipariş ve
+ * varyant fiyatlarında `currencyCode` olarak geliyor, sync bunu
+ * MerchantSettings'e yazıyor. Buradaki fonksiyonlar o kodu alıp
+ * `Intl.NumberFormat` ile biçimlendirir.
+ *
+ * Saf fonksiyonlar — React'e ve tarayıcıya bağımlı değil, test edilebilir.
+ * Aktif para birimini okuyan sarmalayıcı için `@/lib/currency`.
+ */
+
+export const DEFAULT_LOCALE = 'tr-TR';
+export const DEFAULT_CURRENCY = 'TRY';
+
+/** ISO 4217 üç harfli kod. Geçersiz kod Intl'de RangeError atar; önce eleriz. */
+const CURRENCY_PATTERN = /^[A-Za-z]{3}$/;
+
+export function isValidCurrencyCode(code: unknown): code is string {
+  return typeof code === 'string' && CURRENCY_PATTERN.test(code);
+}
+
+/** Aynı (locale, currency) çifti için formatter'ı yeniden kurmayalım — tablolarda satır başına çağrılıyor. */
+const moneyFormatters = new Map<string, { formatter: Intl.NumberFormat; isFallback: boolean }>();
+
+function getMoneyFormatter(locale: string, currency: string) {
+  const key = `${locale}|${currency}`;
+  const cached = moneyFormatters.get(key);
+  if (cached) return cached;
+
+  let entry: { formatter: Intl.NumberFormat; isFallback: boolean };
+  try {
+    entry = {
+      formatter: new Intl.NumberFormat(locale, {
+        style: 'currency',
+        currency,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }),
+      isFallback: false,
+    };
+  } catch {
+    // Kod ISO listesinde yoksa para birimi stilinden vazgeçip kodu önek olarak yazarız.
+    entry = {
+      formatter: new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      isFallback: true,
+    };
+  }
+  moneyFormatters.set(key, entry);
+  return entry;
+}
+
+/**
+ * Para biçimi. `currencyCode` verilmezse/geçersizse `TRY` varsayılır —
+ * mağaza para birimi henüz sync edilmemiş olabilir.
+ *
+ * @example formatMoney(1234.5)         → "₺1.234,50"
+ * @example formatMoney(1234.5, 'USD')  → "$1.234,50"
+ */
+export function formatMoney(value: number, currencyCode?: string | null, locale: string = DEFAULT_LOCALE): string {
+  const safeValue = Number.isFinite(value) ? value : 0;
+  const currency = isValidCurrencyCode(currencyCode) ? currencyCode.toUpperCase() : DEFAULT_CURRENCY;
+  const { formatter, isFallback } = getMoneyFormatter(locale, currency);
+  const formatted = formatter.format(safeValue);
+  return isFallback ? `${currency} ${formatted}` : formatted;
+}
+
+/** Adet/sayaç biçimi — binlik ayraçlı, ondalıksız. */
+export function formatNumber(value: number, locale: string = DEFAULT_LOCALE): string {
+  return (Number.isFinite(value) ? value : 0).toLocaleString(locale);
+}
+
+/** Oran (0–1) → "%12,3". */
+export function formatPercent(ratio: number, maximumFractionDigits = 1, locale: string = DEFAULT_LOCALE): string {
+  const safe = Number.isFinite(ratio) ? ratio : 0;
+  return `%${(safe * 100).toLocaleString(locale, { maximumFractionDigits })}`;
+}
+
+/**
+ * Bir varyant/sipariş listesindeki baskın para birimini seçer.
+ * Karışık kodlarda en çok geçen kazanır; hiç yoksa null (çağıran varsayılana düşer).
+ */
+export function dominantCurrencyCode(codes: Array<string | null | undefined>): string | null {
+  const counts = new Map<string, number>();
+  for (const code of codes) {
+    if (!isValidCurrencyCode(code)) continue;
+    const upper = code.toUpperCase();
+    counts.set(upper, (counts.get(upper) ?? 0) + 1);
+  }
+  let winner: string | null = null;
+  let best = 0;
+  for (const [code, count] of counts) {
+    if (count > best) {
+      winner = code;
+      best = count;
+    }
+  }
+  return winner;
+}

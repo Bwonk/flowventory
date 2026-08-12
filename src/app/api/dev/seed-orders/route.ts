@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth-helpers';
 import { AuthTokenManager } from '@/models/auth-token/manager';
@@ -71,7 +72,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('seed-orders error:', error);
+    logger.error('seed-orders error', { error });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Seed failed' },
       { status: 500 },

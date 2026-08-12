@@ -1,5 +1,6 @@
 import { logger } from '@/lib/logger';
 import { getIkas } from '@/helpers/api-helpers';
+import { dominantCurrencyCode } from '@/lib/format';
 import { pickMainImageUrl } from '@/lib/ikas-image';
 import { fetchAllPages } from '@/lib/ikas-client/pagination';
 import { getMerchantSettings } from '@/lib/merchant-settings';
@@ -74,7 +75,34 @@ export async function syncProducts(merchantId: string, authToken: AuthToken): Pr
     prisma.productSnapshot.createMany({ data: rows }),
   ]);
 
+  await syncMerchantCurrency(merchantId, rows.map(r => r.currencyCode));
+
   return rows.length;
+}
+
+/**
+ * Mağazanın para birimini varyant fiyatlarından türetip MerchantSettings'e yazar (B11).
+ * ikas çok pazarlı; `₺` hardcode etmek yerine tek kaynağı burada besliyoruz.
+ * Değişiklik yoksa yazma yapılmaz; hata sync'i kırmaz (kozmetik veri).
+ */
+async function syncMerchantCurrency(merchantId: string, codes: Array<string | null>): Promise<void> {
+  const detected = dominantCurrencyCode(codes);
+  if (!detected) return;
+  try {
+    const current = await prisma.merchantSettings.findUnique({
+      where: { merchantId },
+      select: { currencyCode: true },
+    });
+    if (current?.currencyCode === detected) return;
+    await prisma.merchantSettings.upsert({
+      where: { merchantId },
+      create: { merchantId, currencyCode: detected },
+      update: { currencyCode: detected },
+    });
+    logger.info('Merchant currency detected from product prices', { merchantId, currencyCode: detected });
+  } catch (error) {
+    logger.warn('Merchant currency could not be persisted', { merchantId, error });
+  }
 }
 
 /** Son N günün siparişlerini varyant × gün olarak SalesDaily'ye yazar. */

@@ -1,39 +1,39 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Check, Pencil, X } from 'lucide-react';
 import { ApiRequests } from '@/lib/api-requests';
+import type { VariantStockLocation } from '@/components/home-page/lib/product';
 
 /**
  * Seçili varyant için satır içi stok düzenleme.
  * Kaydet → POST /api/ikas/update-stock (ikas'a yazar + snapshot tazeler).
  * Başarıda yeni değer lokal gösterilir; listelerin tam tazelenmesi
  * bir sonraki sayfa yüklemesinde/sync'te gerçekleşir.
+ *
+ * Çok depolu mağaza (B16): varyant stoğu artık tüm depoların toplamı, ama
+ * ikas'a yazarken hedef depo belli olmak zorunda. Tek depo varsa eskisi gibi
+ * tek satır; birden fazlaysa toplam + depo bazlı satırlar gösterilir.
+ * (ikas Admin API depo adı vermediği için depolar sırayla numaralanır.)
  */
-export const StockEditor: React.FC<{
-  token: string | null;
+
+const rowClass = 'flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2';
+
+/** Tek bir deponun stoğunu düzenleyen satır. */
+const LocationRow: React.FC<{
+  token: string;
   productId: string;
   variantId: string;
-  stockLocationId: string | null;
+  label: string;
+  stockLocationId: string;
   currentStock: number;
-}> = ({ token, productId, variantId, stockLocationId, currentStock }) => {
+}> = ({ token, productId, variantId, label, stockLocationId, currentStock }) => {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(currentStock);
   const [displayStock, setDisplayStock] = useState(currentStock);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
-
-  // Varyant değişince editor durumunu sıfırla.
-  useEffect(() => {
-    setEditing(false);
-    setDraft(currentStock);
-    setDisplayStock(currentStock);
-    setError(null);
-    setSaved(false);
-  }, [variantId, currentStock]);
-
-  if (!token || !stockLocationId) return null;
 
   const save = async () => {
     setSaving(true);
@@ -60,8 +60,13 @@ export const StockEditor: React.FC<{
   };
 
   return (
-    <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2">
-      <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">STOK</p>
+    <div className={rowClass}>
+      <p
+        className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground"
+        title={`Depo kimliği: ${stockLocationId}`}
+      >
+        {label}
+      </p>
       {editing ? (
         <>
           <input
@@ -69,6 +74,7 @@ export const StockEditor: React.FC<{
             min={0}
             value={draft}
             autoFocus
+            aria-label={`${label} stok adedi`}
             onChange={e => setDraft(Math.max(0, Math.floor(Number(e.target.value) || 0)))}
             onKeyDown={e => {
               if (e.key === 'Enter') save();
@@ -117,6 +123,44 @@ export const StockEditor: React.FC<{
       )}
       {saving && <span className="text-xs text-muted-foreground">Kaydediliyor…</span>}
       {error && <span className="text-xs text-destructive">{error}</span>}
+    </div>
+  );
+};
+
+export const StockEditor: React.FC<{
+  token: string | null;
+  productId: string;
+  variantId: string;
+  locations: VariantStockLocation[];
+}> = ({ token, productId, variantId, locations }) => {
+  if (!token || locations.length === 0) return null;
+
+  const singleLocation = locations.length === 1;
+  const total = locations.reduce((sum, l) => sum + l.stockCount, 0);
+
+  return (
+    <div className="flex flex-col gap-2">
+      {!singleLocation && (
+        <div className={rowClass}>
+          <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+            TOPLAM STOK
+          </p>
+          <p className="text-sm font-semibold tabular-nums text-foreground">{total} adet</p>
+          <span className="text-xs text-muted-foreground">{locations.length} depo</span>
+        </div>
+      )}
+      {locations.map((location, index) => (
+        // key'e depo dahil: varyant/depo değişince satır state'i (taslak, hata) sıfırlanır.
+        <LocationRow
+          key={`${variantId}:${location.stockLocationId}`}
+          token={token}
+          productId={productId}
+          variantId={variantId}
+          label={singleLocation ? 'STOK' : `DEPO ${index + 1}`}
+          stockLocationId={location.stockLocationId}
+          currentStock={location.stockCount}
+        />
+      ))}
     </div>
   );
 };

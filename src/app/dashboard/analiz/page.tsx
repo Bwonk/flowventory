@@ -1,5 +1,6 @@
 'use client';
 
+import { logger } from '@/lib/logger';
 import { useCallback, useEffect, useState } from 'react';
 import Image from 'next/image';
 import { TokenHelpers } from '@/helpers/token-helpers';
@@ -9,10 +10,7 @@ import type { AbcClass } from '@/lib/reports/abc';
 import { ErrorState } from '@/components/shared/ErrorState';
 import { StockLifeBadge } from '@/components/shared/badges/StockLifeBadge';
 import { Skeleton } from '@/components/ui/skeleton';
-
-function formatPrice(value: number): string {
-  return `₺${value.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}`;
-}
+import { formatPrice, useMerchantCurrency } from '@/lib/currency';
 
 const ABC_LABELS: Record<AbcClass, { title: string; description: string }> = {
   A: { title: 'A Sınıfı', description: 'Cironun ~%80\'i — sürekli izle, asla tükettirme' },
@@ -43,6 +41,8 @@ function AnalizSkeleton() {
  * Hangi ürüne dikkat, hangisine sermaye azaltma kararı için tek ekran.
  */
 export default function AnalizPage() {
+  // Mağaza para birimini tazeler; formatPrice aktif kodu okur.
+  useMerchantCurrency();
   const [insight, setInsight] = useState<InventoryInsightApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -63,7 +63,7 @@ export default function AnalizPage() {
         setError('Analiz verisi alınamadı.');
       }
     } catch (error) {
-      console.error('Error initializing analysis page:', error);
+      logger.error('Error initializing analysis page', { error });
       setError('Beklenmeyen bir hata oluştu.');
     } finally {
       setLoading(false);

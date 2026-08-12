@@ -1,5 +1,6 @@
 'use client';
 
+import { logger } from '@/lib/logger';
 import { useEffect } from 'react';
 import { ErrorState } from '@/components/shared/ErrorState';
 
@@ -15,7 +16,7 @@ export default function DashboardError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error('Dashboard render error:', error);
+    logger.error('Dashboard render error', { error });
   }, [error]);
 
   return (

@@ -1,5 +1,6 @@
 'use client';
 
+import { logger } from '@/lib/logger';
 import { useCallback, useEffect, useState } from 'react';
 import Image from 'next/image';
 import { AlertTriangle, Printer, RefreshCw } from 'lucide-react';
@@ -7,11 +8,8 @@ import { TokenHelpers } from '@/helpers/token-helpers';
 import { ApiRequests } from '@/lib/api-requests';
 import type { PurchaseReportApiResponse } from '@/app/api/reports/purchase/route';
 import { ErrorState } from '@/components/shared/ErrorState';
+import { formatPrice, useMerchantCurrency } from '@/lib/currency';
 import { RaporSkeleton } from './_components/RaporSkeleton';
-
-function formatPrice(value: number): string {
-  return `₺${value.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}`;
-}
 
 /**
  * Satın Alma Raporu sayfası.
@@ -21,6 +19,8 @@ function formatPrice(value: number): string {
  * (Türkçe karakter sorunları olmadığı için jspdf yerine print CSS tercih edildi).
  */
 export default function RaporPage() {
+  // Mağaza para birimini tazeler; formatPrice aktif kodu okur.
+  useMerchantCurrency();
   const [token, setToken] = useState<string | null>(null);
   const [report, setReport] = useState<PurchaseReportApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -40,7 +40,7 @@ export default function RaporPage() {
       }
       return false;
     } catch (error) {
-      console.error('Error fetching purchase report:', error);
+      logger.error('Error fetching purchase report', { error });
       return false;
     }
   }, []);
@@ -58,7 +58,7 @@ export default function RaporPage() {
       const ok = await fetchReport(fetchedToken);
       if (!ok) setError('Rapor oluşturulamadı.');
     } catch (error) {
-      console.error('Error initializing report page:', error);
+      logger.error('Error initializing report page', { error });
       setError('Beklenmeyen bir hata oluştu.');
     } finally {
       setLoading(false);
@@ -90,7 +90,7 @@ export default function RaporPage() {
       setTargetDaysDraft(null);
       await fetchReport(token);
     } catch (error) {
-      console.error('Error saving report settings:', error);
+      logger.error('Error saving report settings', { error });
     } finally {
       setSavingSettings(false);
     }

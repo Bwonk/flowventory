@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useCallback, useEffect, useState } from 'react';
 import { TokenHelpers } from '@/helpers/token-helpers';
 import { ApiRequests } from '@/lib/api-requests';
@@ -118,7 +119,7 @@ export function useStockThreshold(): {
             warningThreshold: next.max,
           });
         } catch (error) {
-          console.error('Stok eşiği sunucuya kaydedilemedi:', error);
+          logger.error('Stok eşiği sunucuya kaydedilemedi', { error });
         }
       })();
 

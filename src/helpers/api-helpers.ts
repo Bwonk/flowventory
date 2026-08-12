@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { OAuthAPI } from '@ikas/admin-api-client';
 import moment from 'moment';
 import { AuthToken } from '../models/auth-token';
@@ -68,7 +69,7 @@ export async function onCheckToken(token?: AuthToken): Promise<{ accessToken: st
     return { accessToken: undefined };
   } catch (error) {
     // Log the error for debugging purposes (in English).
-    console.error('Failed to check or refresh token:', error);
+    logger.error('Failed to check or refresh token', { error });
     return { accessToken: undefined };
   }
 }

@@ -7,7 +7,7 @@ export function getProductStatus(
 ): 'critical' | 'warning' | 'healthy' {
   let hasWarning = false;
   for (const variant of product.variants) {
-    const stock = variant.stocks?.[0]?.stockCount ?? 0;
+    const stock = getVariantStock(variant);
     if (stock <= criticalThreshold) return 'critical';
     if (stock <= warningThreshold) hasWarning = true;
   }
@@ -32,8 +32,28 @@ export function getVariantName(variant: Variant): string {
   return variant.sku || 'Varsayılan';
 }
 
+/**
+ * Varyantın tüm depolardaki toplam stoğu (B16).
+ *
+ * Önceden yalnızca `stocks[0]` okunuyordu; sync katmanı ise (ikas-sync.ts)
+ * tüm depoları topluyordu. Çok depolu mağazalarda dashboard KPI'ları ile
+ * snapshot/analiz farklı sayı gösteriyordu — tek davranışta birleştirildi.
+ * Depo bazlı görünüm/transfer önerisi ayrı bir özellik (Katman 3).
+ */
 export function getVariantStock(variant: Variant): number {
-  return variant.stocks?.[0]?.stockCount ?? 0;
+  return (variant.stocks ?? []).reduce((sum, s) => sum + (s?.stockCount ?? 0), 0);
+}
+
+export interface VariantStockLocation {
+  stockLocationId: string;
+  stockCount: number;
+}
+
+/** Varyantın depo bazlı stok dağılımı — stok düzenleme hangi depoya yazacağını bilmeli. */
+export function getVariantStockLocations(variant: Variant): VariantStockLocation[] {
+  return (variant.stocks ?? [])
+    .filter((s): s is NonNullable<typeof s> & { stockLocationId: string } => Boolean(s?.stockLocationId))
+    .map(s => ({ stockLocationId: s.stockLocationId, stockCount: s.stockCount ?? 0 }));
 }
 
 /** Ürünün toplam stok adedi (tüm varyantların toplamı). */

@@ -1,5 +1,10 @@
 import type { AnalyticsApiResponse } from '@/app/api/ikas/analytics/route';
-import { getDaysRemaining, getProductThumbnail, getTotalStock } from '@/components/home-page/lib/product';
+import {
+  getDaysRemaining,
+  getProductThumbnail,
+  getTotalStock,
+  getVariantStock,
+} from '@/components/home-page/lib/product';
 import type { Product, Variant, VariantSales } from '@/components/home-page/types';
 import type { TrendDataPoint } from '@/components/shared/TrendChart';
 
@@ -10,10 +15,10 @@ import type { TrendDataPoint } from '@/components/shared/TrendChart';
  * sayfa yalnızca render'dan sorumlu.
  */
 
-/** Ürünün varyantları arasındaki minimum stok. */
+/** Ürünün varyantları arasındaki minimum stok (varyant stoğu = tüm depoların toplamı). */
 export function minStock(product: Product): number {
   if (product.variants.length === 0) return 0;
-  return Math.min(...product.variants.map(v => v.stocks?.[0]?.stockCount ?? 0));
+  return Math.min(...product.variants.map(getVariantStock));
 }
 
 export interface SkuHealth {
@@ -31,7 +36,7 @@ export function computeSkuHealth(products: Product[], maxThreshold: number): Sku
   let healthy = 0;
   for (const product of products) {
     for (const variant of product.variants) {
-      const s = variant.stocks?.[0]?.stockCount ?? 0;
+      const s = getVariantStock(variant);
       if (s === 0) critical++;
       else if (s <= maxThreshold) warning++;
       else healthy++;
@@ -54,16 +59,16 @@ export function computeSkuHealth(products: Product[], maxThreshold: number): Sku
 
 /** Tükenen (0 stoklu varyantı olan) ürün sayısı. */
 export function countCritical(products: Product[]): number {
-  return products.filter(p => p.variants.some(v => (v.stocks?.[0]?.stockCount ?? 0) === 0)).length;
+  return products.filter(p => p.variants.some(v => getVariantStock(v) === 0)).length;
 }
 
 /** Tükenmemiş ama eşik altında varyantı olan ürün sayısı. */
 export function countWarning(products: Product[], maxThreshold: number): number {
   return products.filter(
     p =>
-      !p.variants.some(v => (v.stocks?.[0]?.stockCount ?? 0) === 0) &&
+      !p.variants.some(v => getVariantStock(v) === 0) &&
       p.variants.some(v => {
-        const s = v.stocks?.[0]?.stockCount ?? 0;
+        const s = getVariantStock(v);
         return s > 0 && s <= maxThreshold;
       }),
   ).length;
@@ -99,7 +104,7 @@ export function computeLockedCapital(deadStock: Product[]): LockedCapital {
   let usedSellPriceFallback = false;
   for (const p of deadStock) {
     for (const v of p.variants) {
-      const stock = v.stocks?.[0]?.stockCount ?? 0;
+      const stock = getVariantStock(v);
       if (stock === 0) continue;
       const buyPrice = v.prices?.[0]?.buyPrice;
       const price = buyPrice ?? v.prices?.[0]?.sellPrice ?? 0;

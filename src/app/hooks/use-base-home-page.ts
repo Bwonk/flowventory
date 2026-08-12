@@ -1,5 +1,6 @@
 'use client';
 
+import { logger } from '@/lib/logger';
 import { AppBridgeHelper } from '@ikas/app-helpers';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -51,7 +52,7 @@ export function useBaseHomePage() {
         await handleAuthorizationFlow();
 
       } catch (error) {
-        console.error('Error during base home page initialization:', error);
+        logger.error('Error during base home page initialization', { error });
         
         // Fallback to authorization page on any unexpected errors
         router.push('/authorize-store');

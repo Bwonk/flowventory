@@ -1,5 +1,6 @@
 'use client';
 
+import { logger } from '@/lib/logger';
 import { useCallback, useEffect, useState } from 'react';
 import { TokenHelpers } from '@/helpers/token-helpers';
 import { ApiRequests } from '@/lib/api-requests';
@@ -58,7 +59,7 @@ export function useDashboardData(): DashboardData {
             return false;
           })
           .catch(error => {
-            console.error('Error fetching products:', error);
+            logger.error('Error fetching products', { error });
             return false;
           }),
         ApiRequests.ikas
@@ -72,7 +73,7 @@ export function useDashboardData(): DashboardData {
             return false;
           })
           .catch(error => {
-            console.error('Error fetching analytics:', error);
+            logger.error('Error fetching analytics', { error });
             return false;
           }),
         ApiRequests.productView
@@ -80,20 +81,20 @@ export function useDashboardData(): DashboardData {
           .then(res => {
             if (res.status === 200 && res.data?.data) setDailyViewStats(res.data.data);
           })
-          .catch(error => console.error('Error fetching daily view stats:', error)),
+          .catch(error => logger.error('Error fetching daily view stats', { error })),
         ApiRequests.insights
           .conversion(fetchedToken)
           .then(res => {
             if (res.status === 200 && res.data?.data) setConversionInsight(res.data.data);
           })
-          .catch(error => console.error('Error fetching conversion insight:', error)),
+          .catch(error => logger.error('Error fetching conversion insight', { error })),
       ]);
 
       if (!productsOk && !analyticsOk) {
         setError('Mağaza verileri alınamadı.');
       }
     } catch (error) {
-      console.error('Error initializing dashboard:', error);
+      logger.error('Error initializing dashboard', { error });
       setError('Beklenmeyen bir hata oluştu.');
     } finally {
       setLoading(false);

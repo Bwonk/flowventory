@@ -13,6 +13,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { formatPrice } from '@/lib/currency';
+import { formatNumber } from '@/lib/format';
 import { TR_MONTHS } from '@/components/home-page/constants';
 import type { ChartMetric } from '@/components/home-page/types';
 
@@ -84,12 +86,12 @@ function formatDayLabel(dateStr: string): string {
 function formatSummary(value: number, metric: ChartMetric, period: ChartPeriod): string {
   const prefix = period === 'last24h' ? 'Seçili günde' : 'Seçili dönemde';
   if (metric === 'revenue') {
-    return prefix + ' toplam ₺' + value.toLocaleString('tr-TR', { minimumFractionDigits: 2 }) + ' ciro';
+    return prefix + ' toplam ' + formatPrice(value) + ' ciro';
   }
   if (metric === 'views') {
-    return prefix + ' toplam ' + value.toLocaleString('tr-TR') + ' görüntülenme';
+    return prefix + ' toplam ' + formatNumber(value) + ' görüntülenme';
   }
-  return prefix + ' toplam ' + value.toLocaleString('tr-TR') + ' adet satış';
+  return prefix + ' toplam ' + formatNumber(value) + ' adet satış';
 }
 
 // Props injected by recharts into a custom Tooltip content element.
@@ -307,7 +309,9 @@ export const TrendChart: React.FC<TrendChartProps> = ({
     }
 
     return [];
-  }, [period, data, effectiveMetric, hourlyData, appliedRange]);
+    // hourlyViews: 24s + "görüntülenme" seçiliyken veri asenkron geliyor;
+    // bağımlılıkta olmazsa yüklenen saatlik veri grafiğe yansımıyordu.
+  }, [period, data, effectiveMetric, hourlyData, hourlyViews, appliedRange]);
 
   const totalValue = useMemo(
     () => chartData.reduce((s, d) => s + d.value, 0),

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { getUserFromRequest } from '@/lib/auth-helpers';
 import { AuthTokenManager } from '@/models/auth-token/manager';
 import {
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof TrackingScriptError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
-    console.error('Tracking script install error:', error);
+    logger.error('Tracking script install error', { error });
     const message =
       error instanceof Error && error.message.includes('trackingScriptInstall')
         ? 'Veritabanı istemcisi güncel değil. ikas app dev’i yeniden başlatın.'

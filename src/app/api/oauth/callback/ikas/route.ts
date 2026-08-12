@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { config } from '@/globals/config';
 import { getSession, setSession } from '@/lib/session';
 import { validateRequest } from '@/lib/validation';
@@ -128,7 +129,7 @@ export async function GET(request: NextRequest) {
     // Stok/ürün/sipariş webhook'larını kaydet — sync katmanını taze tutar.
     // Hata kurulum akışını kırmaz (registerWebhooks içeride loglar).
     await registerWebhooks(token, resolvePublicApiUrl(request)).catch(error => {
-      console.error('Webhook registration error (non-fatal):', error);
+      logger.error('Webhook registration error (non-fatal)', { error });
     });
 
     // Update session with new merchant and app IDs, clear state, and set expiration
@@ -159,7 +160,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL(`/callback?${callbackUrl.toString()}`, getRedirectUri(request.headers.get('host')!)));
   } catch (error) {
     // Log and return error response
-    console.error('Callback error:', error);
+    logger.error('Callback error', { error });
     return NextResponse.json({ error: { statusCode: 500, message: 'Callback failed' } }, { status: 500 });
   }
 }

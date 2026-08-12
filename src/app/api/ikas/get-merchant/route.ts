@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { GetMerchantQueryData } from '@/lib/ikas-client/generated/graphql';
 import { getIkas } from '@/helpers/api-helpers';
 import { getUserFromRequest } from '@/lib/auth-helpers';
@@ -47,7 +48,7 @@ export async function GET(request: NextRequest,) {
     }
   } catch (error) {
     // Log the error for debugging
-    console.error('Error fetching merchant:', error);
+    logger.error('Error fetching merchant', { error });
     // Return a generic server error response
     return NextResponse.json({ error: { statusCode: 500, message: 'Failed to fetch merchant' } }, { status: 500 });
   }

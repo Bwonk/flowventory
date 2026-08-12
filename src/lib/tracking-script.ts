@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { getIkas } from '@/helpers/api-helpers';
@@ -85,7 +86,7 @@ export async function resolveStorefrontId(authToken: AuthToken): Promise<string>
         authorizedAppResponse.data.getAuthorizedApp.salesChannelId || salesChannelId;
     }
   } catch (error) {
-    console.warn('getAuthorizedApp failed while resolving storefront', error);
+    logger.warn('getAuthorizedApp failed while resolving storefront', { error });
   }
 
   // App'e salesChannel bağlı değilse merchant'ın storefront kanalını dene.
@@ -103,7 +104,7 @@ export async function resolveStorefrontId(authToken: AuthToken): Promise<string>
         }
       }
     } catch (error) {
-      console.warn('getSalesChannel failed while resolving storefront', error);
+      logger.warn('getSalesChannel failed while resolving storefront', { error });
     }
   }
 
@@ -133,7 +134,7 @@ export async function resolveStorefrontId(authToken: AuthToken): Promise<string>
       });
       authToken.salesChannelId = resolvedSalesChannelId;
     } catch (error) {
-      console.warn('Failed to backfill salesChannelId on AuthToken', error);
+      logger.warn('Failed to backfill salesChannelId on AuthToken', { error });
     }
   }
 
@@ -173,7 +174,7 @@ function formatIkasMutationError(errors: unknown): string {
 
 function throwCreateScriptError(errors: unknown): never {
   const detail = formatIkasMutationError(errors);
-  console.error('createStorefrontJSScript failed', detail);
+  logger.error('createStorefrontJSScript failed', { detail });
 
   const lower = detail.toLowerCase();
   if (lower.includes('enclosed in <script') || lower.includes('validatescriptcontent')) {
@@ -248,7 +249,7 @@ export async function installOrUpdateTrackingScript(params: {
 
     if (!result.isSuccess || !result.data?.updateStorefrontJSScript) {
       // Kayıtlı id ikas'ta yoksa (silinmiş olabilir) create'e düş.
-      console.warn('updateStorefrontJSScript failed, falling back to create', {
+      logger.warn('updateStorefrontJSScript failed, falling back to create', {
         errors: result.errors,
         scriptId: existing.scriptId,
       });
@@ -272,7 +273,7 @@ export async function installOrUpdateTrackingScript(params: {
       updated = true;
     }
   } else {
-    console.info('Installing tracking script', {
+    logger.info('Installing tracking script', {
       storefrontId,
       salesChannelId: authToken.salesChannelId,
       apiUrl,

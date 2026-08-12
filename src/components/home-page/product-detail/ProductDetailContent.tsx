@@ -14,6 +14,7 @@ import {
   getTotalStock,
   getVariantName,
   getVariantStock,
+  getVariantStockLocations,
   stockToStatus,
 } from '../lib/product';
 import {
@@ -22,7 +23,7 @@ import {
   getVariantQuantity,
   getVariantRevenue,
 } from '../lib/analytics';
-import { formatPrice } from '../lib/format';
+import { formatPrice } from '@/lib/currency';
 import { CategoryBadge } from '@/components/shared/badges/CategoryBadge';
 import { StatusBadge } from '@/components/shared/badges/StatusBadge';
 import { ModalProductImage } from './atoms';
@@ -257,8 +258,7 @@ export const ProductDetailContent: React.FC<{
                 token={token}
                 productId={product.id}
                 variantId={selectedVariant.id}
-                stockLocationId={selectedVariant.stocks?.[0]?.stockLocationId ?? null}
-                currentStock={getVariantStock(selectedVariant)}
+                locations={getVariantStockLocations(selectedVariant)}
               />
             )}
             <TrendChart

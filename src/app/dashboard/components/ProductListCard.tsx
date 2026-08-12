@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { Eye, Package, type LucideIcon } from 'lucide-react';
 import type { StockStatus } from '@/components/shared/badges/StatusBadge';
@@ -33,11 +34,16 @@ const ProductImage: React.FC<{ src?: string; alt: string }> = ({ src, alt }) => 
     );
   }
   return (
-    <img
+    // unoptimized: görseller ikas CDN'inde, Next optimizer'ından geçirmeye gerek yok
+    // (ConversionInsightCard ile aynı kullanım).
+    <Image
       src={src}
       alt={alt}
+      width={40}
+      height={40}
       className="h-10 w-10 flex-shrink-0 rounded-lg border border-border bg-muted object-cover"
       onError={() => setFailed(true)}
+      unoptimized
     />
   );
 };

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { config } from '@/globals/config';
 import { getRedirectUri } from '@/helpers/api-helpers';
 import { getSession, setSession } from '@/lib/session';
@@ -60,7 +61,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(authorizeUrl);
   } catch (error) {
     // Log and return a 500 error if something goes wrong
-    console.error('Authorize error:', error);
+    logger.error('Authorize error', { error });
     return NextResponse.json({ error: 'Authorization failed' }, { status: 500 });
   }
 }

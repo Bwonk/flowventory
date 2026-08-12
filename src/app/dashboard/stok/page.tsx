@@ -1,5 +1,6 @@
 'use client';
 
+import { logger } from '@/lib/logger';
 import { Suspense, useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { TokenHelpers } from '@/helpers/token-helpers';
@@ -8,11 +9,14 @@ import HomePage from '../../../components/home-page';
 import { ListProductsApiResponse } from '../../api/ikas/list-products/route';
 import { AnalyticsApiResponse } from '../../api/ikas/analytics/route';
 import { ErrorState } from '@/components/shared/ErrorState';
+import { useMerchantCurrency } from '@/lib/currency';
 import { StokSkeleton } from './_components/StokSkeleton';
 
 type Product = NonNullable<ListProductsApiResponse['products']>[0];
 
 function StokPageContent() {
+  // Mağaza para birimini tazeler; formatPrice (ürün modal'ı, grafik) aktif kodu okur.
+  useMerchantCurrency();
   const searchParams = useSearchParams();
   const filterParam = searchParams.get('filter');
   const viewParam = searchParams.get('view');
@@ -39,7 +43,7 @@ function StokPageContent() {
         setStoreName(res.data.data.merchantInfo.storeName);
       }
     } catch (error) {
-      console.error('Error fetching store name:', error);
+      logger.error('Error fetching store name', { error });
     }
   }, []);
 
@@ -53,7 +57,7 @@ function StokPageContent() {
       }
       return false;
     } catch (error) {
-      console.error('Error fetching products:', error);
+      logger.error('Error fetching products', { error });
       return false;
     }
   }, []);
@@ -65,7 +69,7 @@ function StokPageContent() {
         setAnalytics(res.data.data);
       }
     } catch (error) {
-      console.error('Error fetching analytics:', error);
+      logger.error('Error fetching analytics', { error });
     }
   }, []);
 
@@ -76,7 +80,7 @@ function StokPageContent() {
         setViewStats(res.data.data as Record<string, number>);
       }
     } catch (error) {
-      console.error('Error fetching view stats:', error);
+      logger.error('Error fetching view stats', { error });
     }
   }, []);
 
@@ -103,7 +107,7 @@ function StokPageContent() {
         setError('Ürün listesi alınamadı.');
       }
     } catch (error) {
-      console.error('Error initializing dashboard:', error);
+      logger.error('Error initializing dashboard', { error });
       setError('Beklenmeyen bir hata oluştu.');
     } finally {
       setLoading(false);
