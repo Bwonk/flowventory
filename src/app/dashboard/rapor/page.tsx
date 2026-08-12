@@ -7,6 +7,10 @@ import { AlertTriangle, Printer, RefreshCw } from 'lucide-react';
 import { TokenHelpers } from '@/helpers/token-helpers';
 import { ApiRequests } from '@/lib/api-requests';
 import type { PurchaseReportApiResponse } from '@/app/api/reports/purchase/route';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { PageContainer } from '@/components/layout/PageContainer';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { ErrorState } from '@/components/shared/ErrorState';
 import { formatPrice, useMerchantCurrency } from '@/lib/currency';
 import { RaporSkeleton } from './_components/RaporSkeleton';
@@ -106,82 +110,70 @@ export default function RaporPage() {
   const generatedAt = new Date(report.generatedAt);
 
   return (
-    <div className="mx-auto max-w-7xl p-6 print:max-w-none print:p-0">
-      {/* Başlık + eylemler */}
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="mb-1 font-mono text-[10px] uppercase tracking-wider text-slate">RAPOR</p>
-          <h1 className="text-4xl font-normal tracking-[-0.04em] text-primary">Satın Alma Raporu</h1>
-          <p className="mt-2 text-xs text-muted-foreground">
-            Son {report.salesWindowDays} günün satış hızına göre · {generatedAt.toLocaleString('tr-TR')}
-          </p>
-        </div>
-        <div className="flex gap-2 print:hidden">
-          <button
-            type="button"
-            onClick={initialize}
-            className="inline-flex items-center gap-1.5 rounded-full border border-border px-4 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
-          >
-            <RefreshCw className="h-3 w-3" aria-hidden />
-            Yenile
-          </button>
-          <button
-            type="button"
-            onClick={() => window.print()}
-            disabled={report.lineCount === 0}
-            className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-foreground disabled:opacity-50"
-          >
-            <Printer className="h-3 w-3" aria-hidden />
-            Yazdır / PDF
-          </button>
-        </div>
-      </div>
+    <PageContainer className="print:max-w-none print:p-0">
+      <PageHeader
+        eyebrow="RAPOR"
+        title="Satın Alma Raporu"
+        description={`Son ${report.salesWindowDays} günün satış hızına göre · ${generatedAt.toLocaleString('tr-TR')}`}
+        actions={
+          <div className="flex gap-2 print:hidden">
+            <Button variant="outline" size="sm" onClick={initialize} className="gap-1.5">
+              <RefreshCw className="size-3" aria-hidden />
+              Yenile
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => window.print()}
+              disabled={report.lineCount === 0}
+              className="gap-1.5"
+            >
+              <Printer className="size-3" aria-hidden />
+              Yazdır / PDF
+            </Button>
+          </div>
+        }
+      />
 
       {/* Parametreler */}
-      <section className="mb-4 flex flex-wrap items-end gap-4 rounded-xl border border-border bg-background p-4 print:hidden">
+      <section className="mb-4 flex flex-wrap items-end gap-4 rounded-lg border border-hairline bg-card p-4 print:hidden">
         <div>
           <label htmlFor="leadTime" className="mb-1 block text-xs text-muted-foreground">
             Tedarik süresi (gün)
           </label>
-          <input
+          <Input
             id="leadTime"
             type="number"
             min={0}
             max={365}
             value={leadTime}
             onChange={e => setLeadTimeDraft(Math.max(0, Number(e.target.value) || 0))}
-            className="w-24 rounded-lg border border-border px-3 py-1.5 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+            className="w-24"
           />
         </div>
         <div>
           <label htmlFor="targetDays" className="mb-1 block text-xs text-muted-foreground">
             Hedef stok (gün)
           </label>
-          <input
+          <Input
             id="targetDays"
             type="number"
             min={1}
             max={365}
             value={targetDays}
             onChange={e => setTargetDaysDraft(Math.max(1, Number(e.target.value) || 1))}
-            className="w-24 rounded-lg border border-border px-3 py-1.5 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+            className="w-24"
           />
         </div>
-        <button
-          type="button"
-          onClick={saveSettings}
-          disabled={!settingsDirty || savingSettings}
-          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-foreground disabled:opacity-50"
-        >
+        <Button onClick={saveSettings} disabled={!settingsDirty || savingSettings}>
           {savingSettings ? 'Hesaplanıyor…' : 'Uygula'}
-        </button>
+        </Button>
         <p className="text-xs text-muted-foreground">
           Öneri = günlük satış × (hedef + tedarik süresi) + emniyet stoğu − mevcut stok, 5&apos;in katına yuvarlanır.
         </p>
       </section>
 
       {/* Özet */}
-      <section className="mb-4 rounded-xl border border-border bg-background overflow-hidden">
+      <section className="mb-4 rounded-lg border border-hairline bg-card overflow-hidden">
         <div className="grid grid-cols-2 lg:grid-cols-4">
           {[
             { label: 'TOPLAM MALİYET', value: formatPrice(report.totalCost) },
@@ -191,7 +183,7 @@ export default function RaporPage() {
           ].map(item => (
             <div key={item.label} className="border-b border-r border-border p-4 last:border-r-0 lg:border-b-0">
               <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{item.label}</p>
-              <p className={`mt-1 text-2xl font-semibold tracking-tight ${item.highlight ? 'text-destructive' : 'text-foreground'}`}>
+              <p className={`mt-1 font-mono text-2xl font-medium tabular-nums ${item.highlight ? 'text-destructive' : 'text-foreground'}`}>
                 {item.value}
               </p>
             </div>
@@ -200,7 +192,7 @@ export default function RaporPage() {
       </section>
 
       {report.lineCount === 0 ? (
-        <div className="flex flex-col items-center gap-2 rounded-xl border border-border bg-background px-6 py-16 text-center">
+        <div className="flex flex-col items-center gap-2 rounded-lg border border-hairline bg-card px-6 py-16 text-center">
           <p className="text-sm font-medium text-foreground">Sipariş önerisi yok</p>
           <p className="text-xs text-muted-foreground">
             Satış hızı ve mevcut stok seviyelerine göre şu an sipariş gerektiren ürün bulunmuyor.
@@ -210,7 +202,7 @@ export default function RaporPage() {
         report.vendors.map(vendor => (
           <section
             key={vendor.vendorId ?? 'none'}
-            className="mb-4 overflow-hidden rounded-xl border border-border bg-background print:break-inside-avoid"
+            className="mb-4 overflow-hidden rounded-lg border border-hairline bg-card print:break-inside-avoid"
           >
             <div className="flex items-center justify-between border-b border-border px-5 py-3">
               <div>
@@ -259,7 +251,7 @@ export default function RaporPage() {
                             <p className="truncate font-medium text-foreground">
                               {line.productName}
                               {line.urgent && (
-                                <span className="ml-1.5 inline-flex items-center gap-0.5 rounded-full bg-red-50 px-1.5 py-0.5 text-[10px] font-medium text-destructive align-middle">
+                                <span className="ml-1.5 inline-flex items-center gap-0.5 rounded-full bg-destructive/10 px-1.5 py-0.5 text-[10px] font-medium text-destructive align-middle">
                                   <AlertTriangle className="h-2.5 w-2.5" aria-hidden />
                                   acil
                                 </span>
@@ -295,6 +287,6 @@ export default function RaporPage() {
         Flowventory satın alma raporu · {generatedAt.toLocaleString('tr-TR')} · Tedarik süresi {report.leadTimeDays} gün,
         hedef stok {report.targetStockDays} gün. ~ işaretli tutarlar alış fiyatı yerine satış fiyatıyla hesaplanmıştır.
       </p>
-    </div>
+    </PageContainer>
   );
 }

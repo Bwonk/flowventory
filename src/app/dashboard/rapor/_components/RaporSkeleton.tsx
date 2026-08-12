@@ -8,11 +8,11 @@ export function RaporSkeleton() {
       <Skeleton className="mb-8 h-10 w-72" />
       <div className="mb-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} className="h-24 rounded-xl" />
+          <Skeleton key={i} className="h-24 rounded-lg" />
         ))}
       </div>
       {Array.from({ length: 2 }).map((_, i) => (
-        <Skeleton key={i} className="mb-4 h-64 rounded-xl" />
+        <Skeleton key={i} className="mb-4 h-64 rounded-lg" />
       ))}
     </div>
   );
