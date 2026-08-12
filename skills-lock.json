@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "skills": {
+    "design-md": {
+      "source": "aisdkagents.com",
+      "sourceUrl": "https://www.aisdkagents.com/skill/design-md",
+      "sourceType": "well-known",
+      "computedHash": "2ee2ab4b020c131bdd97645ce97b65c1d9ca0efa2c85ff6a9de368a8920a32c9",
+      "wellKnownDigest": "sha256:0690b02d62860764a38abedf3bc87c8522c1d15646113fb66f27c6f22bcb33b9"
+    }
+  }
+}

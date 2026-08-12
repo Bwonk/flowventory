@@ -10,6 +10,9 @@
 
 # Project Rules for Ikas App Starter App (Next.js)
 
+## Quick Links
+- [Design Language](DESIGN.md)
+
 ## Core Principles
 - Prefer simplicity, readability, explicitness. Keep logic in small, testable functions.
 - TypeScript strict; avoid any. Use precise types from generated GraphQL.
