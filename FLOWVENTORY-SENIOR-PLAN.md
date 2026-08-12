@@ -134,7 +134,7 @@ Kazanımlar: tüm katalog üzerinde doğru hesap (top-10 kısıtı yok), <100ms 
 ### Katman 3 — Olgunluk
 11. **Kaydedilmiş görünümler / filtreler** — "Kritik + Kışlık kategori" gibi, URL paylaşılabilir.
 12. **Excel/CSV export** — mevcut CSV'yi genişlet; rapor bazlı export.
-13. **Çoklu depo desteği** — B16'nın ürünleşmiş hali; depo bazlı stok ve transfer önerisi.
+13. ~~**Çoklu depo desteği**~~ — **kapsam dışı.** B16'nın veri tutarsızlığı giderildi (frontend artık tüm depoları topluyor, StockEditor depo bazlı yazıyor). Ürünleşmiş hâli (depo adları, depolar arası transfer önerisi) ikas Admin API'sinde `listStockLocation` benzeri bir sorgu olmadığı için yapılamıyor — MCP list + introspect ile doğrulandı, `getMerchant` de depo bilgisi vermiyor. Depoları "DEPO 1 / DEPO 2" diye numaralandırmaktan öteye gidemeyeceğimiz için yarım bir özellik olarak bırakmak yerine plandan çıkarıldı. ikas bu sorguyu eklerse yeniden değerlendirilir.
 14. **Onboarding akışı** — kurulumdan sonra 3 adım: tracker kur → eşikleri ayarla → ilk raporu gör. Şu an kullanıcı boş dashboard'a düşüyor.
 15. **Faturalandırma (ikas recurring charge)** — App Store'da satılacaksa zorunlu; plan limitleri (ürün sayısı, rapor sayısı).
 16. **i18n (TR/EN)** — ikas'ın yurtdışı mağazaları için gerekli; `lib/i18n.ts` silinmişti, yeniden ve doğru şekilde.

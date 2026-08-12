@@ -139,7 +139,7 @@ pnpm dev                    # (veya ikas CLI dev komutu)
 | Kod | İş | Durum |
 |---|---|---|
 | B11 | `₺` hardcode — para birimi artık `src/lib/format.ts` + `src/lib/currency.ts` üzerinden; sync varyant fiyatlarından `currencyCode`'u tespit edip `MerchantSettings`'e yazıyor | ✅ Tamamlandı (dil/i18n ayrı iş, hâlâ bloklu) |
-| B16 | Frontend `stocks[0]` yerine tüm depoları topluyor (`getVariantStock`) — sync ile tutarlı; StockEditor çok depoluysa depo bazlı düzenliyor | ✅ Tutarsızlık giderildi (depo adları + transfer önerisi hâlâ Katman 3) |
+| B16 | Frontend `stocks[0]` yerine tüm depoları topluyor (`getVariantStock`) — sync ile tutarlı; StockEditor çok depoluysa depo bazlı düzenliyor | ✅ Tutarsızlık giderildi (depo adları + transfer önerisi kapsam dışı — API yok) |
 | B20 | Tüm `console.*` çağrıları `logger`'a taşındı (client dahil); OAuth callback'te parametre loglayan satır kaldırıldı (code/signature sızıntısı) | ✅ Tamamlandı |
 | — | Rate limiter in-memory — multi-instance deploy'da Redis'e taşınmalı | Postgres kararıyla birlikte |
 | — | Lint uyarıları: `TrendChart` hourlyViews dep (gerçek bug'dı — 24s/görüntülenme grafiği asenkron veriyi göstermiyordu) + `<img>` → `next/image` | ✅ Temiz (0 uyarı) |
@@ -149,11 +149,15 @@ pnpm dev                    # (veya ikas CLI dev komutu)
 - Zamanlanmış özet raporu (günlük/haftalık e-posta — alarm altyapısı hazır, cron gerekiyor)
 - Kaydedilmiş görünümler / paylaşılabilir filtreler
 - Excel export (CSV var; rapor bazlı export yok)
-- Çoklu depo desteği (B16'nın ürünleşmişi: depo bazlı stok + transfer önerisi)
-- ~~Sell-through / stok devir hızı metriği~~ → ✅ Analiz sayfasına eklendi (`src/lib/reports/sell-through.ts`)
 - Tedarikçi yönetimi (leadTime'ı tedarikçi bazına indir; vendor'suz ürünler için uyarı)
 - Audit log (kim ne zaman stok değiştirdi)
 - XYZ analizi (talep oynaklığı — ABC'nin yanına 9 kutu matris)
+
+**Kapsam dışı bırakıldı:**
+- ~~Çoklu depo desteği (depo adları + transfer önerisi)~~ — ikas Admin API'sinde depo/lokasyon listeleyen bir sorgu yok (MCP list + introspect ile doğrulandı; `getMerchant` de vermiyor). Depoları "DEPO 1 / DEPO 2" diye numaralandırmaktan öteye gidemez, yarım kalır. B16'daki **veri tutarsızlığı zaten giderildi** — eksik olan sadece ürünleşme. ikas bu sorguyu eklerse yeniden açılır.
+
+**Tamamlananlar:**
+- ~~Sell-through / stok devir hızı metriği~~ → Analiz sayfası + `src/lib/reports/sell-through.ts`
 
 ### Üretim öncesi hatırlatmalar
 - [ ] Postgres'e geç (yukarıda)
