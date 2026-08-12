@@ -103,7 +103,7 @@ pnpm dev                    # (veya ikas CLI dev komutu)
 - [ ] Stok Takibi sayfası: filtreler, deep link'ler (`?filter=tukendi`, `?view=dead`, `?product=...`)
 - [ ] Ürün modal'ı: chart periyotları (24s/7g/30g/1y/özel), varyant seçince "Görüntülenme" gizlenmesi
 - [x] `pnpm test` (80 test) + `pnpm build` + `pnpm lint` yeni makinede geçiyor
-- [ ] GitHub Actions: push sonrası CI yeşil mi (ilk kez çalışacak)
+- [x] GitHub Actions: CI yeşil (teknik borç commit'lerinde de geçti)
 
 ### L) Teknik borç düzeltmelerinin QA'i (B11/B16/B20 sonrası)
 - [ ] Fiyatlar her sayfada doğru para birimiyle mi (ilk sync sonrası; TRY dışı mağazada `$`/`€` görünmeli)
