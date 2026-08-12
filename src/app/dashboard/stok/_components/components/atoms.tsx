@@ -7,7 +7,7 @@ export const MonoLabel: React.FC<{ children: React.ReactNode; className?: string
   children,
   className,
 }) => (
-  <p className={`font-mono text-[12px] uppercase tracking-[0.08em] text-slate ${className ?? ''}`}>
+  <p className={`font-mono text-[12px] uppercase tracking-[0.08em] text-muted-foreground ${className ?? ''}`}>
     {children}
   </p>
 );
@@ -21,8 +21,8 @@ export const ProductThumb: React.FC<{ src?: string; alt: string; sizeClass?: str
   const [errored, setErrored] = useState(false);
   if (!src || errored) {
     return (
-      <div className={`flex ${sizeClass} items-center justify-center rounded-lg bg-soft-stone`}>
-        <Package className="h-4 w-4 text-slate" />
+      <div className={`flex ${sizeClass} items-center justify-center rounded-lg bg-muted`}>
+        <Package className="h-4 w-4 text-muted-foreground" />
       </div>
     );
   }

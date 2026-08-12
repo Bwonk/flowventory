@@ -1,4 +1,4 @@
-import type { Product, Variant, ProductStatus, VariantSales } from '../types';
+import type { Product, Variant, ProductStatus, VariantSales } from './types';
 
 export function getProductStatus(
   product: Product,

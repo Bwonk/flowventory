@@ -3,7 +3,7 @@
 import React from 'react';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import type { SortBy, StatusFilter, StockRange } from '../types';
+import type { SortBy, StatusFilter, StockRange } from '@/lib/products/types';
 import {
   DEFAULT_SORT,
   SORT_LABELS,
@@ -12,7 +12,7 @@ import {
   STATUS_OPTIONS,
   STOCK_RANGE_LABELS,
   STOCK_RANGE_OPTIONS,
-} from '../constants';
+} from '@/lib/products/constants';
 import { Dropdown, OptionButton } from './Dropdown';
 import { ThresholdControl } from './ThresholdControl';
 import { FilterChip } from './atoms';
@@ -43,16 +43,16 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   hasActiveFilters,
   onClearAll,
 }) => (
-  <div className="mb-8 rounded-[12px] border border-border bg-background">
+  <div className="mb-8 rounded-lg border border-hairline bg-card">
     {/* Satır 1: arama solda, filtre dropdown'ları sağda */}
     <div className="flex flex-col gap-2 p-2 sm:flex-row sm:items-center">
       <div className="relative flex-1">
-        <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate" />
+        <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="Ürün veya varyant ara..."
           value={query}
           onChange={e => onQueryChange(e.target.value)}
-          className="h-10 w-full border-0 bg-transparent pl-10 text-[14px] text-foreground shadow-none placeholder:text-slate focus-visible:border-0 focus-visible:ring-0"
+          className="h-10 w-full border-0 bg-transparent pl-10 text-[14px] text-foreground shadow-none placeholder:text-muted-foreground focus-visible:border-0 focus-visible:ring-0"
         />
       </div>
 
@@ -141,7 +141,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           <button
             type="button"
             onClick={onClearAll}
-            className="ml-auto text-[14px] text-action-blue underline-offset-4 transition-colors hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            className="ml-auto text-[14px] text-accent-blue underline-offset-4 transition-colors hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           >
             Tümünü Temizle
           </button>

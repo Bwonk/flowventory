@@ -16,7 +16,7 @@ import { PageContainer } from '@/components/layout/PageContainer';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { useStockThreshold } from '@/lib/stock-threshold';
 import { formatPrice, useMerchantCurrency } from '@/lib/currency';
-import { getTotalStock } from '@/components/home-page/lib/product';
+import { getTotalStock } from '@/lib/products/product';
 import { ProductListCard, type ProductListItem } from './_components/ProductListCard';
 import { ConversionInsightCard } from './_components/ConversionInsightCard';
 import { OnboardingCard } from './_components/OnboardingCard';
@@ -41,7 +41,7 @@ import {
   formatStockAge,
   minStock,
 } from './lib/metrics';
-import { getProductThumbnail } from '@/components/home-page/lib/product';
+import { getProductThumbnail } from '@/lib/products/product';
 
 export default function DashboardPage() {
   const {

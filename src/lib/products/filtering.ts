@@ -1,5 +1,5 @@
-import type { Product, ProductRow, StatusFilter, StockRange, SortBy, VariantSales } from '../types';
-import { STATUS_SEVERITY } from '../constants';
+import type { Product, ProductRow, StatusFilter, StockRange, SortBy, VariantSales } from './types';
+import { STATUS_SEVERITY } from './constants';
 import { getDaysRemaining, getProductCategory, getProductStatus, getProductThumbnail, getTotalStock } from './product';
 
 /** Ürünü tek satıra indirger: en kötü varyant durumu + toplam stok. */

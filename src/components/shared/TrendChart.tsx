@@ -13,8 +13,8 @@ import { DateRangePicker } from '@/components/shared/trend-chart/DateRangePicker
 import { cn } from '@/lib/utils';
 import { formatPrice } from '@/lib/currency';
 import { formatNumber } from '@/lib/format';
-import { TR_MONTHS } from '@/components/home-page/constants';
-import type { ChartMetric } from '@/components/home-page/types';
+import { TR_MONTHS } from '@/lib/products/constants';
+import type { ChartMetric } from '@/lib/products/types';
 
 export type ChartPeriod =
   | 'last24h'

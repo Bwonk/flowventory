@@ -4,8 +4,8 @@ import {
   getProductThumbnail,
   getTotalStock,
   getVariantStock,
-} from '@/components/home-page/lib/product';
-import type { Product, Variant, VariantSales } from '@/components/home-page/types';
+} from '@/lib/products/product';
+import type { Product, Variant, VariantSales } from '@/lib/products/types';
 import type { TrendDataPoint } from '@/components/shared/TrendChart';
 
 /**

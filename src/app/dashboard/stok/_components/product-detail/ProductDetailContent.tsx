@@ -5,8 +5,8 @@ import { DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import type { AnalyticsApiResponse } from '@/app/api/ikas/analytics/route';
 import type { SingleProductViewStats } from '@/app/api/product-view/stats/route';
 import { ApiRequests } from '@/lib/api-requests';
-import type { DaySeriesPoint, Product } from '../types';
-import { STATUS_SEVERITY } from '../constants';
+import type { DaySeriesPoint, Product } from '@/lib/products/types';
+import { STATUS_SEVERITY } from '@/lib/products/constants';
 import {
   getProductCategory,
   getProductStatus,
@@ -16,13 +16,13 @@ import {
   getVariantStock,
   getVariantStockLocations,
   stockToStatus,
-} from '../lib/product';
+} from '@/lib/products/product';
 import {
   getProductQuantity,
   getProductRevenue,
   getVariantQuantity,
   getVariantRevenue,
-} from '../lib/analytics';
+} from '@/lib/products/analytics';
 import { formatPrice } from '@/lib/currency';
 import { CategoryBadge } from '@/components/shared/badges/CategoryBadge';
 import { StatusBadge } from '@/components/shared/badges/StatusBadge';

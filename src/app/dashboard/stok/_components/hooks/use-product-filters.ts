@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useStockThreshold } from '@/lib/stock-threshold';
-import type { Product, ProductRow, SortBy, StatusFilter, StockRange, VariantSales } from '../types';
-import { DEFAULT_SORT, ITEMS_PER_PAGE } from '../constants';
-import { flattenToProducts, filterRows } from '../lib/filtering';
+import type { Product, ProductRow, SortBy, StatusFilter, StockRange, VariantSales } from '@/lib/products/types';
+import { DEFAULT_SORT, ITEMS_PER_PAGE } from '@/lib/products/constants';
+import { flattenToProducts, filterRows } from '@/lib/products/filtering';
 
 export type ViewMode = 'normal' | 'dead';
 

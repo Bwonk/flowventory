@@ -3,7 +3,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Package } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import type { ProductRow } from '../types';
+import type { ProductRow } from '@/lib/products/types';
 import { StatusBadge } from '@/components/shared/badges/StatusBadge';
 import { ProductThumb } from './atoms';
 
@@ -46,14 +46,14 @@ export const ProductTable: React.FC<ProductTableProps> = ({
       {rows.length === 0 && !loadingMore ? (
         <div className="flex flex-col items-center gap-3 py-20 text-center">
           <Package className="h-8 w-8 text-hairline" />
-          <p className="text-[18px] leading-[1.4] text-slate">
+          <p className="text-[18px] leading-[1.4] text-muted-foreground">
             {hasActiveFilters ? 'Seçili filtrelerle eşleşen ürün bulunamadı.' : 'Henüz ürün bulunamadı.'}
           </p>
           {hasActiveFilters && (
             <button
               type="button"
               onClick={onClearFilters}
-              className="text-[14px] font-medium text-action-blue underline-offset-4 hover:underline"
+              className="text-[14px] font-medium text-accent-blue underline-offset-4 hover:underline"
             >
               Filtreleri temizle
             </button>
@@ -64,25 +64,25 @@ export const ProductTable: React.FC<ProductTableProps> = ({
           <Table>
             <TableHeader className="bg-background">
               <TableRow className="border-b border-border hover:bg-transparent">
-                <TableHead className={`w-[48px] px-3 py-3 text-center font-mono text-[12px] uppercase tracking-[0.08em] text-slate`}>
+                <TableHead className={`w-[48px] px-3 py-3 text-center font-mono text-[12px] uppercase tracking-[0.08em] text-muted-foreground`}>
                   #
                 </TableHead>
-                <TableHead className={`w-[72px] px-3 py-3 font-mono text-[12px] uppercase tracking-[0.08em] text-slate`}>
+                <TableHead className={`w-[72px] px-3 py-3 font-mono text-[12px] uppercase tracking-[0.08em] text-muted-foreground`}>
                   Görsel
                 </TableHead>
-                <TableHead className={`px-3 py-3 font-mono text-[12px] uppercase tracking-[0.08em] text-slate`}>
+                <TableHead className={`px-3 py-3 font-mono text-[12px] uppercase tracking-[0.08em] text-muted-foreground`}>
                   Ürün Bilgileri
                 </TableHead>
-                <TableHead className={`px-3 py-3 font-mono text-[12px] uppercase tracking-[0.08em] text-slate`}>
+                <TableHead className={`px-3 py-3 font-mono text-[12px] uppercase tracking-[0.08em] text-muted-foreground`}>
                   Durum
                 </TableHead>
-                <TableHead className={`px-3 py-3 font-mono text-[12px] uppercase tracking-[0.08em] text-slate`}>
+                <TableHead className={`px-3 py-3 font-mono text-[12px] uppercase tracking-[0.08em] text-muted-foreground`}>
                   Görüntülenme
                 </TableHead>
-                <TableHead className={`px-3 py-3 font-mono text-[12px] uppercase tracking-[0.08em] text-slate`}>
+                <TableHead className={`px-3 py-3 font-mono text-[12px] uppercase tracking-[0.08em] text-muted-foreground`}>
                   Stok Ömrü
                 </TableHead>
-                <TableHead className="px-3 py-3 font-mono text-[12px] uppercase tracking-[0.08em] text-slate">
+                <TableHead className="px-3 py-3 font-mono text-[12px] uppercase tracking-[0.08em] text-muted-foreground">
                   Toplam Stok
                 </TableHead>
               </TableRow>
@@ -98,7 +98,7 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                     onClick={() => onSelectProduct(row.productId)}
                   >
                     <TableCell className={`w-[48px] px-3 py-3 text-center align-middle`}>
-                      <span className="font-mono text-[14px] tabular-nums text-slate">
+                      <span className="font-mono text-[14px] tabular-nums text-muted-foreground">
                         {String(rowNumber).padStart(2, '0')}
                       </span>
                     </TableCell>
@@ -107,15 +107,15 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                     </TableCell>
                     <TableCell className={`px-3 py-3 align-middle`}>
                       <div className="flex flex-col gap-1">
-                        <span className="text-[16px] font-medium text-primary transition-colors group-hover:text-action-blue">
+                        <span className="text-[16px] font-medium text-primary transition-colors group-hover:text-accent-blue">
                           {row.productName}
                         </span>
-                        <span className="flex items-center gap-2 text-[14px] text-slate">
+                        <span className="flex items-center gap-2 text-[14px] text-muted-foreground">
                           <span className="inline-block h-1.5 w-1.5 rounded-full bg-hairline" />
                           {row.variantCount} varyant
                         </span>
                         {row.category && (
-                          <span className="mt-1 inline-flex w-fit rounded-full bg-pale-blue px-2.5 py-0.5 text-[12px] font-medium text-action-blue">
+                          <span className="mt-1 inline-flex w-fit rounded-full bg-info px-2.5 py-0.5 text-[12px] font-medium text-accent-blue">
                             {row.category}
                           </span>
                         )}
@@ -128,7 +128,7 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                       {row.viewCount != null ? (
                         <div>
                           <p className="text-lg font-semibold text-primary">{row.viewCount}</p>
-                          <p className="mt-0.5 text-xs text-slate">Son 30 gün</p>
+                          <p className="mt-0.5 text-xs text-muted-foreground">Son 30 gün</p>
                         </div>
                       ) : (
                         <p className="text-lg text-hairline">—</p>
@@ -144,7 +144,7 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                           return (
                             <div>
                               <p className="text-lg text-hairline">—</p>
-                              <p className="mt-0.5 text-xs text-slate">Satış yok</p>
+                              <p className="mt-0.5 text-xs text-muted-foreground">Satış yok</p>
                             </div>
                           );
                         }
@@ -168,14 +168,14 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                           return (
                             <div>
                               <p className="text-lg font-semibold text-primary">365+ gün</p>
-                              <p className="mt-0.5 text-xs text-slate">Fazla stok</p>
+                              <p className="mt-0.5 text-xs text-muted-foreground">Fazla stok</p>
                             </div>
                           );
                         }
                         return (
                           <div>
                             <p className="text-lg font-semibold text-primary">{d} gün</p>
-                            <p className="mt-0.5 text-xs text-slate">Yeterli</p>
+                            <p className="mt-0.5 text-xs text-muted-foreground">Yeterli</p>
                           </div>
                         );
                       })()}
@@ -187,7 +187,7 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                         >
                           {row.totalStock}
                         </span>
-                        <span className="text-[14px] text-slate">Adet</span>
+                        <span className="text-[14px] text-muted-foreground">Adet</span>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -197,28 +197,28 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                 [...Array(3)].map((_, i) => (
                   <TableRow key={`skeleton-${i}`} className="border-b border-border">
                     <TableCell className={`w-[48px] px-3 py-3`}>
-                      <div className="mx-auto h-5 w-6 animate-pulse rounded bg-soft-stone" />
+                      <div className="mx-auto h-5 w-6 animate-pulse rounded bg-muted" />
                     </TableCell>
                     <TableCell className={`w-[72px] px-3 py-3`}>
-                      <div className="h-10 w-10 animate-pulse rounded bg-soft-stone" />
+                      <div className="h-10 w-10 animate-pulse rounded bg-muted" />
                     </TableCell>
                     <TableCell className={`px-3 py-3`}>
                       <div className="flex flex-col gap-2">
-                        <div className="h-4 w-40 animate-pulse rounded bg-soft-stone" />
-                        <div className="h-3 w-24 animate-pulse rounded bg-soft-stone" />
+                        <div className="h-4 w-40 animate-pulse rounded bg-muted" />
+                        <div className="h-3 w-24 animate-pulse rounded bg-muted" />
                       </div>
                     </TableCell>
                     <TableCell className={`px-3 py-3`}>
-                      <div className="h-6 w-16 animate-pulse rounded-full bg-soft-stone" />
+                      <div className="h-6 w-16 animate-pulse rounded-full bg-muted" />
                     </TableCell>
                     <TableCell className={`px-3 py-3`}>
-                      <div className="h-4 w-12 animate-pulse rounded bg-soft-stone" />
+                      <div className="h-4 w-12 animate-pulse rounded bg-muted" />
                     </TableCell>
                     <TableCell className={`px-3 py-3`}>
-                      <div className="h-4 w-14 animate-pulse rounded bg-soft-stone" />
+                      <div className="h-4 w-14 animate-pulse rounded bg-muted" />
                     </TableCell>
                     <TableCell className="px-3 py-3">
-                      <div className="h-5 w-16 animate-pulse rounded bg-soft-stone" />
+                      <div className="h-5 w-16 animate-pulse rounded bg-muted" />
                     </TableCell>
                   </TableRow>
                 ))
@@ -232,7 +232,7 @@ export const ProductTable: React.FC<ProductTableProps> = ({
           {/* End-of-list message */}
           {!hasMore && rows.length > 0 && !loadingMore && (
             <div className="border-t border-border px-6 py-4 text-center">
-              <p className="text-[14px] text-slate">Tüm ürünler yüklendi</p>
+              <p className="text-[14px] text-muted-foreground">Tüm ürünler yüklendi</p>
             </div>
           )}
         </div>

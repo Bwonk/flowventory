@@ -1,5 +1,5 @@
-import type { ProductRow } from '../types';
-import { STATUS_META } from '../constants';
+import type { ProductRow } from './types';
+import { STATUS_META } from './constants';
 
 export function downloadCSV(rows: ProductRow[]) {
   const headers = ['Ürün Adı', 'Kategori', 'Durum', 'Toplam Stok', 'Varyant Sayısı'];

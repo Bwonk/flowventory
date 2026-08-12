@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import type { ProductStatus } from '../types';
+import type { ProductStatus } from '@/lib/products/types';
 import { cn } from '@/lib/utils';
 import { Check } from 'lucide-react';
 import { StatusBadge } from '@/components/shared/badges/StatusBadge';

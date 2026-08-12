@@ -3,13 +3,15 @@
 import React, { useEffect, useState } from 'react';
 import { Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { HomePageProps, Product } from './types';
+import { PageContainer } from '@/components/layout/PageContainer';
+import { PageHeader } from '@/components/layout/PageHeader';
+import type { HomePageProps, Product } from '@/lib/products/types';
 import { useProductFilters } from './hooks/use-product-filters';
 import { MonoLabel } from './components/atoms';
 import { FilterBar } from './components/FilterBar';
 import { ProductTable } from './components/ProductTable';
 import { ProductDetailModal } from './product-detail/ProductDetailModal';
-import { downloadCSV } from './lib/csv';
+import { downloadCSV } from '@/lib/products/csv';
 
 const HomePage: React.FC<HomePageProps> = ({ token, products = [], analytics, viewStats, loading, initialStatusFilter, initialViewMode, initialSelectedProductId }) => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -44,24 +46,18 @@ const HomePage: React.FC<HomePageProps> = ({ token, products = [], analytics, vi
 
 
   return (
-    <div className="font-sans text-foreground">
-      <div className="mx-auto max-w-7xl px-6 py-8">
-        {/* Başlık */}
-        <header className="mb-6 flex items-center justify-between">
-          <div>
-            <p className="mb-1 font-mono text-[10px] uppercase tracking-wider text-slate">
-              STOK YÖNETİMİ
-            </p>
-            <h1 className="text-3xl font-normal tracking-[-0.03em] text-primary">Stok Takibi</h1>
-          </div>
-          <Button
-            onClick={() => downloadCSV(filters.displayedRows)}
-            className="h-auto gap-2 rounded-full bg-primary px-6 py-3 text-[14px] font-medium text-primary-foreground shadow-none transition-colors hover:bg-black"
-          >
-            <Download className="h-4 w-4" />
-            CSV İndir
-          </Button>
-        </header>
+    <div className="text-foreground">
+      <PageContainer>
+        <PageHeader
+          eyebrow="STOK YÖNETİMİ"
+          title="Stok Takibi"
+          actions={
+            <Button onClick={() => downloadCSV(filters.displayedRows)} className="gap-2">
+              <Download className="size-4" />
+              CSV İndir
+            </Button>
+          }
+        />
 
         {/* Birleşik filtre konteyneri */}
         <FilterBar
@@ -90,7 +86,7 @@ const HomePage: React.FC<HomePageProps> = ({ token, products = [], analytics, vi
           onLoadMore={filters.loadMore}
           loadingMore={filters.loadingMore}
         />
-      </div>
+      </PageContainer>
 
       {/* Ürün detay modalı */}
       <ProductDetailModal

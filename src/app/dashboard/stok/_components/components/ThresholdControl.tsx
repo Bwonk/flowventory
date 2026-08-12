@@ -36,34 +36,34 @@ export const ThresholdControl: React.FC = () => {
     >
       {close => (
         <div className="w-72 p-4">
-          <p className="mb-3 font-mono text-[10px] uppercase tracking-wider text-slate">STOK EŞİĞİ</p>
+          <p className="mb-3 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">STOK EŞİĞİ</p>
 
           <label className="mb-1 text-sm font-medium text-primary">Kritik seviye</label>
-          <p className="mb-2 text-xs text-slate">Bu adet ve altı → Kritik (kırmızı)</p>
+          <p className="mb-2 text-xs text-muted-foreground">Bu adet ve altı → Kritik (kırmızı)</p>
           <div className="mb-3 flex items-center gap-2">
-            <span className="text-slate">{'≤'}</span>
+            <span className="text-muted-foreground">{'≤'}</span>
             <input
               type="number"
               value={tempCritical}
               onChange={e => setTempCritical(e.target.value === '' ? 0 : Number(e.target.value))}
               className="w-20 rounded-lg border border-border px-3 py-1.5 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
             />
-            <span className="text-xs text-slate">adet</span>
+            <span className="text-xs text-muted-foreground">adet</span>
           </div>
 
           <div className="my-3 border-t border-muted" />
 
           <label className="mb-1 text-sm font-medium text-primary">Az kalan seviye</label>
-          <p className="mb-2 text-xs text-slate">Bu adet ve altı → Az Kalan (sarı)</p>
+          <p className="mb-2 text-xs text-muted-foreground">Bu adet ve altı → Az Kalan (sarı)</p>
           <div className="mb-3 flex items-center gap-2">
-            <span className="text-slate">{'≤'}</span>
+            <span className="text-muted-foreground">{'≤'}</span>
             <input
               type="number"
               value={tempWarning}
               onChange={e => setTempWarning(e.target.value === '' ? 0 : Number(e.target.value))}
               className="w-20 rounded-lg border border-border px-3 py-1.5 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
             />
-            <span className="text-xs text-slate">adet</span>
+            <span className="text-xs text-muted-foreground">adet</span>
           </div>
 
           {hasError && (
@@ -71,7 +71,7 @@ export const ThresholdControl: React.FC = () => {
           )}
 
           <div className="mt-3 border-t border-muted pt-3">
-            <p className="text-xs text-slate">Bu değerler dashboard ve listedeki renklendirmeyi belirler.</p>
+            <p className="text-xs text-muted-foreground">Bu değerler dashboard ve listedeki renklendirmeyi belirler.</p>
           </div>
 
           <div className="mt-4 flex gap-2">
@@ -82,7 +82,7 @@ export const ThresholdControl: React.FC = () => {
                 setTempWarning(threshold.max);
                 close();
               }}
-              className="flex-1 rounded-lg border border-border py-2 text-sm text-slate transition-colors hover:bg-muted"
+              className="flex-1 rounded-lg border border-border py-2 text-sm text-muted-foreground transition-colors hover:bg-muted"
             >
               İptal
             </button>

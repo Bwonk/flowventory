@@ -5,7 +5,7 @@ import { Suspense, useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { TokenHelpers } from '@/helpers/token-helpers';
 import { ApiRequests } from '@/lib/api-requests';
-import HomePage from '../../../components/home-page';
+import HomePage from './_components';
 import { ListProductsApiResponse } from '../../api/ikas/list-products/route';
 import { AnalyticsApiResponse } from '../../api/ikas/analytics/route';
 import { ErrorState } from '@/components/shared/ErrorState';

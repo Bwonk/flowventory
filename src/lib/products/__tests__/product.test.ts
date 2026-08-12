@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import type { Product, Variant } from '@/components/home-page/types';
+import type { Product, Variant } from '@/lib/products/types';
 import {
   getProductStatus,
   getTotalStock,
   getVariantStock,
   getVariantStockLocations,
-} from '@/components/home-page/lib/product';
+} from '@/lib/products/product';
 
 /**
  * B16 regresyonu: varyant stoğu tüm depoların toplamı olmalı.

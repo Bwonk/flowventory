@@ -1,4 +1,4 @@
-import type { Product, VariantSales } from '../types';
+import type { Product, VariantSales } from './types';
 
 /** Bu ürüne ait varyantların 30 günlük toplam cirosu. */
 export function getProductRevenue(product: Product, salesByVariant: VariantSales[]): number {

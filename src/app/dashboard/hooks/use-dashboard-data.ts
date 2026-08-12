@@ -7,7 +7,7 @@ import { ApiRequests } from '@/lib/api-requests';
 import type { AnalyticsApiResponse } from '@/app/api/ikas/analytics/route';
 import type { ConversionInsightApiResponse } from '@/app/api/insights/conversion/route';
 import type { DailyViewStatsResponse } from '@/app/api/product-view/stats/route';
-import type { Product } from '@/components/home-page/types';
+import type { Product } from '@/lib/products/types';
 
 export interface DashboardData {
   token: string | null;

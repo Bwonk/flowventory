@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogClose } from '@/components/ui/dialog';
 import { XIcon } from 'lucide-react';
 import type { AnalyticsApiResponse } from '@/app/api/ikas/analytics/route';
 import { useStockThreshold } from '@/lib/stock-threshold';
-import type { Product } from '../types';
+import type { Product } from '@/lib/products/types';
 import { ProductDetailContent } from './ProductDetailContent';
 
 interface ProductDetailModalProps {

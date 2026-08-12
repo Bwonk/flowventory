@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Check, Pencil, X } from 'lucide-react';
 import { ApiRequests } from '@/lib/api-requests';
-import type { VariantStockLocation } from '@/components/home-page/lib/product';
+import type { VariantStockLocation } from '@/lib/products/product';
 
 /**
  * Seçili varyant için satır içi stok düzenleme.
