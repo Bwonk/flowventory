@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   dominantCurrencyCode,
+  formatDateKey,
   formatMoney,
   formatNumber,
   formatPercent,
@@ -87,5 +88,24 @@ describe('dominantCurrencyCode', () => {
   it('hiç geçerli kod yoksa null döner', () => {
     expect(dominantCurrencyCode([null, 'X'])).toBeNull();
     expect(dominantCurrencyCode([])).toBeNull();
+  });
+});
+
+describe('formatDateKey', () => {
+  it('tarih anahtarını okunur biçime çevirir', () => {
+    expect(formatDateKey('2026-09-01')).toBe('1 Eyl 2026');
+  });
+
+  it('yerel saat diliminden bağımsız olarak günü kaydırmaz', () => {
+    // Anahtar merchant TZ'sinde üretildi; UTC'de biçimlendirilmezse
+    // negatif ofsetli tarayıcıda "31 Ara 2025" görünürdü.
+    expect(formatDateKey('2026-01-01')).toBe('1 Oca 2026');
+  });
+
+  it('geçersiz veya boş anahtarda null döner', () => {
+    expect(formatDateKey('2026-9-1')).toBeNull();
+    expect(formatDateKey('bugün')).toBeNull();
+    expect(formatDateKey(null)).toBeNull();
+    expect(formatDateKey(undefined)).toBeNull();
   });
 });

@@ -3,14 +3,18 @@
 import { logger } from '@/lib/logger';
 import { useCallback, useEffect, useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { TokenHelpers } from '@/helpers/token-helpers';
 import { ApiRequests } from '@/lib/api-requests';
-import type { InventoryInsightApiResponse } from '@/app/api/insights/inventory/route';
+import type { InventoryInsightApiResponse, InventoryInsightItem } from '@/app/api/insights/inventory/route';
 import type { AbcClass } from '@/lib/reports/abc';
+import type { SellThroughBand } from '@/lib/reports/sell-through';
 import { ErrorState } from '@/components/shared/ErrorState';
+import { SellThroughBadge } from '@/components/shared/badges/SellThroughBadge';
 import { StockLifeBadge } from '@/components/shared/badges/StockLifeBadge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatPrice, useMerchantCurrency } from '@/lib/currency';
+import { formatDateKey, formatNumber, formatPercent } from '@/lib/format';
 
 const ABC_LABELS: Record<AbcClass, { title: string; description: string }> = {
   A: { title: 'A Sınıfı', description: 'Cironun ~%80\'i — sürekli izle, asla tükettirme' },
@@ -18,11 +22,38 @@ const ABC_LABELS: Record<AbcClass, { title: string; description: string }> = {
   C: { title: 'C Sınıfı', description: 'Cironun ~%5\'i — stok bağlama, azaltmayı düşün' },
 };
 
+const SELL_THROUGH_BAND_ORDER: SellThroughBand[] = ['yüksek', 'normal', 'düşük', 'satışsız'];
+
+const SELL_THROUGH_BAND_LABEL: Record<SellThroughBand, string> = {
+  yüksek: 'Hızlı eriyen (%60+)',
+  normal: 'Normal (%25-60)',
+  düşük: 'Yavaş (%25 altı)',
+  satışsız: 'Hiç satmayan',
+};
+
+const SELL_THROUGH_BAND_DOT: Record<SellThroughBand, string> = {
+  yüksek: 'bg-status-healthy',
+  normal: 'bg-blue-500',
+  düşük: 'bg-status-warning',
+  satışsız: 'bg-status-critical',
+};
+
 const ABC_BADGE_CLASS: Record<AbcClass, string> = {
   A: 'bg-emerald-50 text-emerald-800',
   B: 'bg-amber-50 text-amber-800',
   C: 'bg-muted text-muted-foreground',
 };
+
+/**
+ * "Tükeniş" sütunu metni. Üç ayrı "tarih yok" hâli var ve karıştırılmamalı:
+ * stok zaten bitmiş, satış olmadığı için tahmin edilemiyor, tahmin 2 yılın
+ * ötesinde (pratikte ölü stok).
+ */
+function stockoutLabel(item: InventoryInsightItem): string {
+  if (item.totalStock === 0) return 'tükendi';
+  if (item.daysOfStock === null) return 'satış yok';
+  return formatDateKey(item.stockoutDate) ?? '2+ yıl';
+}
 
 function AnalizSkeleton() {
   return (
@@ -80,13 +111,14 @@ export default function AnalizPage() {
 
   const totalAgingValue = insight.agingBuckets.reduce((s, b) => s + b.stockValue, 0);
   const hasEstimate = insight.items.some(i => i.isEstimate && i.totalStock > 0);
+  const sellThrough = insight.sellThroughSummary;
 
   return (
     <div className="mx-auto max-w-7xl p-6">
       <p className="mb-1 font-mono text-[10px] uppercase tracking-wider text-slate">ANALİZ</p>
       <h1 className="mb-2 text-4xl font-normal tracking-[-0.04em] text-primary">Envanter Analizi</h1>
       <p className="mb-6 text-xs text-muted-foreground">
-        Son {insight.windowDays} günün satışına göre ABC sınıflandırması ve stok yaşlandırma
+        Son {insight.windowDays} günün satışına göre ABC sınıflandırması, satış hızı ve stok yaşlandırma
         {hasEstimate && ' · ~ işaretli değerler alış fiyatı yerine satış fiyatıyla hesaplandı'}
       </p>
 
@@ -110,6 +142,88 @@ export default function AnalizPage() {
             </div>
           ))}
         </div>
+      </section>
+
+      {/* Satış hızı */}
+      <section className="mb-4 rounded-xl border border-border bg-background p-5">
+        <h2 className="text-sm font-medium text-foreground">Satış Hızı</h2>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          Son {insight.windowDays} günde satılan mal, eldeki mala oranla ne kadar eridi
+        </p>
+
+        <div className="mt-4 grid gap-6 md:grid-cols-3">
+          <div>
+            <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">SELL-THROUGH</p>
+            <p className="mt-1 text-3xl font-semibold tracking-tight text-foreground tabular-nums">
+              {sellThrough.overall === null ? '—' : formatPercent(sellThrough.overall, 0)}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {formatNumber(sellThrough.soldUnits)} adet satıldı · {formatNumber(sellThrough.stockUnits)} adet elde
+            </p>
+            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full bg-status-healthy"
+                style={{ width: `${Math.round((sellThrough.overall ?? 0) * 100)}%` }}
+              />
+            </div>
+          </div>
+
+          <div>
+            <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">YILLIK DEVİR</p>
+            <p className="mt-1 text-3xl font-semibold tracking-tight text-foreground tabular-nums">
+              {sellThrough.turnoverRate === null
+                ? '—'
+                : `~${sellThrough.turnoverRate.toLocaleString('tr-TR', { maximumFractionDigits: 1 })}×`}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Bu hızla devam ederse stok yılda bu kadar kez döner
+            </p>
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              ~ : dönem ortalaması yerine bugünkü stoğa göre yaklaşık
+            </p>
+          </div>
+
+          <div>
+            <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">ÜRÜN DAĞILIMI</p>
+            <ul className="mt-2 space-y-1.5">
+              {SELL_THROUGH_BAND_ORDER.map(band => (
+                <li key={band} className="flex items-center gap-2 text-xs">
+                  <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${SELL_THROUGH_BAND_DOT[band]}`} />
+                  <span className="flex-1 text-muted-foreground">{SELL_THROUGH_BAND_LABEL[band]}</span>
+                  <span className="font-medium tabular-nums text-foreground">
+                    {sellThrough.bandCounts[band]}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        {sellThrough.stockoutRiskCount > 0 && (
+          <div className="mt-5 rounded-lg border border-border bg-muted/40 p-4">
+            <p className="text-xs font-medium text-foreground">
+              {sellThrough.stockoutRiskCount} ürün tedarik süresinden ({insight.leadTimeDays} gün) önce tükeniyor
+            </p>
+            <ul className="mt-2 space-y-1">
+              {sellThrough.stockoutRisk.map(risk => (
+                <li key={risk.productId} className="flex items-baseline justify-between gap-4 text-xs">
+                  <span className="truncate text-muted-foreground">{risk.productName}</span>
+                  <span className="shrink-0 tabular-nums text-muted-foreground">
+                    {risk.totalStock} adet · {formatDateKey(risk.stockoutDate) ?? '—'}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            {sellThrough.stockoutRiskCount > sellThrough.stockoutRisk.length && (
+              <p className="mt-1.5 text-[11px] text-muted-foreground">
+                +{sellThrough.stockoutRiskCount - sellThrough.stockoutRisk.length} ürün daha
+              </p>
+            )}
+            <Link href="/dashboard/rapor" className="mt-3 inline-block text-xs font-medium text-foreground underline underline-offset-2">
+              Satın alma raporunu aç →
+            </Link>
+          </div>
+        )}
       </section>
 
       {/* Yaşlandırma */}
@@ -158,7 +272,11 @@ export default function AnalizPage() {
                 <th className="px-3 py-2 text-right font-normal">Ciro (30g)</th>
                 <th className="px-3 py-2 text-right font-normal">Satış</th>
                 <th className="px-3 py-2 text-right font-normal">Stok</th>
+                <th className="px-3 py-2 text-right font-normal" title="Satılan ÷ (satılan + kalan)">
+                  Sell-through
+                </th>
                 <th className="px-3 py-2 text-right font-normal">Stok Ömrü</th>
+                <th className="px-3 py-2 text-right font-normal">Tükeniş</th>
                 <th className="px-5 py-2 text-right font-normal">Bağlı Sermaye</th>
               </tr>
             </thead>
@@ -189,11 +307,25 @@ export default function AnalizPage() {
                   <td className="px-3 py-2.5 text-right tabular-nums">{item.soldQty}</td>
                   <td className="px-3 py-2.5 text-right tabular-nums">{item.totalStock}</td>
                   <td className="px-3 py-2.5 text-right">
+                    <SellThroughBadge rate={item.sellThrough} band={item.sellThroughBand} />
+                  </td>
+                  <td className="px-3 py-2.5 text-right">
                     {item.totalStock === 0 ? (
                       <span className="text-muted-foreground">—</span>
                     ) : (
                       <StockLifeBadge days={item.daysOfStock} />
                     )}
+                  </td>
+                  <td className="px-3 py-2.5 text-right text-xs tabular-nums">
+                    <span
+                      className={
+                        item.stockoutBeforeLeadTime && item.totalStock > 0
+                          ? 'font-medium text-destructive'
+                          : 'text-muted-foreground'
+                      }
+                    >
+                      {stockoutLabel(item)}
+                    </span>
                   </td>
                   <td className="px-5 py-2.5 text-right font-medium tabular-nums">
                     {formatPrice(item.stockValue)}

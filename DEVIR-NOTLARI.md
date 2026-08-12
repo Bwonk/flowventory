@@ -82,6 +82,11 @@ pnpm dev                    # (veya ikas CLI dev komutu)
 ### E) Analiz (`/dashboard/analiz`)
 - [ ] ABC dağılımı mantıklı mı (en çok satan A'da mı)
 - [ ] Yaşlandırma kovaları + bağlı sermaye; 180+/satışsız kovaları kırmızı mı
+- [ ] Satış Hızı bloğu: sell-through yüzdesi ile "N adet satıldı / M adet elde" tutarlı mı
+- [ ] Ürün dağılımı sayıları toplamı = tablodaki ürün sayısı mı (stoksuz + satışsız ürünler hariç)
+- [ ] "X ürün tedarik süresinden önce tükeniyor" listesi: Ayarlar'da tedarik süresini değiştirince liste değişiyor mu
+- [ ] Tükeniş sütunu: stoksuz ürün "tükendi", satışsız ürün "satış yok", çok yavaş ürün "2+ yıl" gösteriyor mu
+- [ ] Tükeniş tarihi mağaza saat diliminde mi (gün kayması yok)
 
 ### F) Dönüşüm kartı (dashboard)
 - [ ] Görüntülenme/satış/dönüşüm % değerleri; "düşük dönüşüm" rozeti çıkıyor mu
@@ -108,7 +113,7 @@ pnpm dev                    # (veya ikas CLI dev komutu)
 ### K) Regresyon
 - [ ] Stok Takibi sayfası: filtreler, deep link'ler (`?filter=tukendi`, `?view=dead`, `?product=...`)
 - [ ] Ürün modal'ı: chart periyotları (24s/7g/30g/1y/özel), varyant seçince "Görüntülenme" gizlenmesi
-- [x] `pnpm test` (88 test) + `pnpm build` + `pnpm lint` yeni makinede geçiyor
+- [x] `pnpm test` (115 test) + `pnpm build` + `pnpm lint` yeni makinede geçiyor
 - [x] GitHub Actions: CI yeşil (teknik borç commit'lerinde de geçti)
 
 ### L) Teknik borç düzeltmelerinin QA'i (B11/B16/B20 sonrası)
@@ -145,7 +150,7 @@ pnpm dev                    # (veya ikas CLI dev komutu)
 - Kaydedilmiş görünümler / paylaşılabilir filtreler
 - Excel export (CSV var; rapor bazlı export yok)
 - Çoklu depo desteği (B16'nın ürünleşmişi: depo bazlı stok + transfer önerisi)
-- Sell-through / stok devir hızı metriği
+- ~~Sell-through / stok devir hızı metriği~~ → ✅ Analiz sayfasına eklendi (`src/lib/reports/sell-through.ts`)
 - Tedarikçi yönetimi (leadTime'ı tedarikçi bazına indir; vendor'suz ürünler için uyarı)
 - Audit log (kim ne zaman stok değiştirdi)
 - XYZ analizi (talep oynaklığı — ABC'nin yanına 9 kutu matris)

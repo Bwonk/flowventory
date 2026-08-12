@@ -77,6 +77,32 @@ export function formatPercent(ratio: number, maximumFractionDigits = 1, locale: 
   return `%${(safe * 100).toLocaleString(locale, { maximumFractionDigits })}`;
 }
 
+/** Tarih anahtarı: "2026-09-01". SalesDaily/ProductView bu formatta tutuluyor. */
+const DATE_KEY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+/**
+ * "2026-09-01" → "1 Eyl 2026".
+ *
+ * Anahtar zaten merchant timezone'unda üretildiği için burada UTC'de
+ * biçimlendiriyoruz; aksi hâlde tarayıcının TZ'si günü bir kaydırabilir.
+ *
+ * @returns geçersiz anahtarda null — çağıran "—" gösterir.
+ */
+export function formatDateKey(key: string | null | undefined, locale: string = DEFAULT_LOCALE): string | null {
+  if (typeof key !== 'string') return null;
+  const match = DATE_KEY_PATTERN.exec(key);
+  if (!match) return null;
+  const [, year, month, day] = match;
+  const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleDateString(locale, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
 /**
  * Bir varyant/sipariş listesindeki baskın para birimini seçer.
  * Karışık kodlarda en çok geçen kazanır; hiç yoksa null (çağıran varsayılana düşer).
