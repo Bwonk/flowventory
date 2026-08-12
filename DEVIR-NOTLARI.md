@@ -102,8 +102,15 @@ pnpm dev                    # (veya ikas CLI dev komutu)
 ### K) Regresyon
 - [ ] Stok Takibi sayfası: filtreler, deep link'ler (`?filter=tukendi`, `?view=dead`, `?product=...`)
 - [ ] Ürün modal'ı: chart periyotları (24s/7g/30g/1y/özel), varyant seçince "Görüntülenme" gizlenmesi
-- [ ] `pnpm test` (55 test) + `pnpm build` yeni makinede de geçiyor mu
+- [x] `pnpm test` (80 test) + `pnpm build` + `pnpm lint` yeni makinede geçiyor
 - [ ] GitHub Actions: push sonrası CI yeşil mi (ilk kez çalışacak)
+
+### L) Teknik borç düzeltmelerinin QA'i (B11/B16/B20 sonrası)
+- [ ] Fiyatlar her sayfada doğru para birimiyle mi (ilk sync sonrası; TRY dışı mağazada `$`/`€` görünmeli)
+- [ ] Çok depolu mağazada dashboard stok sayısı = analiz sayfasındaki sayı (eskiden ilk depoyu okuyordu)
+- [ ] Ürün modal'ı: tek depoda "STOK" satırı, çok depoda "TOPLAM STOK" + "DEPO 1/2…" satırları
+- [ ] Bir depoyu düzenle → ikas admin'de **o depo** değişsin, diğeri sabit kalsın
+- [ ] Grafik: 24 saat + "Görüntülenme" seçimi artık veri geldiğinde güncelleniyor mu
 
 ---
 
@@ -120,12 +127,12 @@ pnpm dev                    # (veya ikas CLI dev komutu)
 ### Plandan kalan küçük teknik borçlar
 | Kod | İş | Durum |
 |---|---|---|
-| B11 | `₺` ve Türkçe hardcode — `currencyCode` veride var ama `formatPrice` kullanmıyor | Yapılmadı (i18n ile birlikte ele al) |
-| B16 | Frontend hâlâ `stocks[0]` okuyor (çok depolu mağazada ilk depo); snapshot tarafı ise tüm depoları topluyor | Kısmi — çoklu depo özelliği Katman 3'te |
-| B20 | Client component'lerde `console.error` kaldı (server tarafı logger'a taşındı) | Kısmi — kritik değil |
+| B11 | `₺` hardcode — para birimi artık `src/lib/format.ts` + `src/lib/currency.ts` üzerinden; sync varyant fiyatlarından `currencyCode`'u tespit edip `MerchantSettings`'e yazıyor | ✅ Tamamlandı (dil/i18n ayrı iş, hâlâ bloklu) |
+| B16 | Frontend `stocks[0]` yerine tüm depoları topluyor (`getVariantStock`) — sync ile tutarlı; StockEditor çok depoluysa depo bazlı düzenliyor | ✅ Tutarsızlık giderildi (depo adları + transfer önerisi hâlâ Katman 3) |
+| B20 | Tüm `console.*` çağrıları `logger`'a taşındı (client dahil); OAuth callback'te parametre loglayan satır kaldırıldı (code/signature sızıntısı) | ✅ Tamamlandı |
 | — | Rate limiter in-memory — multi-instance deploy'da Redis'e taşınmalı | Postgres kararıyla birlikte |
-| — | 3 eski lint uyarısı: `TrendChart` hourlyViews dep + bir `<img>` | Kozmetik |
-| — | `src/app/api/dev/seed-orders` + mock-analytics: production build'e girmiyor ama App Store öncesi tamamen silinebilir | Not |
+| — | Lint uyarıları: `TrendChart` hourlyViews dep (gerçek bug'dı — 24s/görüntülenme grafiği asenkron veriyi göstermiyordu) + `<img>` → `next/image` | ✅ Temiz (0 uyarı) |
+| — | `src/app/api/dev/seed-orders` + mock-analytics: production build'e girmiyor ama App Store öncesi tamamen silinebilir | Not — manuel QA bitene kadar dursun |
 
 ### Plandan kalan özellik fikirleri (Katman 2-3, hiç başlanmadı)
 - Zamanlanmış özet raporu (günlük/haftalık e-posta — alarm altyapısı hazır, cron gerekiyor)
