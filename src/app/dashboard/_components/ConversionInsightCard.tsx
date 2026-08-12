@@ -19,7 +19,7 @@ function formatPercent(rate: number): string {
 export function ConversionInsightCard({ insight }: { insight: ConversionInsightApiResponse | null }) {
   if (!insight || insight.totalViews === 0) {
     return (
-      <section className="rounded-xl border border-border bg-background p-5">
+      <section className="rounded-lg border border-hairline bg-card p-5">
         <h2 className="text-sm font-medium text-foreground">Görüntülenme → Satış Dönüşümü</h2>
         <div className="mt-6 flex flex-col items-center gap-2 py-8 text-center">
           <Eye className="h-6 w-6 text-muted-foreground" aria-hidden />
@@ -39,7 +39,7 @@ export function ConversionInsightCard({ insight }: { insight: ConversionInsightA
   const flagged = insight.items.filter(i => i.lowConversion).length;
 
   return (
-    <section className="rounded-xl border border-border bg-background p-5">
+    <section className="rounded-lg border border-hairline bg-card p-5">
       <div className="mb-4 flex items-center justify-between">
         <div>
           <h2 className="text-sm font-medium text-foreground">Görüntülenme → Satış Dönüşümü</h2>
@@ -48,7 +48,7 @@ export function ConversionInsightCard({ insight }: { insight: ConversionInsightA
           </p>
         </div>
         {flagged > 0 && (
-          <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-800">
+          <span className="rounded-full bg-warning px-2.5 py-0.5 text-xs font-medium text-warning-foreground">
             {flagged} ürün ilgi görüyor ama satmıyor
           </span>
         )}
@@ -82,7 +82,7 @@ export function ConversionInsightCard({ insight }: { insight: ConversionInsightA
                     <span className="truncate font-medium text-foreground">{item.productName}</span>
                     {item.lowConversion && (
                       <span
-                        className="shrink-0 rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-800"
+                        className="shrink-0 rounded-full bg-warning px-1.5 py-0.5 text-[10px] font-medium text-warning-foreground"
                         title="Görüntülenmesi yüksek, dönüşümü mağaza ortalamasının yarısının altında — fiyat, görsel veya açıklamayı gözden geçirin"
                       >
                         düşük dönüşüm

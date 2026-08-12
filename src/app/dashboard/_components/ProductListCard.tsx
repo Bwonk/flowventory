@@ -56,7 +56,7 @@ export const ProductListCard: React.FC<ProductListCardProps> = ({
   emptyState,
 }) => {
   return (
-    <section className="flex flex-col rounded-2xl border border-border bg-background p-5">
+    <section className="flex flex-col rounded-lg border border-hairline bg-card p-5">
       <div className="mb-4 flex items-center justify-between">
         <div>
           <h2 className="text-sm font-medium text-primary">{title}</h2>

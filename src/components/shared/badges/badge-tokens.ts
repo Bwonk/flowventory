@@ -5,39 +5,38 @@ export const BADGE_SIZE: Record<BadgeSize, string> = {
   md: 'px-3 py-1 text-xs',
 };
 
-// DESIGN.md ile hizalı semantic renkler. Marka değerleri (pale-green,
-// deep-green, error) design token'larından; kalan durum aksanları Tailwind
-// paletinden gelir. Arbitrary hex kullanılmaz.
+// DESIGN.md ile hizalı semantic renkler. Tüm zeminler/metinler semantic
+// token çiftlerinden türer; Tailwind ham paleti ve arbitrary hex kullanılmaz.
 export const BADGE_COLORS = {
   green: {
-    bg: 'bg-pale-green', // #edfce9
-    text: 'text-deep-green', // #003c33
+    bg: 'bg-success',
+    text: 'text-success-foreground',
     dot: 'bg-status-healthy',
   },
   amber: {
-    bg: 'bg-amber-50',
-    text: 'text-amber-800',
+    bg: 'bg-warning',
+    text: 'text-warning-foreground',
     dot: 'bg-status-warning',
   },
   red: {
-    bg: 'bg-red-50',
-    text: 'text-destructive', // #b30000
+    bg: 'bg-destructive/10',
+    text: 'text-destructive',
     dot: 'bg-status-critical',
   },
   indigo: {
-    bg: 'bg-indigo-50',
-    text: 'text-indigo-700',
-    dot: 'bg-indigo-500',
+    bg: 'bg-info',
+    text: 'text-info-foreground',
+    dot: 'bg-accent-blue',
   },
   neutral: {
     bg: 'bg-muted',
     text: 'text-muted-foreground',
-    dot: 'bg-gray-400',
+    dot: 'bg-muted-foreground',
   },
   blue: {
-    bg: 'bg-blue-50',
-    text: 'text-blue-800',
-    dot: 'bg-blue-500',
+    bg: 'bg-info',
+    text: 'text-info-foreground',
+    dot: 'bg-accent-blue',
   },
 } as const;
 

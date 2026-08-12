@@ -1,17 +1,15 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Bar, BarChart, XAxis, YAxis, Tooltip } from 'recharts';
-import { Calendar as CalendarIcon, ChevronDown, Check } from 'lucide-react';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { type DateRange } from 'react-day-picker';
-import type { ChartConfig } from '@/components/evilcharts/ui/chart';
-import { ChartContainer } from '@/components/evilcharts/ui/chart';
-import { BarShape } from '@/components/evilcharts/blocks/monospace-bar-chart';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { Button } from '@/components/ui/button';
+import type { ChartConfig } from '@/components/ui/chart';
+import { ChartContainer } from '@/components/ui/chart';
+import { BarShape } from '@/components/shared/trend-chart/BarShape';
+import { SegmentedControl } from '@/components/shared/trend-chart/SegmentedControl';
+import { DateRangePicker } from '@/components/shared/trend-chart/DateRangePicker';
 import { cn } from '@/lib/utils';
 import { formatPrice } from '@/lib/currency';
 import { formatNumber } from '@/lib/format';
@@ -61,7 +59,7 @@ const METRIC_LABELS: Record<ChartMetric, string> = {
   views: 'Görüntülenme',
 };
 
-// Quick range presets shown at the top of the date dropdown.
+// Tarih seçicinin üstündeki hızlı aralık ön ayarları.
 const QUICK_RANGES: { value: ChartPeriod; label: string }[] = [
   { value: 'last24h', label: 'Son 24 Saat' },
   { value: 'last7d', label: 'Son 7 Gün' },
@@ -69,10 +67,11 @@ const QUICK_RANGES: { value: ChartPeriod; label: string }[] = [
   { value: 'last1y', label: 'Son 1 Yıl' },
 ];
 
+// Palet yalnızca --chart-* token'larından (DESIGN.md §5); chart-1 = accent.
 const chartConfig = {
-  revenue: { label: 'Ciro', colors: { light: ['var(--primary)'] as string[] } },
-  quantity: { label: 'Satış Adedi', colors: { light: ['var(--chart-2)'] as string[] } },
-  views: { label: 'Görüntülenme', colors: { light: ['var(--chart-1)'] as string[] } },
+  revenue: { label: 'Ciro', color: 'var(--chart-1)' },
+  quantity: { label: 'Satış Adedi', color: 'var(--chart-2)' },
+  views: { label: 'Görüntülenme', color: 'var(--chart-3)' },
 } satisfies ChartConfig;
 
 function formatDayLabel(dateStr: string): string {
@@ -94,24 +93,24 @@ function formatSummary(value: number, metric: ChartMetric, period: ChartPeriod):
   return prefix + ' toplam ' + formatNumber(value) + ' adet satış';
 }
 
-// Props injected by recharts into a custom Tooltip content element.
+// recharts'ın custom Tooltip content elemanına enjekte ettiği props.
 interface DateHoverLabelProps {
   active?: boolean;
   label?: string | number;
 }
 
-// Lightweight date-only chip shown on hover. The metric value is already
-// rendered above the bar by BarShape, so this only identifies the date.
+// Hover'da yalnızca tarihi gösteren hafif çip; metrik değeri BarShape zaten
+// barın üstüne çiziyor.
 function DateHoverLabel({ active, label }: DateHoverLabelProps) {
   if (!active || label === undefined || label === '') return null;
   return (
-    <div className="pointer-events-none rounded-md border border-border bg-background px-2 py-0.5 text-[10px] font-medium text-primary shadow-sm">
+    <div className="pointer-events-none rounded-md border border-hairline bg-popover px-2 py-0.5 font-mono text-[10px] font-medium text-foreground shadow-sm">
       {label}
     </div>
   );
 }
 
-// Resolve the start/end bounds for daily-granularity periods.
+// Günlük granülerlikteki dönemler için başlangıç/bitiş sınırları.
 function getDailyBounds(period: ChartPeriod, applied: DateRange | undefined): { from: Date; to: Date } {
   const now = new Date();
   if (period === 'custom' && applied?.from && applied?.to) {
@@ -124,7 +123,7 @@ function getDailyBounds(period: ChartPeriod, applied: DateRange | undefined): { 
   if (period === 'thisMonth') {
     return { from: new Date(now.getFullYear(), now.getMonth(), 1), to: now };
   }
-  // last30d (default daily window)
+  // last30d (varsayılan günlük pencere)
   const from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 29);
   return { from, to: now };
 }
@@ -150,65 +149,10 @@ export const TrendChart: React.FC<TrendChartProps> = ({
   const [hourlyData, setHourlyData] = useState<HourlyPoint[] | null>(null);
   const [hourlyViews, setHourlyViews] = useState<Array<{ hour: number; label: string; viewCount: number }> | null>(null);
   const [hourlyLoading, setHourlyLoading] = useState(false);
-  // Committed custom range (only meaningful when period === 'custom').
+  // Uygulanmış özel aralık (yalnızca period === 'custom' iken anlamlı).
   const [appliedRange, setAppliedRange] = useState<DateRange | undefined>();
-  // Working range edited inside the dropdown before Uygula.
-  const [draftRange, setDraftRange] = useState<DateRange | undefined>();
-  const [open, setOpen] = useState(false);
-  // Two months on desktop, one on narrow/mobile layouts.
-  const [monthsToShow, setMonthsToShow] = useState(2);
 
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [showLeftFade, setShowLeftFade] = useState(false);
-  const [showRightFade, setShowRightFade] = useState(false);
-
-  const handleScroll = useCallback(() => {
-    if (scrollRef.current) {
-      const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
-      setShowLeftFade(scrollLeft > 0);
-      // 1px tolerance for rounding errors
-      setShowRightFade(Math.ceil(scrollLeft + clientWidth) < scrollWidth);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (open) {
-      // Small timeout to ensure DOM is fully painted
-      setTimeout(() => {
-        if (scrollRef.current) {
-          const activeBtn = scrollRef.current.querySelector('[aria-selected="true"]') as HTMLButtonElement | null;
-          if (activeBtn) {
-            // Scroll active button into view if it's not fully visible
-            const container = scrollRef.current;
-            const btnLeft = activeBtn.offsetLeft - container.offsetLeft;
-            const btnRight = btnLeft + activeBtn.offsetWidth;
-            
-            if (btnLeft < container.scrollLeft) {
-              container.scrollLeft = btnLeft - 8;
-            } else if (btnRight > container.scrollLeft + container.clientWidth) {
-              container.scrollLeft = btnRight - container.clientWidth + 8;
-            }
-          }
-        }
-        handleScroll();
-      }, 0);
-    }
-  }, [open, handleScroll, period]);
-
-  useEffect(() => {
-    window.addEventListener('resize', handleScroll);
-    return () => window.removeEventListener('resize', handleScroll);
-  }, [handleScroll]);
-
-  useEffect(() => {
-    const mq = window.matchMedia('(min-width: 640px)');
-    const update = () => setMonthsToShow(mq.matches ? 2 : 1);
-    update();
-    mq.addEventListener('change', update);
-    return () => mq.removeEventListener('change', update);
-  }, []);
-
-  // Quick ranges available in this instance (respects hourly support + modal restrictions).
+  // Bu örnekte kullanılabilir hızlı aralıklar (saatlik destek + filtre).
   const quickRanges = useMemo(() => {
     let filtered = QUICK_RANGES;
     if (!hourlyFetch) filtered = filtered.filter(r => r.value !== 'last24h');
@@ -324,7 +268,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({
 
   const xAxisInterval = period === 'last24h' ? 2 : chartData.length > 15 ? 4 : 0;
 
-  // Label shown on the dropdown trigger for the active range.
+  // Tarih seçici tetikleyicisinde görünen etiket.
   const triggerLabel = useMemo(() => {
     if (period === 'custom' && appliedRange?.from) {
       if (appliedRange.to) {
@@ -341,46 +285,24 @@ export const TrendChart: React.FC<TrendChartProps> = ({
       ?? 'Tarih aralığı';
   }, [period, appliedRange, quickRanges]);
 
-  // Apply a quick preset immediately and close the dropdown.
   const selectQuickRange = useCallback((value: ChartPeriod) => {
     setPeriod(value);
     setAppliedRange(undefined);
-    setDraftRange(undefined);
-    setOpen(false);
   }, []);
 
-  // Commit the drafted custom range.
-  const applyCustomRange = useCallback(() => {
-    if (!draftRange?.from || !draftRange?.to) return;
-    setAppliedRange(draftRange);
+  const applyCustomRange = useCallback((range: DateRange) => {
+    setAppliedRange(range);
     setPeriod('custom');
-    setOpen(false);
-  }, [draftRange]);
-
-  // Sync the draft with the committed range whenever the dropdown opens.
-  const handleOpenChange = useCallback((next: boolean) => {
-    if (next) setDraftRange(appliedRange);
-    setOpen(next);
-  }, [appliedRange]);
-
-  const canApplyCustom = Boolean(draftRange?.from && draftRange?.to);
-
-  // Live feedback for the draft selection inside the open popover.
-  const draftFromLabel = draftRange?.from
-    ? format(draftRange.from, 'd MMM yyyy', { locale: tr })
-    : null;
-  const draftToLabel = draftRange?.to
-    ? format(draftRange.to, 'd MMM yyyy', { locale: tr })
-    : null;
+  }, []);
 
   return (
     <div className={cn(
-      layout === 'default' && "rounded-2xl border border-border bg-card p-6 flex flex-col",
-      layout === 'modal' && "p-6 md:p-0 grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)_auto]"
+      layout === 'default' && 'flex flex-col rounded-lg border border-hairline bg-card p-5',
+      layout === 'modal' && 'grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] p-6 md:p-0',
     )}>
       <div className={cn(
-        "mb-5 flex flex-wrap gap-4",
-        layout === 'default' ? "shrink-0 items-start justify-between" : "min-w-0 flex-col md:flex-row md:items-start md:justify-between"
+        'mb-5 flex flex-wrap gap-4',
+        layout === 'default' ? 'shrink-0 items-start justify-between' : 'min-w-0 flex-col md:flex-row md:items-start md:justify-between',
       )}>
         <div className="min-w-0 flex-1">
           <h2 className="truncate text-sm font-medium text-foreground">{title}</h2>
@@ -388,174 +310,39 @@ export const TrendChart: React.FC<TrendChartProps> = ({
         </div>
 
         <div className={cn(
-          "flex flex-col gap-2",
-          layout === 'default' ? "items-end" : "max-md:items-start max-md:w-full items-end"
+          'flex flex-col gap-2',
+          layout === 'default' ? 'items-end' : 'items-end max-md:w-full max-md:items-start',
         )}>
           {availableMetrics.length > 1 && (
-            <div className="inline-flex gap-0.5 rounded-2xl bg-muted p-1">
-            {availableMetrics.map(m => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => setMetric(m)}
-                aria-pressed={effectiveMetric === m}
-                className={cn(
-                  'rounded-2xl px-3 h-9 text-xs transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1',
-                  effectiveMetric === m
-                    ? 'bg-background font-medium text-primary shadow-sm'
-                    : 'text-muted-foreground hover:text-primary',
-                )}
-              >
-                {METRIC_LABELS[m]}
-              </button>
-            ))}
-          </div>
-        )}
+            <SegmentedControl
+              aria-label="Metrik seç"
+              options={availableMetrics.map(m => ({ value: m, label: METRIC_LABELS[m] }))}
+              value={effectiveMetric}
+              onChange={setMetric}
+            />
+          )}
 
-        {quickRanges.length > 0 && (
-          <Popover open={open} onOpenChange={handleOpenChange}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                aria-label="Tarih aralığı seç"
-                aria-expanded={open}
-                className={cn(
-                  'rounded-2xl h-9 gap-1.5 px-3 text-xs font-normal text-primary',
-                  period === 'custom' && 'border-primary bg-muted',
-                )}
-              >
-                <CalendarIcon className="size-3.5 shrink-0 text-muted-foreground" />
-                <span>{triggerLabel}</span>
-                <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent 
-              container={portalContainer ?? undefined}
-              align="end" 
-              sideOffset={6} 
-              className="z-[100] w-auto max-w-[calc(100vw-1rem)] rounded-lg p-4"
-              onOpenAutoFocus={(e) => e.preventDefault()}
-              onCloseAutoFocus={(e) => e.preventDefault()}
-            >
-              {/* SECTION 1 — Quick ranges */}
-              <div className="relative">
-                {/* Left Blur */}
-                <div
-                  className={cn(
-                    'pointer-events-none absolute bottom-0 left-0 top-0 z-10 w-6 bg-gradient-to-r from-background to-transparent transition-opacity duration-200',
-                    showLeftFade ? 'opacity-100' : 'opacity-0'
-                  )}
-                />
-                {/* Right Blur */}
-                <div
-                  className={cn(
-                    'pointer-events-none absolute bottom-0 right-0 top-0 z-10 w-6 bg-gradient-to-l from-background to-transparent transition-opacity duration-200',
-                    showRightFade ? 'opacity-100' : 'opacity-0'
-                  )}
-                />
-                
-                <div
-                  ref={scrollRef}
-                  onScroll={handleScroll}
-                  className="flex gap-0.5 overflow-x-auto scroll-smooth rounded-2xl bg-muted p-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
-                  role="listbox"
-                  aria-label="Hızlı aralıklar"
-                >
-                  {quickRanges.map(r => {
-                    const active = period === r.value;
-                    return (
-                      <button
-                        key={r.value}
-                        type="button"
-                        role="option"
-                        aria-selected={active}
-                        onClick={() => selectQuickRange(r.value)}
-                        className={cn(
-                          'flex h-9 shrink-0 items-center justify-center rounded-2xl px-4 text-xs transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1',
-                          active
-                            ? 'bg-background font-medium text-primary shadow-sm'
-                            : 'font-medium text-muted-foreground hover:text-primary'
-                        )}
-                      >
-                        {r.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {showCustom && (
-                <>
-                  {/* DIVIDER */}
-                  <div className="my-4 -mx-4 border-t border-border" />
-
-                  {/* SECTION 2 — Custom range */}
-                  <p className="mb-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
-                    ÖZEL ARALIK
-                  </p>
-                  {/* Live draft selection feedback */}
-                  <div className="mb-2" aria-live="polite">
-                    {!draftFromLabel ? (
-                      <p className="text-xs text-muted-foreground">Tarih aralığı seçin</p>
-                    ) : !draftToLabel ? (
-                      <div className="flex gap-1 text-xs">
-                        <span className="text-primary">Başlangıç: {draftFromLabel}</span>
-                        <span className="text-border">|</span>
-                        <span className="text-muted-foreground">Bitiş tarihini seçin</span>
-                      </div>
-                    ) : (
-                      <p className="text-xs font-medium text-primary">
-                        {draftFromLabel} – {draftToLabel}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex justify-center">
-                    <Calendar
-                      mode="range"
-                      selected={draftRange}
-                      onSelect={(nextRange) => setDraftRange(nextRange)}
-                      defaultMonth={draftRange?.from ?? appliedRange?.from}
-                      numberOfMonths={monthsToShow}
-                      showOutsideDays
-                      locale={tr}
-                      className="p-0"
-                      classNames={{
-                        weekday: 'flex-1 rounded-md text-[0.8rem] font-medium text-muted-foreground select-none',
-                        month: 'flex w-full flex-col gap-3',
-                      }}
-                    />
-                  </div>
-                  <div className="mt-3 -mx-4 border-t border-border px-4 pt-3 flex items-center justify-end gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleOpenChange(false)}
-                      className="inline-flex h-9 items-center rounded-2xl px-3 text-xs font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
-                    >
-                      İptal
-                    </button>
-                    <button
-                      type="button"
-                      onClick={applyCustomRange}
-                      disabled={!canApplyCustom}
-                      className="inline-flex h-9 items-center rounded-2xl bg-primary px-4 text-xs font-medium text-primary-foreground transition-colors hover:bg-black disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
-                    >
-                      Uygula
-                    </button>
-                  </div>
-                </>
-              )}
-            </PopoverContent>
-          </Popover>
+          {quickRanges.length > 0 && (
+            <DateRangePicker
+              quickRanges={quickRanges}
+              period={period}
+              appliedRange={appliedRange}
+              triggerLabel={triggerLabel}
+              showCustom={showCustom}
+              portalContainer={portalContainer}
+              onSelectQuick={selectQuickRange}
+              onApplyCustom={applyCustomRange}
+            />
           )}
         </div>
       </div>
 
       {hourlyLoading ? (
-        <div className={cn("flex items-center justify-center py-10", layout === 'modal' ? "min-h-0 overflow-hidden" : "min-h-[160px]")}>
+        <div className={cn('flex items-center justify-center py-10', layout === 'modal' ? 'min-h-0 overflow-hidden' : 'min-h-[160px]')}>
           <p className="text-sm text-muted-foreground">Yükleniyor...</p>
         </div>
       ) : hasNoDataAtAll || isAllZero ? (
-        <div className={cn("flex flex-col items-center justify-center py-10 text-center", layout === 'modal' ? "min-h-0 overflow-hidden" : "min-h-[160px]")}>
+        <div className={cn('flex flex-col items-center justify-center py-10 text-center', layout === 'modal' ? 'min-h-0 overflow-hidden' : 'min-h-[160px]')}>
           <p className="text-sm font-medium text-foreground">
             {effectiveMetric === 'revenue' && 'Bu dönemde ciro verisi bulunmuyor.'}
             {effectiveMetric === 'quantity' && 'Bu dönemde satış verisi bulunmuyor.'}
@@ -564,10 +351,10 @@ export const TrendChart: React.FC<TrendChartProps> = ({
           <p className="mt-1 text-xs text-muted-foreground">Farklı bir tarih aralığı veya varyant seçebilirsiniz.</p>
         </div>
       ) : (
-        <div className={cn("w-full", layout === 'modal' && "min-h-0 overflow-hidden")} style={layout === 'default' ? { height: chartHeight } : undefined}>
-          <ChartContainer 
-            config={chartConfig} 
-            className="h-full w-full" 
+        <div className={cn('w-full', layout === 'modal' && 'min-h-0 overflow-hidden')} style={layout === 'default' ? { height: chartHeight } : undefined}>
+          <ChartContainer
+            config={chartConfig}
+            className="h-full w-full"
           >
           <BarChart data={chartData} margin={{ top: 30, right: 8, bottom: 0, left: 8 }} barCategoryGap="10%">
             <XAxis
@@ -590,7 +377,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({
             />
             <Bar
               dataKey="value"
-              fill={'var(--color-' + effectiveMetric + '-0)'}
+              fill={'var(--color-' + effectiveMetric + ')'}
               shape={<BarShape />}
               activeBar={<BarShape />}
               maxBarSize={24}
@@ -602,7 +389,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({
       )}
 
       {!hasNoDataAtAll && !isAllZero && totalValue > 0 && (
-        <div className={cn("mt-4 border-t border-muted pt-4", layout === 'modal' && "shrink-0 border-border")}>
+        <div className={cn('mt-4 border-t border-hairline pt-4', layout === 'modal' && 'shrink-0')}>
           <p className="text-xs text-muted-foreground">{formatSummary(totalValue, effectiveMetric, period)}</p>
         </div>
       )}

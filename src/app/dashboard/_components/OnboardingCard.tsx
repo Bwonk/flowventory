@@ -95,7 +95,7 @@ export function OnboardingCard({ token }: { token: string | null }) {
   if (doneCount === steps.length) return null;
 
   return (
-    <section className="mb-4 rounded-xl border border-border bg-background p-5">
+    <section className="mb-4 rounded-lg border border-hairline bg-card p-5">
       <div className="mb-3 flex items-start justify-between gap-4">
         <div>
           <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">BAŞLARKEN</p>

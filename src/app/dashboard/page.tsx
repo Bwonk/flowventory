@@ -12,12 +12,14 @@ import {
   Package,
 } from 'lucide-react';
 import { ApiRequests } from '@/lib/api-requests';
+import { PageContainer } from '@/components/layout/PageContainer';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { useStockThreshold } from '@/lib/stock-threshold';
 import { formatPrice, useMerchantCurrency } from '@/lib/currency';
 import { getTotalStock } from '@/components/home-page/lib/product';
-import { ProductListCard, type ProductListItem } from './components/ProductListCard';
-import { ConversionInsightCard } from './components/ConversionInsightCard';
-import { OnboardingCard } from './components/OnboardingCard';
+import { ProductListCard, type ProductListItem } from './_components/ProductListCard';
+import { ConversionInsightCard } from './_components/ConversionInsightCard';
+import { OnboardingCard } from './_components/OnboardingCard';
 import { TrendChart, type TrendDataPoint } from '@/components/shared/TrendChart';
 import { StatusBadge } from '@/components/shared/badges/StatusBadge';
 import { TrendBadge } from '@/components/shared/badges/TrendBadge';
@@ -157,13 +159,19 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl p-6">
+    <PageContainer>
+      <PageHeader
+        eyebrow="GENEL BAKIŞ"
+        title="Dashboard"
+        description="Envanter ve satış performansının özeti"
+      />
+
       {/* Onboarding — kurulum adımları tamamlanana kadar görünür */}
       <OnboardingCard token={token} />
 
       {/* Mock veri uyarısı — sadece development'ta, sipariş yokken görünür */}
       {isMockData && (
-        <div className="mb-4 rounded-xl border border-border bg-muted px-4 py-2.5">
+        <div className="mb-4 rounded-lg border border-hairline bg-muted px-4 py-2.5">
           <p className="text-xs text-muted-foreground">
             <span className="font-medium text-foreground">Demo verisi:</span> Mağazada henüz sipariş
             olmadığı için satış grafikleri sentetik veriyle dolduruldu. Gerçek sipariş geldiğinde
@@ -173,7 +181,7 @@ export default function DashboardPage() {
       )}
 
       {/* SECTION 1 — KPI Metrikleri */}
-      <section className="mb-4 rounded-xl border border-border bg-background overflow-hidden">
+      <section className="mb-4 rounded-lg border border-hairline bg-card overflow-hidden">
         <div className="grid grid-cols-2 lg:grid-cols-5">
           {/* 1 — Son 30 Gün Ciro */}
           <div className="flex flex-col p-5 border-b border-r border-border even:border-r-0 last:border-b-0 lg:border-b-0 lg:even:border-r lg:last:border-r-0">
@@ -181,7 +189,7 @@ export default function DashboardPage() {
               <DollarSign className="h-3 w-3 text-muted-foreground" />
               <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">SON 30 GÜN CİRO</p>
             </div>
-            <p className="text-3xl font-semibold tracking-tight text-foreground mt-2">{formatPrice(totalRevenue)}</p>
+            <p className="mt-2 font-mono text-2xl font-medium tabular-nums text-foreground">{formatPrice(totalRevenue)}</p>
             <div className="mt-auto pt-3">
               <TrendBadge value={revenueChange} size="sm" />
               <p className="text-xs text-muted-foreground mt-1.5">
@@ -196,7 +204,7 @@ export default function DashboardPage() {
               <Package className="h-3 w-3 text-muted-foreground" />
               <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">AKTİF ÜRÜN</p>
             </div>
-            <p className="text-3xl font-semibold tracking-tight text-foreground mt-2">{products.length} ürün</p>
+            <p className="mt-2 font-mono text-2xl font-medium tabular-nums text-foreground">{products.length} ürün</p>
             <div className="mt-auto pt-3">
               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-muted text-muted-foreground">
                 {skuHealth.total} SKU
@@ -214,7 +222,7 @@ export default function DashboardPage() {
               <AlertTriangle className="h-3 w-3 text-muted-foreground" />
               <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">KRİTİK STOK</p>
             </div>
-            <p className="text-3xl font-semibold tracking-tight text-foreground mt-2">{criticalCount + warningCount} ürün</p>
+            <p className="mt-2 font-mono text-2xl font-medium tabular-nums text-foreground">{criticalCount + warningCount} ürün</p>
             <div className="mt-auto pt-3">
               <div className="flex flex-wrap gap-1.5 mb-2">
                 {criticalCount > 0 && (
@@ -240,7 +248,7 @@ export default function DashboardPage() {
               <Archive className="h-3 w-3 text-muted-foreground" />
               <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">ÖLÜ STOK</p>
             </div>
-            <p className="text-3xl font-semibold tracking-tight text-foreground mt-2">
+            <p className="mt-2 font-mono text-2xl font-medium tabular-nums text-foreground">
               {formatPrice(lockedCapital.total)}
               {lockedCapital.isEstimate && (
                 <span className="ml-1 align-top text-xs font-normal text-muted-foreground" title="Bazı ürünlerde alış fiyatı tanımlı değil; satış fiyatı kullanıldı">
@@ -267,7 +275,7 @@ export default function DashboardPage() {
               const age = formatStockAge(avgDaysRemaining);
               return (
                 <>
-                  <p className="text-3xl font-semibold tracking-tight text-foreground mt-2">{age.primary}</p>
+                  <p className="mt-2 font-mono text-2xl font-medium tabular-nums text-foreground">{age.primary}</p>
                   <div className="mt-auto pt-3">
                     <p className="text-xs text-muted-foreground">{age.secondary}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">Satış hızına göre hesaplandı</p>
@@ -276,7 +284,7 @@ export default function DashboardPage() {
               );
             })() : (
               <>
-                <p className="text-3xl font-semibold tracking-tight text-foreground mt-2">—</p>
+                <p className="mt-2 font-mono text-2xl font-medium tabular-nums text-foreground">—</p>
                 <div className="mt-auto pt-3">
                   <p className="text-xs text-muted-foreground">Yeterli satış verisi yok</p>
                 </div>
@@ -287,7 +295,7 @@ export default function DashboardPage() {
       </section>
 
       {/* SECTION 2 — Stok Sağlığı */}
-      <section className="mb-4 rounded-xl border border-border bg-background p-5">
+      <section className="mb-4 rounded-lg border border-hairline bg-card p-5">
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h2 className="text-sm font-medium text-foreground">Stok Sağlığı</h2>
@@ -332,7 +340,7 @@ export default function DashboardPage() {
                 <span className="text-xs text-muted-foreground">{item.label}</span>
               </div>
               <p>
-                <span className="text-xl font-semibold tracking-tight text-foreground">{item.count}</span>
+                <span className="font-mono text-xl font-medium tabular-nums text-foreground">{item.count}</span>
                 <span className="ml-1 text-xs text-muted-foreground">SKU</span>
               </p>
               <p className="text-xs text-muted-foreground">
@@ -375,7 +383,7 @@ export default function DashboardPage() {
           subtitle={`Stok eşiği (${maxThreshold} adet) altına düşen ve tükenen ürünler`}
           badge={lowStockProducts.length > 0 ? {
             text: `${lowStockProducts.length} ürün`,
-            className: 'shrink-0 rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-destructive',
+            className: 'shrink-0 rounded-full bg-destructive/10 px-2.5 py-0.5 text-xs font-medium text-destructive',
           } : undefined}
           items={lowStockListItems}
           emptyState={{
@@ -390,6 +398,6 @@ export default function DashboardPage() {
       <div className="mt-4">
         <ConversionInsightCard insight={conversionInsight} />
       </div>
-    </div>
+    </PageContainer>
   );
 }
