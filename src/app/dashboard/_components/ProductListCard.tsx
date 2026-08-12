@@ -60,7 +60,7 @@ export const ProductListCard: React.FC<ProductListCardProps> = ({
       <div className="mb-4 flex items-center justify-between">
         <div>
           <h2 className="text-sm font-medium text-primary">{title}</h2>
-          <p className="mt-0.5 text-xs text-slate">{subtitle}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">{subtitle}</p>
         </div>
         {badge && (
           <span className={badge.className}>{badge.text}</span>
@@ -69,9 +69,9 @@ export const ProductListCard: React.FC<ProductListCardProps> = ({
 
       {items.length === 0 ? (
         <div className="flex flex-col items-center py-10">
-          <emptyState.icon className="mb-3 h-8 w-8 text-slate" />
+          <emptyState.icon className="mb-3 h-8 w-8 text-muted-foreground" />
           <p className="text-sm font-medium text-primary">{emptyState.title}</p>
-          <p className="mt-1 text-xs text-slate">{emptyState.description}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{emptyState.description}</p>
         </div>
       ) : (
         <div className="divide-y divide-muted">
@@ -81,13 +81,13 @@ export const ProductListCard: React.FC<ProductListCardProps> = ({
               href={`/dashboard/stok?product=${item.productId}`}
               className="group flex items-center gap-3 rounded-lg px-2 py-3 -mx-2 transition-colors hover:bg-muted cursor-pointer"
             >
-              <span className="w-6 flex-shrink-0 text-center font-mono text-xs text-slate">
+              <span className="w-6 flex-shrink-0 text-center font-mono text-xs text-muted-foreground">
                 {String(item.index).padStart(2, '0')}
               </span>
               <ProductImage src={item.image} alt={item.name} />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-primary">{item.name}</p>
-                <p className="mt-0.5 truncate text-xs text-slate">{item.meta}</p>
+                <p className="mt-0.5 truncate text-xs text-muted-foreground">{item.meta}</p>
               </div>
               {item.status && (
                 <StatusBadge status={item.status} size="sm" />

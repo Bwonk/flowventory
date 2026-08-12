@@ -59,17 +59,6 @@
   --color-status-healthy: var(--status-healthy);
   --color-status-warning: var(--status-warning);
   --color-status-critical: var(--status-critical);
-  /* COMPAT — Cohere-dönemi sınıf adları (aşağıdaki :root bloğuna bakın).
-     Yeni kodda kullanmak yasak; Faz 7'de silinecek. */
-  --color-slate: var(--slate);
-  --color-soft-stone: var(--soft-stone);
-  --color-pale-green: var(--pale-green);
-  --color-pale-blue: var(--pale-blue);
-  --color-deep-green: var(--deep-green);
-  --color-dark-navy: var(--dark-navy);
-  --color-coral: var(--coral);
-  --color-coral-soft: var(--coral-soft);
-  --color-action-blue: var(--action-blue);
 }
 
 :root {
@@ -130,22 +119,6 @@
   --warning-foreground: #b45309;
   --invert: #18181b;
   --invert-foreground: #fafafa;
-  /* ekstralar */
-  --modal-bg: rgba(24, 24, 27, 0.8);
-  --icon: #71717a;
-
-  /* COMPAT — Cohere-dönemi alias'ları, yeni palete eşlenmiş durumda.
-     Her sayfa fazı kendi kullanımını semantik sınıfa çevirir; Faz 7'de bu
-     blok ve @theme'deki karşılıkları silinir. Yeni kodda kullanmayın. */
-  --slate: #71717a; /* → text-muted-foreground */
-  --soft-stone: #f4f4f5; /* → bg-muted */
-  --pale-green: #ecfdf5; /* → bg-success */
-  --pale-blue: #eff6ff; /* → bg-info */
-  --deep-green: #047857; /* → text-success-foreground */
-  --dark-navy: #18181b; /* → text-foreground */
-  --coral: #dc2626; /* → text-destructive */
-  --coral-soft: #f87171;
-  --action-blue: #1863dc; /* → accent-blue */
 }
 
 @layer base {

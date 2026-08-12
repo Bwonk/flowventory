@@ -129,7 +129,7 @@ export function OnboardingCard({ token }: { token: string | null }) {
             >
               <span
                 className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold ${
-                  step.done ? 'bg-pale-green text-deep-green' : 'bg-muted text-muted-foreground'
+                  step.done ? 'bg-success text-success-foreground' : 'bg-muted text-muted-foreground'
                 }`}
               >
                 {step.done ? <Check className="h-3 w-3" aria-hidden /> : i + 1}
