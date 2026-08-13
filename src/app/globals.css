@@ -87,12 +87,15 @@
   --border: #e4e4e7;
   --input: #e4e4e7;
   --ring: #1863dc; /* accent mavi — tek mavi */
-  /* grafikler — chart-1 accent, kalanlar nötr/ikincil */
+  /* grafikler — chart-1 accent, kalanlar nötr gri rampası.
+     chart-3/4 daha önce --status-healthy/--status-warning ile birebir aynıydı;
+     dolu bir yeşil seri "sağlıklı" durum sinyali gibi okunuyordu. Durum rengi
+     bütçesi gereği yeşil/sarı/kırmızı yalnızca --status-* için ayrılmıştır. */
   --chart-1: #1863dc;
   --chart-2: #64748b;
-  --chart-3: #059669;
-  --chart-4: #d97706;
-  --chart-5: #a1a1aa;
+  --chart-3: #a1a1aa;
+  --chart-4: #3f3f46;
+  --chart-5: #d4d4d8;
   /* sidebar */
   --sidebar: #ffffff;
   --sidebar-foreground: #18181b;
