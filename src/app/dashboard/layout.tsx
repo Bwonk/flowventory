@@ -45,7 +45,12 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
     <SidebarProvider>
       <AppSidebar storeName={storeName} />
-      <SidebarInset className="h-svh overflow-y-auto">
+      {/*
+        min-w-0: inset bir flex öğesi ve varsayılan min-width:auto ile geniş tablolar
+        onu içeriği kadar şişiriyordu — tablonun kendi overflow-x-auto'su devreye
+        girmeden tüm sayfa yatay kayıyordu.
+      */}
+      <SidebarInset className="h-svh min-w-0 overflow-y-auto">
         {/* Dar iframe genişliği: sidebar Sheet'e düşer, tetikleyici bu barda yaşar. */}
         <header className="flex h-12 shrink-0 items-center gap-2 border-b border-hairline bg-card px-4 print:hidden md:hidden">
           <SidebarTrigger />

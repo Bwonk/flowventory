@@ -181,15 +181,22 @@ export default function DashboardPage() {
       )}
 
       {/* SECTION 1 — KPI Metrikleri */}
-      <section className="mb-4 rounded-lg border border-hairline bg-card overflow-hidden">
-        <div className="grid grid-cols-2 lg:grid-cols-5">
+      {/*
+        Sütun sayısı viewport'a değil kartın kendi genişliğine bağlı: iframe genişliği
+        sabit olsa da sidebar 256px yediği için medya sorguları yanlış eşikte tetikleniyor
+        ve para birimi değerleri komşu tile'a taşıyordu. Ayraçlar her hücreye sağ/alt
+        kenarlık olarak veriliyor; grid'in -mr/-mb px'i son sütun ve satırın fazladan
+        çizgisini overflow-hidden ile kırpıyor, böylece sütun sayısı serbestçe değişebilir.
+      */}
+      <section className="@container mb-4 rounded-lg border border-hairline bg-card overflow-hidden">
+        <div className="-mr-px -mb-px grid grid-cols-1 @lg:grid-cols-2 @3xl:grid-cols-3 @6xl:grid-cols-5">
           {/* 1 — Son 30 Gün Ciro */}
-          <div className="flex flex-col p-5 border-b border-r border-border even:border-r-0 last:border-b-0 lg:border-b-0 lg:even:border-r lg:last:border-r-0">
+          <div className="flex flex-col border-b border-r border-border p-5">
             <div className="flex items-center gap-1.5 mb-1">
               <DollarSign className="h-3 w-3 text-muted-foreground" />
               <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">SON 30 GÜN CİRO</p>
             </div>
-            <p className="mt-2 font-mono text-xl font-medium tabular-nums xl:text-2xl text-foreground">{formatPrice(totalRevenue)}</p>
+            <p className="mt-2 font-mono text-xl font-medium tabular-nums @7xl:text-2xl text-foreground">{formatPrice(totalRevenue)}</p>
             <div className="mt-auto pt-3">
               <TrendBadge value={revenueChange} size="sm" />
               <p className="text-xs text-muted-foreground mt-1.5">
@@ -199,12 +206,12 @@ export default function DashboardPage() {
           </div>
 
           {/* 2 — Aktif Ürün */}
-          <div className="flex flex-col p-5 border-b border-r border-border even:border-r-0 last:border-b-0 lg:border-b-0 lg:even:border-r lg:last:border-r-0">
+          <div className="flex flex-col border-b border-r border-border p-5">
             <div className="flex items-center gap-1.5 mb-1">
               <Package className="h-3 w-3 text-muted-foreground" />
               <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">AKTİF ÜRÜN</p>
             </div>
-            <p className="mt-2 font-mono text-xl font-medium tabular-nums xl:text-2xl text-foreground">{products.length} ürün</p>
+            <p className="mt-2 font-mono text-xl font-medium tabular-nums @7xl:text-2xl text-foreground">{products.length} ürün</p>
             <div className="mt-auto pt-3">
               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-muted text-muted-foreground">
                 {skuHealth.total} SKU
@@ -216,13 +223,13 @@ export default function DashboardPage() {
           {/* 3 — Kritik Stok (tıklanabilir) */}
           <Link
             href="/dashboard/stok?filter=tukendi"
-            className="group flex flex-col p-5 border-b border-r border-border even:border-r-0 last:border-b-0 lg:border-b-0 lg:even:border-r lg:last:border-r-0 cursor-pointer transition-all duration-200 hover:-translate-y-[1px] hover:shadow-sm hover:border-hairline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="group flex flex-col border-b border-r border-border p-5 cursor-pointer transition-all duration-200 hover:-translate-y-[1px] hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <div className="flex items-center gap-1.5 mb-1">
               <AlertTriangle className="h-3 w-3 text-muted-foreground" />
               <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">KRİTİK STOK</p>
             </div>
-            <p className="mt-2 font-mono text-xl font-medium tabular-nums xl:text-2xl text-foreground">{criticalCount + warningCount} ürün</p>
+            <p className="mt-2 font-mono text-xl font-medium tabular-nums @7xl:text-2xl text-foreground">{criticalCount + warningCount} ürün</p>
             <div className="mt-auto pt-3">
               <div className="flex flex-wrap gap-1.5 mb-2">
                 {criticalCount > 0 && (
@@ -242,13 +249,13 @@ export default function DashboardPage() {
           {/* 4 — Ölü Stok (tıklanabilir) */}
           <Link
             href="/dashboard/stok?view=dead"
-            className="group flex flex-col p-5 border-b border-r border-border even:border-r-0 last:border-b-0 lg:border-b-0 lg:even:border-r lg:last:border-r-0 cursor-pointer transition-all duration-200 hover:-translate-y-[1px] hover:shadow-sm hover:border-hairline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="group flex flex-col border-b border-r border-border p-5 cursor-pointer transition-all duration-200 hover:-translate-y-[1px] hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <div className="flex items-center gap-1.5 mb-1">
               <Archive className="h-3 w-3 text-muted-foreground" />
               <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">ÖLÜ STOK</p>
             </div>
-            <p className="mt-2 font-mono text-xl font-medium tabular-nums xl:text-2xl text-foreground">
+            <p className="mt-2 font-mono text-xl font-medium tabular-nums @7xl:text-2xl text-foreground">
               {formatPrice(lockedCapital.total)}
               {lockedCapital.isEstimate && (
                 <span className="block font-sans text-xs font-normal text-muted-foreground" title="Bazı ürünlerde alış fiyatı tanımlı değil; satış fiyatı kullanıldı">
@@ -266,7 +273,7 @@ export default function DashboardPage() {
           </Link>
 
           {/* 5 — Ortalama Stok Ömrü */}
-          <div className="flex flex-col p-5 border-b border-r border-border even:border-r-0 last:border-b-0 lg:border-b-0 lg:even:border-r lg:last:border-r-0">
+          <div className="flex flex-col border-b border-r border-border p-5">
             <div className="flex items-center gap-1.5 mb-1">
               <Clock className="h-3 w-3 text-muted-foreground" />
               <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">ORT. STOK ÖMRÜ</p>
@@ -275,7 +282,7 @@ export default function DashboardPage() {
               const age = formatStockAge(avgDaysRemaining);
               return (
                 <>
-                  <p className="mt-2 font-mono text-xl font-medium tabular-nums xl:text-2xl text-foreground">{age.primary}</p>
+                  <p className="mt-2 font-mono text-xl font-medium tabular-nums @7xl:text-2xl text-foreground">{age.primary}</p>
                   <div className="mt-auto pt-3">
                     <p className="text-xs text-muted-foreground">{age.secondary}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">Satış hızına göre hesaplandı</p>
@@ -284,7 +291,7 @@ export default function DashboardPage() {
               );
             })() : (
               <>
-                <p className="mt-2 font-mono text-xl font-medium tabular-nums xl:text-2xl text-foreground">—</p>
+                <p className="mt-2 font-mono text-xl font-medium tabular-nums @7xl:text-2xl text-foreground">—</p>
                 <div className="mt-auto pt-3">
                   <p className="text-xs text-muted-foreground">Yeterli satış verisi yok</p>
                 </div>

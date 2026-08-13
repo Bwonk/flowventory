@@ -173,17 +173,17 @@ export default function RaporPage() {
       </section>
 
       {/* Özet */}
-      <section className="mb-4 rounded-lg border border-hairline bg-card overflow-hidden">
-        <div className="grid grid-cols-2 lg:grid-cols-4">
+      <section className="@container mb-4 rounded-lg border border-hairline bg-card overflow-hidden">
+        <div className="-mr-px -mb-px grid grid-cols-1 @lg:grid-cols-2 @5xl:grid-cols-4">
           {[
             { label: 'TOPLAM MALİYET', value: formatPrice(report.totalCost) },
             { label: 'SİPARİŞ SATIRI', value: `${report.lineCount}` },
             { label: 'ACİL', value: `${report.urgentCount}`, highlight: report.urgentCount > 0 },
             { label: 'TEDARİKÇİ', value: `${report.vendors.length}` },
           ].map(item => (
-            <div key={item.label} className="border-b border-r border-border p-4 last:border-r-0 lg:border-b-0">
+            <div key={item.label} className="border-b border-r border-border p-4">
               <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{item.label}</p>
-              <p className={`mt-1 font-mono text-xl font-medium tabular-nums xl:text-2xl ${item.highlight ? 'text-destructive' : 'text-foreground'}`}>
+              <p className={`mt-1 font-mono text-xl font-medium tabular-nums @7xl:text-2xl ${item.highlight ? 'text-destructive' : 'text-foreground'}`}>
                 {item.value}
               </p>
             </div>

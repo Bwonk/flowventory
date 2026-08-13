@@ -5,6 +5,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { Mail } from 'lucide-react';
 import { TokenHelpers } from '@/helpers/token-helpers';
 import { ApiRequests } from '@/lib/api-requests';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 /**
  * E-posta bildirim ayarları kartı.
@@ -67,7 +69,7 @@ export function NotificationSettingsCard() {
   if (loading) return null;
 
   return (
-    <section className="mt-6 max-w-xl rounded-lg border border-hairline bg-card p-5">
+    <section className="mt-6 rounded-lg border border-hairline bg-card p-6">
       <div className="flex items-center gap-2">
         <Mail className="h-4 w-4 text-muted-foreground" aria-hidden />
         <h2 className="text-sm font-medium text-foreground">E-posta Bildirimleri</h2>
@@ -88,29 +90,28 @@ export function NotificationSettingsCard() {
           E-posta bildirimlerini aç
         </label>
 
-        <div>
+        <div className="max-w-sm">
           <label htmlFor="notifEmail" className="mb-1 block text-xs text-muted-foreground">
             Bildirim adresi
           </label>
-          <input
+          <Input
             id="notifEmail"
             type="email"
             value={email}
             onChange={e => setEmail(e.target.value)}
             placeholder="ornek@magaza.com"
-            className="w-full rounded-lg border border-border px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
           />
         </div>
 
         <div className="flex items-center gap-3">
-          <button
+          <Button
             type="button"
             onClick={save}
             disabled={saving || (enabled && !email.trim())}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-foreground disabled:opacity-50"
+            className="self-start"
           >
             {saving ? 'Kaydediliyor…' : 'Kaydet'}
-          </button>
+          </Button>
           {message && <span className="text-xs text-muted-foreground">{message}</span>}
         </div>
       </div>
