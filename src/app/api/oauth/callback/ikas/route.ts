@@ -3,7 +3,6 @@ import { config } from '@/globals/config';
 import { getSession, setSession } from '@/lib/session';
 import { validateRequest } from '@/lib/validation';
 import { OAuthAPI } from '@ikas/admin-api-client';
-import moment from 'moment';
 import { getIkas, getRedirectUri } from '@/helpers/api-helpers';
 import { JwtHelpers } from '@/helpers/jwt-helpers';
 import { TokenHelpers } from '@/helpers/token-helpers';
@@ -111,7 +110,7 @@ export async function GET(request: NextRequest) {
     // Extract necessary IDs and calculate token expiration date
     const authorizedAppId = authorizedAppResponse.data.getAuthorizedApp.id!;
     const merchantId = merchantResponse.data.getMerchant.id!;
-    const expireDate = moment().add(tokenResponse.data.expires_in, 'seconds').toDate().toISOString();
+    const expireDate = new Date(Date.now() + tokenResponse.data.expires_in * 1000).toISOString();
 
     // Build the final AuthToken object
     const token: AuthToken = {
