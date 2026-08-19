@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { Eye } from 'lucide-react';
+import { EyeIcon } from '@/components/ui/icons/eye';
 import type { ConversionInsightApiResponse } from '@/app/api/insights/conversion/route';
 
 function formatPercent(rate: number): string {
@@ -22,7 +22,8 @@ export function ConversionInsightCard({ insight }: { insight: ConversionInsightA
       <section className="rounded-lg border border-hairline bg-card p-5">
         <h2 className="text-sm font-medium text-foreground">Görüntülenme → Satış Dönüşümü</h2>
         <div className="mt-6 flex flex-col items-center gap-2 py-8 text-center">
-          <Eye className="h-6 w-6 text-muted-foreground" aria-hidden />
+          {/* Boş durum ikonu — hover hedefi değil, statik. */}
+          <EyeIcon size={24} className="flex text-muted-foreground" aria-hidden />
           <p className="text-sm font-medium text-foreground">Henüz görüntülenme verisi yok</p>
           <p className="text-xs text-muted-foreground">
             Ürün görüntülenmelerini toplamak için{' '}

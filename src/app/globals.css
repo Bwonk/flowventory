@@ -133,6 +133,20 @@
   }
 }
 
+/* Bildirim drawer'ı açıkken sidebar paneli olduğu gibi kalır (köşe radius'ları
+   dahil); drawer arkasından uzayan bir katman gibi okunur. Yalnızca sağ
+   hairline gizlenir ki beyaz drawer üzerinde dikey dikiş çizgisi görünmesin.
+   Anahtar, NotificationBell'in masaüstü clip container'ı — exit animasyonu
+   bitene dek DOM'da kaldığı için border ancak drawer tamamen kaybolunca döner. */
+@media (min-width: 768px) {
+  [data-slot='sidebar-inner'] {
+    transition: border-color 150ms;
+  }
+  body:has([data-notification-drawer]) [data-slot='sidebar-inner'] {
+    border-right-color: transparent;
+  }
+}
+
 /* Rapor yazdırma: sidebar (masaüstü fixed container + gap) çıktıya girmez. */
 @media print {
   [data-slot='sidebar'] {

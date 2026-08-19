@@ -3,9 +3,11 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Eye, Package, type LucideIcon } from 'lucide-react';
+import { Package, type LucideIcon } from 'lucide-react';
 import type { StockStatus } from '@/components/shared/badges/StatusBadge';
 import { StatusBadge } from '@/components/shared/badges/StatusBadge';
+import { EyeIcon } from '@/components/ui/icons/eye';
+import { useIconHover } from '@/components/ui/icons/use-icon-hover';
 
 export interface ProductListItem {
   productId: string;
@@ -48,6 +50,40 @@ const ProductImage: React.FC<{ src?: string; alt: string }> = ({ src, alt }) => 
   );
 };
 
+/**
+ * Tek ürün satırı. Her satırın kendi göz ikonu ref'i gerektiği için ayrı
+ * bileşen: hook'u map gövdesinde çağırmak Rules of Hooks ihlali olurdu.
+ */
+const ProductRow: React.FC<{ item: ProductListItem }> = ({ item }) => {
+  const { ref, hoverProps } = useIconHover();
+
+  return (
+    <Link
+      href={`/dashboard/stok?product=${item.productId}`}
+      className="group flex items-center gap-3 rounded-lg px-2 py-3 -mx-2 transition-colors hover:bg-muted cursor-pointer"
+      {...hoverProps}
+    >
+      <span className="w-6 flex-shrink-0 text-center font-mono text-xs text-muted-foreground">
+        {String(item.index).padStart(2, '0')}
+      </span>
+      <ProductImage src={item.image} alt={item.name} />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium text-primary">{item.name}</p>
+        <p className="mt-0.5 truncate text-xs text-muted-foreground">{item.meta}</p>
+      </div>
+      {item.status && (
+        <StatusBadge status={item.status} size="sm" />
+      )}
+      <EyeIcon
+        ref={ref}
+        size={16}
+        className="flex flex-shrink-0 text-muted-foreground transition-colors group-hover:text-primary"
+        aria-hidden
+      />
+    </Link>
+  );
+};
+
 export const ProductListCard: React.FC<ProductListCardProps> = ({
   title,
   subtitle,
@@ -76,24 +112,7 @@ export const ProductListCard: React.FC<ProductListCardProps> = ({
       ) : (
         <div className="divide-y divide-muted">
           {items.map(item => (
-            <Link
-              key={item.productId}
-              href={`/dashboard/stok?product=${item.productId}`}
-              className="group flex items-center gap-3 rounded-lg px-2 py-3 -mx-2 transition-colors hover:bg-muted cursor-pointer"
-            >
-              <span className="w-6 flex-shrink-0 text-center font-mono text-xs text-muted-foreground">
-                {String(item.index).padStart(2, '0')}
-              </span>
-              <ProductImage src={item.image} alt={item.name} />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-primary">{item.name}</p>
-                <p className="mt-0.5 truncate text-xs text-muted-foreground">{item.meta}</p>
-              </div>
-              {item.status && (
-                <StatusBadge status={item.status} size="sm" />
-              )}
-              <Eye className="h-4 w-4 flex-shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />
-            </Link>
+            <ProductRow key={item.productId} item={item} />
           ))}
         </div>
       )}
