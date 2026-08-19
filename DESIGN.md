@@ -70,10 +70,12 @@ uygulaması (ikas paneli) dark modu bize iletmez.
 ### Yükseklik (elevation)
 
 Sınır çizgileri gölgenin yerini alır: yüzeyler `border border-hairline` ile
-ayrılır, `shadow-*` kullanılmaz. İki sanksiyonlu istisna: açılır katmanlar
-(`Popover`, `Dialog`, `DropdownMenu` — shadcn'in kendi `shadow-md`'si kalır)
-ve sticky tablo başlığı altındaki 1px çizgi. Kart içinde kart gerekiyorsa
-ikinci seviye `bg-muted` zeminle, gölgeyle değil ayrılır.
+ayrılır, `shadow-*` kullanılmaz. Üç sanksiyonlu istisna: açılır katmanlar
+(`Popover`, `Dialog`, `DropdownMenu` — shadcn'in kendi `shadow-md`'si kalır),
+sticky tablo başlığı altındaki 1px çizgi ve floating sidebar + bildirim
+drawer "pill"i (`shadow-sm` — canvas üzerinde yüzen kalıcı katman, Freeform
+tarzı derinlik; bilinçli istisna). Kart içinde kart gerekiyorsa ikinci
+seviye `bg-muted` zeminle, gölgeyle değil ayrılır.
 
 ---
 
@@ -151,25 +153,68 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
 - **Grafikler:** [src/components/ui/chart.tsx](src/components/ui/chart.tsx);
   palet yalnızca `--chart-1..5` (chart-1 = accent mavi); grid çizgileri
   hairline, eksen etiketleri mono.
-- **İkonlar:** lucide-react, `size-4` (nav'da `size-4`, buton içinde
-  `size-4`), stroke varsayılan; ikon+metin çiftlerinde optik hizalama.
+- **İkonlar:** varsayılan kütüphane lucide-react, `size-4` (nav'da `size-4`,
+  buton içinde `size-3`), stroke varsayılan; ikon+metin çiftlerinde optik
+  hizalama. Etkileşimli dört nokta — sidebar navigasyonu, bildirim zili,
+  liste satırı "detaya git" affordance'ı ve yenile aksiyonu — animasyonlu
+  heroicons kullanır: [src/components/ui/icons/](src/components/ui/icons).
+  Karma kütüphane **bilinçli**: heroicons stroke-1.5, lucide stroke-2; ikisi
+  aynı satırda yan yana getirilmez. Animasyonlu ikonlar bir `<div>` sarmaladığı
+  için boyut `size` prop'uyla açıkça verilir (`[&>svg]` direkt-çocuk kuralları
+  bu ikonlara işlemez).
 - **Butonlar:** [src/components/ui/button.tsx](src/components/ui/button.tsx);
   birincil = ink, ikincil = `variant="outline"` hairline; tehlikeli =
   `variant="destructive"`. Mavi buton yok.
+- **Sidebar onboarding kartı:**
+  [src/components/layout/OnboardingCard.tsx](src/components/layout/OnboardingCard.tsx);
+  beyaz sidebar yüzeyi üzerinde ikinci seviye `bg-muted` zemin — çerçevesiz,
+  gölgesiz (kart-içinde-kart kuralı). Sonuç: muted zeminde `hover:bg-muted`
+  görünmez, içteki tüm hover yüzeyleri `hover:bg-card`. Daraltılmış ikon
+  modunda kart tamamen gizlenir. Hit alanı istisnası: 240px sidebar'daki
+  kompakt kontrol kümesinde (3 nokta + 2 ok) 40px hedef uygulanamaz — nokta
+  16×32, ok 28px; bilinçli ve sınırlı sapma, sayfa gövdesindeki kontrollere
+  genellenmez. İlerleme ayrı bir sayaçta değil noktalarda yaşar ve **durum
+  rengiyle değil mürekkep tonuyla** kodlanır: aktif = `bg-foreground` hap,
+  tamamlandı = `bg-muted-foreground` nokta, bekliyor = `bg-hairline` nokta.
+  Yeşil yalnızca slayt içindeki rozette (check) kullanılır; başlık üstü çizili.
 
 ---
 
 ## 6. Hareket
 
 - Sidebar aç/kapa animasyonu animate-ui bileşeninden gelir (`motion`
-  spring'leri) — [src/components/ui/sidebar.tsx](src/components/ui/sidebar.tsx).
+  spring'leri) —
+  [src/components/animate-ui/components/radix/sidebar.tsx](src/components/animate-ui/components/radix/sidebar.tsx).
 - Katman giriş/çıkışları shadcn'in `tw-animate-css` keyframe'leriyle kalır
-  (dialog, popover, sheet). `motion` yalnızca animate-ui bileşenlerinde;
+  (dialog, popover, sheet). `motion` yalnızca animate-ui bileşenlerinde,
+  `src/components/ui/icons/` altındaki animasyonlu ikonlarda ve sidebar
+  onboarding kartının slayt geçişinde
+  ([src/components/layout/OnboardingCard.tsx](src/components/layout/OnboardingCard.tsx));
   ikisi bilinçli olarak birlikte yaşar — yeni animasyon için önce mevcut
   utility'ye bak.
+- **Slayt (carousel) motifi** — onboarding kartı emsaldir: yön farkındalıklı
+  **tam genişlik** kaydırma; giren ve çıkan slayt aynı `spring 350/35`'i
+  paylaşır (tek ray hissi), kenarda hafif fade (opacity 0.4↔1, 0.15s) sert
+  kesilmeyi yumuşatır — "çıkış girişten sessiz" ilkesi burada bu fade ile
+  sağlanır; blur yok. Viewport yüksekliği aktif slaytın içeriğine aynı spring
+  ile uyar (ResizeObserver ölçümlü) — metin asla kırpılmaz. Aktif nokta hap
+  morph'u `layoutId` + aynı spring ile noktadan noktaya taşınır.
+  `AnimatePresence initial={false}` → ilk boyamada animasyon yok; rozet/ikon
+  takasları `mode="popLayout"` + spring; `prefers-reduced-motion` → kayma
+  yerine salt cross-fade, yükseklik ve hap anlık. İkon dışı animasyonlarda
+  `useReducedMotion()` doğrudan `motion/react`'ten alınır — `useIconHover`
+  yalnızca ikon animasyonları içindir.
+- **İkon animasyonu daima parent'tan sürülür:**
+  [useIconHover()](src/components/ui/icons/use-icon-hover.ts) ile `ref` +
+  `hoverProps` al, `hoverProps`'u satıra/butona yay. İkona `ref` bağlandığı
+  anda kendi hover'ı kapanır. 16px'lik ikonun kendisine hover beklemek
+  kullanılabilirlik hatası; ayrıca `Button` içindeki
+  `[&_svg]:pointer-events-none` bunu zaten imkânsız kılar.
 - Hover/press geçişleri: `transition-colors duration-150`; asla
   `transition-all`. Basma geri bildirimi `active:scale-[0.99]`'u geçmez.
-- `prefers-reduced-motion` her girişte ve press efektinde saygı görür.
+- `prefers-reduced-motion` her girişte ve press efektinde saygı görür; ikon
+  animasyonlarında bu kontrol `useIconHover` içinde merkezîdir — kullanım
+  noktasında tekrarlama.
 
 ---
 
@@ -187,6 +232,10 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
 - [ ] Kartlar `border-hairline`, `shadow-*` yok (popover katmanları hariç)
 - [ ] Sayısal tablo kolonları sağa hizalı `font-mono`
 - [ ] `transition-all` yok; animasyonlar mevcut utility/bileşenlerden
+- [ ] Animasyonlu ikon varsa hover'ı `useIconHover()` ile parent'tan
+      sürülüyor; boyut `size` prop'uyla açıkça veriliyor
+- [ ] Kart içinde kart `bg-muted` zeminle ayrılıyor; muted zemindeki hover
+      yüzeyi `hover:bg-card`
 
 ---
 

@@ -19,7 +19,6 @@ import { formatPrice, useMerchantCurrency } from '@/lib/currency';
 import { getTotalStock } from '@/lib/products/product';
 import { ProductListCard, type ProductListItem } from './_components/ProductListCard';
 import { ConversionInsightCard } from './_components/ConversionInsightCard';
-import { OnboardingCard } from './_components/OnboardingCard';
 import { TrendChart, type TrendDataPoint } from '@/components/shared/TrendChart';
 import { StatusBadge } from '@/components/shared/badges/StatusBadge';
 import { TrendBadge } from '@/components/shared/badges/TrendBadge';
@@ -165,9 +164,6 @@ export default function DashboardPage() {
         title="Dashboard"
         description="Envanter ve satış performansının özeti"
       />
-
-      {/* Onboarding — kurulum adımları tamamlanana kadar görünür */}
-      <OnboardingCard token={token} />
 
       {/* Mock veri uyarısı — sadece development'ta, sipariş yokken görünür */}
       {isMockData && (

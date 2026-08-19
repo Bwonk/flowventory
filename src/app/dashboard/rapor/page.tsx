@@ -3,7 +3,7 @@
 import { logger } from '@/lib/logger';
 import { useCallback, useEffect, useState } from 'react';
 import Image from 'next/image';
-import { AlertTriangle, Printer, RefreshCw } from 'lucide-react';
+import { AlertTriangle, Printer } from 'lucide-react';
 import { TokenHelpers } from '@/helpers/token-helpers';
 import { ApiRequests } from '@/lib/api-requests';
 import type { PurchaseReportApiResponse } from '@/app/api/reports/purchase/route';
@@ -13,7 +13,24 @@ import { PageContainer } from '@/components/layout/PageContainer';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { ErrorState } from '@/components/shared/ErrorState';
 import { formatPrice, useMerchantCurrency } from '@/lib/currency';
+import { markReportViewed } from '@/lib/onboarding';
+import { ArrowPathIcon } from '@/components/ui/icons/arrow-path';
+import { useIconHover } from '@/components/ui/icons/use-icon-hover';
 import { RaporSkeleton } from './_components/RaporSkeleton';
+
+/** Yenile aksiyonu — ikon animasyonu butonun hover'ından sürülür. */
+function RefreshButton({ onClick }: { onClick: () => void }) {
+  const { ref, hoverProps } = useIconHover();
+
+  return (
+    <Button variant="outline" size="sm" onClick={onClick} className="gap-1.5" {...hoverProps}>
+      {/* size-3! gerekli: Button'ın [&_svg:not([class*='size-'])]:size-4 kuralı
+          :not() attribute seçicisi yüzünden daha yüksek specificity'ye sahip. */}
+      <ArrowPathIcon ref={ref} size={12} className="flex shrink-0 [&>svg]:size-3!" aria-hidden />
+      Yenile
+    </Button>
+  );
+}
 
 /**
  * Satın Alma Raporu sayfası.
@@ -75,11 +92,7 @@ export default function RaporPage() {
 
   // Onboarding: "raporu incele" adımını tamamlandı olarak işaretle.
   useEffect(() => {
-    try {
-      window.localStorage.setItem('flowventory:report-viewed', '1');
-    } catch {
-      // localStorage erişilemezse sessiz geç.
-    }
+    markReportViewed();
   }, []);
 
   const saveSettings = useCallback(async () => {
@@ -117,10 +130,7 @@ export default function RaporPage() {
         description={`Son ${report.salesWindowDays} günün satış hızına göre · ${generatedAt.toLocaleString('tr-TR')}`}
         actions={
           <div className="flex gap-2 print:hidden">
-            <Button variant="outline" size="sm" onClick={initialize} className="gap-1.5">
-              <RefreshCw className="size-3" aria-hidden />
-              Yenile
-            </Button>
+            <RefreshButton onClick={initialize} />
             <Button
               size="sm"
               onClick={() => window.print()}

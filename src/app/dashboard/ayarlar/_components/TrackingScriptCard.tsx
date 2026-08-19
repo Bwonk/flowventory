@@ -5,6 +5,7 @@ import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TokenHelpers } from '@/helpers/token-helpers';
 import { ApiRequests } from '@/lib/api-requests';
+import { markTrackerInstalled } from '@/lib/onboarding';
 import type { TrackingScriptStatusApiResponse } from '@/app/api/tracking-script/status/route';
 
 type UiPhase = 'loadingStatus' | 'idle' | 'installing' | 'success' | 'error';
@@ -106,6 +107,8 @@ export function TrackingScriptCard() {
           apiUrl: res.data.data.apiUrl,
           updatedAt: new Date().toISOString(),
         });
+        // Sidebar'daki onboarding kartı anında güncellensin.
+        markTrackerInstalled();
         setPhase('success');
         return;
       }
