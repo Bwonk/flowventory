@@ -92,8 +92,12 @@ export const ApiRequests = {
   insights: {
     conversion: (token: string) =>
       makeGetRequest<ConversionInsightApiResponse>({ url: '/api/insights/conversion', token }),
-    inventory: (token: string) =>
-      makeGetRequest<InventoryInsightApiResponse>({ url: '/api/insights/inventory', token }),
+    inventory: (token: string, window?: 30 | 60) =>
+      makeGetRequest<InventoryInsightApiResponse>({
+        url: '/api/insights/inventory',
+        token,
+        data: window ? { window: String(window) } : undefined,
+      }),
   },
   notifications: {
     list: (token: string) =>
