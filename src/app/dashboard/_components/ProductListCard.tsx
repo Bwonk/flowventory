@@ -1,22 +1,34 @@
 'use client';
 
-import React, { useState } from 'react';
-import Image from 'next/image';
+import React from 'react';
 import Link from 'next/link';
-import { Package, type LucideIcon } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import type { LucideIcon } from 'lucide-react';
 import { Badge, type BadgeVariant } from '@/components/ui/badge';
 import type { StockStatus } from '@/components/shared/badges/StatusBadge';
 import { StatusBadge } from '@/components/shared/badges/StatusBadge';
-import { EyeIcon } from '@/components/ui/icons/eye';
-import { useIconHover } from '@/components/ui/icons/use-icon-hover';
+import {
+  DataTable,
+  DataTableCell,
+  DataTableHeadCell,
+  DataTableHeaderRow,
+  DataTableRow,
+} from '@/components/shared/data-table/data-table';
+import { EmptyState } from '@/components/shared/data-table/EmptyState';
+import { TableFooterNote } from '@/components/shared/data-table/TableFooterNote';
+import { ProductThumb } from '@/components/shared/filters/atoms';
+import { DashboardListSection } from './DashboardListSection';
 
 export interface ProductListItem {
   productId: string;
   index: number;
   image?: string;
   name: string;
-  meta: string;
+  /** Ürün adının altındaki ikincil satır. */
+  meta?: string;
   status?: StockStatus;
+  /** Sağdaki sayısal kolon (satış adedi / toplam stok). */
+  value: number;
 }
 
 interface ProductListCardProps {
@@ -24,99 +36,106 @@ interface ProductListCardProps {
   subtitle: string;
   badge?: { label: string; variant: BadgeVariant };
   items: ProductListItem[];
-  emptyState: { icon: LucideIcon; title: string; description: string };
+  /** Sayısal kolonun başlığı ("Adet", "Stok"...). */
+  valueHeader: string;
+  /** Verilirse durum kolonu bu başlıkla render edilir. */
+  statusHeader?: string;
+  /** Tam sonuç sayısı; items.length'ten büyükse kesme notu gösterilir. */
+  totalCount?: number;
+  viewAllHref?: string;
+  emptyState: { icon: LucideIcon; message: string; description?: string };
 }
 
-const ProductImage: React.FC<{ src?: string; alt: string }> = ({ src, alt }) => {
-  const [failed, setFailed] = useState(false);
-  if (!src || failed) {
-    return (
-      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border border-border bg-muted">
-        <Package className="h-5 w-5 text-hairline" />
-      </div>
-    );
-  }
-  return (
-    // unoptimized: görseller ikas CDN'inde, Next optimizer'ından geçirmeye gerek yok
-    // (ConversionInsightCard ile aynı kullanım).
-    <Image
-      src={src}
-      alt={alt}
-      width={40}
-      height={40}
-      className="h-10 w-10 flex-shrink-0 rounded-lg border border-border bg-muted object-cover"
-      onError={() => setFailed(true)}
-      unoptimized
-    />
-  );
-};
-
-/**
- * Tek ürün satırı. Her satırın kendi göz ikonu ref'i gerektiği için ayrı
- * bileşen: hook'u map gövdesinde çağırmak Rules of Hooks ihlali olurdu.
- */
-const ProductRow: React.FC<{ item: ProductListItem }> = ({ item }) => {
-  const { ref, hoverProps } = useIconHover();
-
-  return (
-    <Link
-      href={`/dashboard/stok?product=${item.productId}`}
-      className="group flex items-center gap-3 rounded-lg px-2 py-3 -mx-2 transition-colors hover:bg-muted cursor-pointer"
-      {...hoverProps}
-    >
-      <span className="w-6 flex-shrink-0 text-center font-mono text-xs text-muted-foreground">
-        {String(item.index).padStart(2, '0')}
-      </span>
-      <ProductImage src={item.image} alt={item.name} />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-primary">{item.name}</p>
-        <p className="mt-0.5 truncate text-xs text-muted-foreground">{item.meta}</p>
-      </div>
-      {item.status && (
-        <StatusBadge status={item.status} size="sm" />
-      )}
-      <EyeIcon
-        ref={ref}
-        size={16}
-        className="flex flex-shrink-0 text-muted-foreground transition-colors group-hover:text-primary"
-        aria-hidden
-      />
-    </Link>
-  );
-};
-
+/** Dashboard ürün listesi — kanonik DataTable düzeni (stok tablosuyla aynı dialekt). */
 export const ProductListCard: React.FC<ProductListCardProps> = ({
   title,
   subtitle,
   badge,
   items,
+  valueHeader,
+  statusHeader,
+  totalCount,
+  viewAllHref,
   emptyState,
 }) => {
-  return (
-    <section className="flex flex-col rounded-lg border border-hairline bg-card p-5">
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h2 className="text-sm font-medium text-primary">{title}</h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">{subtitle}</p>
-        </div>
-        {badge && (
-          <Badge variant={badge.variant} className="shrink-0">{badge.label}</Badge>
-        )}
-      </div>
+  const router = useRouter();
+  const truncated = totalCount != null && totalCount > items.length;
 
+  return (
+    <DashboardListSection
+      title={title}
+      subtitle={subtitle}
+      badge={badge && <Badge variant={badge.variant}>{badge.label}</Badge>}
+    >
       {items.length === 0 ? (
-        <div className="flex flex-col items-center py-10">
-          <emptyState.icon className="mb-3 h-8 w-8 text-muted-foreground" />
-          <p className="text-sm font-medium text-primary">{emptyState.title}</p>
-          <p className="mt-1 text-xs text-muted-foreground">{emptyState.description}</p>
-        </div>
+        <EmptyState icon={emptyState.icon} message={emptyState.message} description={emptyState.description} />
       ) : (
-        <div className="divide-y divide-muted">
-          {items.map(item => (
-            <ProductRow key={item.productId} item={item} />
-          ))}
-        </div>
+        <>
+          <DataTable>
+            <DataTableHeaderRow>
+              <DataTableHeadCell edge align="center" className="w-[48px]">#</DataTableHeadCell>
+              <DataTableHeadCell>Ürün</DataTableHeadCell>
+              {statusHeader && <DataTableHeadCell>{statusHeader}</DataTableHeadCell>}
+              <DataTableHeadCell align="right" edge>{valueHeader}</DataTableHeadCell>
+            </DataTableHeaderRow>
+            <tbody>
+              {items.map(item => (
+                <DataTableRow
+                  key={item.productId}
+                  onClick={() => router.push(`/dashboard/stok?product=${item.productId}`)}
+                >
+                  <DataTableCell edge align="center" className="w-[48px]">
+                    <span className="font-mono text-xs tabular-nums text-muted-foreground">
+                      {String(item.index).padStart(2, '0')}
+                    </span>
+                  </DataTableCell>
+                  <DataTableCell>
+                    <div className="flex items-center gap-2.5">
+                      <ProductThumb src={item.image} alt="" sizeClass="h-7 w-7" roundedClass="rounded" />
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-foreground">{item.name}</p>
+                        {item.meta && <p className="truncate text-xs text-muted-foreground">{item.meta}</p>}
+                      </div>
+                    </div>
+                  </DataTableCell>
+                  {statusHeader && (
+                    <DataTableCell>
+                      {item.status ? (
+                        <StatusBadge status={item.status} size="sm" />
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </DataTableCell>
+                  )}
+                  <DataTableCell numeric edge className="font-medium">
+                    {item.value}
+                  </DataTableCell>
+                </DataTableRow>
+              ))}
+            </tbody>
+          </DataTable>
+          <TableFooterNote>
+            {truncated ? (
+              <>
+                İlk {items.length} ürün gösteriliyor
+                {viewAllHref && (
+                  <>
+                    {' · '}
+                    <Link
+                      href={viewAllHref}
+                      className="font-medium text-accent-blue underline-offset-4 hover:underline"
+                    >
+                      Tümünü gör &rarr;
+                    </Link>
+                  </>
+                )}
+              </>
+            ) : (
+              <>{items.length} ürün listelendi</>
+            )}
+          </TableFooterNote>
+        </>
       )}
-    </section>
+    </DashboardListSection>
   );
 };

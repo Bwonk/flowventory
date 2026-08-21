@@ -129,7 +129,8 @@ export default function DashboardPage() {
         index: i + 1,
         image: s.imageUrl,
         name: s.productName,
-        meta: s.variantName ? `${s.variantName} • ${s.quantity} adet satıldı` : `${s.quantity} adet satıldı`,
+        meta: s.variantName || undefined,
+        value: s.quantity,
       })),
     [topSellers],
   );
@@ -143,8 +144,9 @@ export default function DashboardPage() {
           index: i + 1,
           image: getProductThumbnail(p),
           name: p.name,
-          meta: `${p.variants.length} varyant • ${getTotalStock(p)} adet`,
+          meta: `${p.variants.length} varyant`,
           status: stock === 0 ? 'out' : 'warning',
+          value: getTotalStock(p),
         };
       }),
     [lowStockProducts],
@@ -374,9 +376,10 @@ export default function DashboardPage() {
           title="En Çok Satanlar"
           subtitle="Son 30 gün"
           items={topSellerItems}
+          valueHeader="Adet"
           emptyState={{
             icon: BarChart2,
-            title: 'Henüz satış verisi yok',
+            message: 'Henüz satış verisi yok',
             description: 'Satış gerçekleşince burada görünecek.',
           }}
         />
@@ -385,9 +388,13 @@ export default function DashboardPage() {
           subtitle={`Stok eşiği (${maxThreshold} adet) altına düşen ve tükenen ürünler`}
           badge={lowStockProducts.length > 0 ? { label: `${lowStockProducts.length} ürün`, variant: 'critical' } : undefined}
           items={lowStockListItems}
+          valueHeader="Stok"
+          statusHeader="Durum"
+          totalCount={lowStockProducts.length}
+          viewAllHref="/dashboard/stok"
           emptyState={{
             icon: CheckCircle,
-            title: 'Tüm ürünler sağlıklı',
+            message: 'Tüm ürünler sağlıklı',
             description: 'Stok eşiği altında ürün bulunmuyor.',
           }}
         />

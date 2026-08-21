@@ -1,6 +1,7 @@
 'use client';
 
 import { formatNumber } from '@/lib/format';
+import { TableFooterNote } from './TableFooterNote';
 import { useInfiniteScroll } from './use-infinite-scroll';
 
 interface InfiniteScrollFooterProps {
@@ -26,13 +27,11 @@ export function InfiniteScrollFooter({
   return (
     <>
       {hasMore && <div ref={sentinelRef} className="h-px" />}
-      {loadingMore && (
-        <p className="border-t border-border px-5 py-3 text-center text-xs text-muted-foreground">Yükleniyor…</p>
-      )}
+      {loadingMore && <TableFooterNote>Yükleniyor…</TableFooterNote>}
       {!hasMore && itemCount > 0 && (
-        <p className="border-t border-border px-5 py-3 text-center text-xs text-muted-foreground">
+        <TableFooterNote>
           {formatNumber(itemCount)} {itemNoun} listelendi
-        </p>
+        </TableFooterNote>
       )}
     </>
   );
