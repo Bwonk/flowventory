@@ -51,6 +51,8 @@
   --color-info: var(--info);
   --color-success-foreground: var(--success-foreground);
   --color-success: var(--success);
+  --color-critical-foreground: var(--critical-foreground);
+  --color-critical: var(--critical);
   /* Data-ink çekirdek token'ları (DESIGN.md) */
   --color-ink: var(--ink);
   --color-hairline: var(--hairline);
@@ -120,6 +122,8 @@
   --info-foreground: #1863dc;
   --warning: #fffbeb;
   --warning-foreground: #b45309;
+  --critical: #fef2f2;
+  --critical-foreground: #b91c1c;
   --invert: #18181b;
   --invert-foreground: #fafafa;
 }
