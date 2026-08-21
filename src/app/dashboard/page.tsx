@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useMemo } from 'react';
-import Link from 'next/link';
 import {
   AlertTriangle,
   Archive,
@@ -20,6 +19,7 @@ import { getTotalStock } from '@/lib/products/product';
 import { ProductListCard, type ProductListItem } from './_components/ProductListCard';
 import { ConversionInsightCard } from './_components/ConversionInsightCard';
 import { KpiTile } from './_components/KpiTile';
+import { StockHealthBand } from './_components/StockHealthBand';
 import { TrendChart, type TrendDataPoint } from '@/components/shared/TrendChart';
 import { StatusBadge } from '@/components/shared/badges/StatusBadge';
 import { Badge } from '@/components/ui/badge';
@@ -189,17 +189,28 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* SECTION 1 — KPI Metrikleri */}
+      {/* SECTION 1 — Genel bakış metrik paneli: KPI grid + Stok Sağlığı bandı */}
       {/*
         Sütun sayısı viewport'a değil kartın kendi genişliğine bağlı: iframe genişliği
         sabit olsa da sidebar 256px yediği için medya sorguları yanlış eşikte tetikleniyor
         ve para birimi değerleri komşu tile'a taşıyordu. Ayraçlar her hücreye sağ/alt
         kenarlık olarak veriliyor; grid'in -mr/-mb px'i son sütun ve satırın fazladan
-        çizgisini overflow-hidden ile kırpıyor, böylece sütun sayısı serbestçe değişebilir.
+        çizgisini overflow-hidden ile kırpıyor.
+
+        Span'lı grid (6/10 kolon tabanı) her genişlikte satırları tam doldurur —
+        5 karo hiçbir kırılımda boş hücre bırakmaz:
+        @lg (2 kolon): Ciro tam satır "hero", kalan 4 karo 2×2.
+        @3xl (6 kolon): satır 1 = 3 karo (2+2+2), satır 2 = 2 geniş karo (3+3).
+        @6xl (10 kolon): 5 karo tek satır (2×5).
       */}
-      <section className="@container rounded-lg border border-hairline bg-card overflow-hidden">
-        <div className="-mr-px -mb-px grid grid-cols-1 @lg:grid-cols-2 @3xl:grid-cols-3 @6xl:grid-cols-5">
+      <section
+        aria-label="Genel bakış metrikleri"
+        className="@container rounded-lg border border-hairline bg-card overflow-hidden"
+      >
+        <div className="-mr-px -mb-px grid grid-cols-1 @lg:grid-cols-2 @3xl:grid-cols-6 @6xl:grid-cols-10">
           <KpiTile
+            className="@lg:col-span-2 @3xl:col-span-2"
+            stagger={0}
             icon={DollarSign}
             label="SON 30 GÜN CİRO"
             value={sectionErrors.analytics ? '—' : formatPrice(totalRevenue)}
@@ -218,6 +229,8 @@ export default function DashboardPage() {
           />
 
           <KpiTile
+            className="@3xl:col-span-2"
+            stagger={1}
             icon={Package}
             label="AKTİF ÜRÜN"
             value={sectionErrors.products ? '—' : `${products.length} ürün`}
@@ -234,6 +247,8 @@ export default function DashboardPage() {
           />
 
           <KpiTile
+            className="@3xl:col-span-2"
+            stagger={2}
             icon={AlertTriangle}
             label="KRİTİK STOK"
             value={sectionErrors.products ? '—' : `${criticalCount + warningCount} ürün`}
@@ -256,6 +271,8 @@ export default function DashboardPage() {
           />
 
           <KpiTile
+            className="@3xl:col-span-3 @6xl:col-span-2"
+            stagger={3}
             icon={Archive}
             label="ÖLÜ STOK"
             value={deadStockUnavailable ? '—' : formatPrice(lockedCapital.total)}
@@ -284,6 +301,8 @@ export default function DashboardPage() {
           />
 
           <KpiTile
+            className="@3xl:col-span-3 @6xl:col-span-2"
+            stagger={4}
             icon={Clock}
             label="ORT. STOK ÖMRÜ"
             value={
@@ -303,78 +322,13 @@ export default function DashboardPage() {
             }
           />
         </div>
-      </section>
 
-      {/* SECTION 2 — Stok Sağlığı */}
-      <section className="@container rounded-lg border border-hairline bg-card p-5">
-        <div className="mb-4 flex items-center justify-between">
-          <div>
-            <h2 className="text-sm font-medium text-foreground">Stok Sağlığı</h2>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              Toplam {skuHealth.total} SKU&apos;nun stok durumu dağılımı
-            </p>
-          </div>
-          {!sectionErrors.products && skuHealth.total > 0 && (
-            <Link
-              href="/dashboard/stok"
-              className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Tüm stokları görüntüle
-              <span>&rarr;</span>
-            </Link>
-          )}
-        </div>
-
-        {sectionErrors.products ? (
-          <EmptyState
-            icon={AlertTriangle}
-            message="Ürün verisi alınamadı."
-            actionLabel="Tekrar dene"
-            onAction={reload}
-          />
-        ) : skuHealth.total === 0 ? (
-          <EmptyState icon={Package} message="Henüz ürün bulunmuyor." />
-        ) : (
-          <>
-            <div
-              className="flex h-2.5 w-full overflow-hidden rounded-full"
-              role="img"
-              aria-label={`Sağlıklı ${skuHealth.healthy}, Az kalan ${skuHealth.warning}, Tükendi ${skuHealth.critical}`}
-            >
-              {skuHealth.healthy > 0 && (
-                <div className="bg-status-healthy" style={{ width: `${skuHealth.segments.healthy}%` }} />
-              )}
-              {skuHealth.warning > 0 && (
-                <div className="bg-status-warning" style={{ width: `${skuHealth.segments.warning}%` }} />
-              )}
-              {skuHealth.critical > 0 && (
-                <div className="bg-status-critical" style={{ width: `${skuHealth.segments.critical}%` }} />
-              )}
-            </div>
-
-            <div className="mt-4 grid grid-cols-1 gap-4 @md:grid-cols-3">
-              {[
-                { dot: 'bg-status-healthy', label: 'Sağlıklı', count: skuHealth.healthy, pct: skuHealth.segments.healthy },
-                { dot: 'bg-status-warning', label: 'Az Kalan', count: skuHealth.warning, pct: skuHealth.segments.warning },
-                { dot: 'bg-status-critical', label: 'Tükendi', count: skuHealth.critical, pct: skuHealth.segments.critical },
-              ].map(item => (
-                <div key={item.label} className="flex flex-col gap-1.5">
-                  <div className="flex items-center gap-2">
-                    <span className={`size-2 rounded-full ${item.dot}`} />
-                    <span className="text-xs text-muted-foreground">{item.label}</span>
-                  </div>
-                  <p>
-                    <span className="font-mono text-xl font-medium tabular-nums text-foreground">{item.count}</span>
-                    <span className="ml-1 text-xs text-muted-foreground">SKU</span>
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    %{item.pct.toLocaleString('tr-TR', { maximumFractionDigits: 1 })}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
+        <StockHealthBand
+          skuHealth={skuHealth}
+          error={sectionErrors.products}
+          onRetry={reload}
+          stagger={5}
+        />
       </section>
 
       {/* SECTION 3 — Performans Trendi */}

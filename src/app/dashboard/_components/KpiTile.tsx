@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -14,13 +14,27 @@ interface KpiTileProps {
   /** Verilirse karo Link olur; cta satırı dinlenme affordance'ıdır. */
   href?: string;
   cta?: string;
+  /** Grid span sınıfları için. */
+  className?: string;
+  /** Verilirse tek seferlik giriş animasyonu bu sırayla gecikir (animate-enter). */
+  stagger?: number;
 }
 
 /**
  * KPI şeridi karosu. Ayraçlar hücrenin sağ/alt kenarlığında olmalı:
  * grid'in -mr/-mb px hilesi son satır/sütunun fazla çizgisini kırpıyor.
  */
-export function KpiTile({ icon: Icon, label, value, valueSuffix, footer, href, cta }: KpiTileProps) {
+export function KpiTile({
+  icon: Icon,
+  label,
+  value,
+  valueSuffix,
+  footer,
+  href,
+  cta,
+  className,
+  stagger,
+}: KpiTileProps) {
   const content = (
     <>
       <div className="mb-1 flex items-center gap-1.5">
@@ -43,12 +57,18 @@ export function KpiTile({ icon: Icon, label, value, valueSuffix, footer, href, c
     </>
   );
 
-  const baseClass = 'flex flex-col border-b border-r border-border p-5';
+  const baseClass = cn(
+    'flex flex-col border-b border-r border-border p-5',
+    stagger != null && 'animate-enter',
+    className,
+  );
+  const staggerStyle = stagger != null ? ({ '--stagger': stagger } as CSSProperties) : undefined;
 
   if (href) {
     return (
       <Link
         href={href}
+        style={staggerStyle}
         className={cn(
           baseClass,
           'group cursor-pointer transition-colors duration-150 hover:bg-muted/40',
@@ -60,5 +80,9 @@ export function KpiTile({ icon: Icon, label, value, valueSuffix, footer, href, c
     );
   }
 
-  return <div className={baseClass}>{content}</div>;
+  return (
+    <div style={staggerStyle} className={baseClass}>
+      {content}
+    </div>
+  );
 }

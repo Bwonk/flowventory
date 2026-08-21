@@ -98,6 +98,12 @@ Yüzey tarifleri:
 - **Kart:** `rounded-lg border border-hairline bg-card p-5`
 - **Yoğun stat tile (KPI grid'i):** gölgesiz, tile'lar arası `divide-x
   divide-hairline` / grid çizgileri; tile içi `p-4`
+- **Metrik paneli (dashboard):** KPI grid'i ve ilişkili özet bandı (ör. Stok
+  Sağlığı metresi) **tek kartta** yaşar — grid + `border-t border-border`
+  ayrılmış tam genişlik alt band; iki komşu kart olarak bölünmez. Grid,
+  span'lı kolon tabanı (6/10) kullanır ki karo sayısı hangi kırılımda olursa
+  olsun satırlar tam dolsun — boş hücre bırakmak yasak. Band başlığı kart
+  h2'si değil, karolarla aynı mono eyebrow dilindedir.
 - **Sayfa bölümü:** kartlar arası `gap-4` veya `gap-6`, asla gölge yığını
 
 ---
@@ -219,6 +225,15 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   anda kendi hover'ı kapanır. 16px'lik ikonun kendisine hover beklemek
   kullanılabilirlik hatası; ayrıca `Button` içindeki
   `[&_svg]:pointer-events-none` bunu zaten imkânsız kılar.
+- **Metrik paneli motifi** — dashboard'daki tek seferlik giriş ve metre
+  animasyonları sanksiyonludur: karolar ve band `globals.css`'teki
+  `animate-enter` utility'siyle (opacity + 8px translateY + blur, 80ms
+  `--stagger`) sırayla girer; Stok Sağlığı metresinin segmentleri ilk boyamada
+  `motion` spring'iyle (bounce 0, ~120ms stagger) genişliğe açılır; legend
+  hover'ı ilgili segmenti bırakıp diğerlerini `opacity-35`'e söndürür
+  (`transition-opacity duration-150`). Her üçü `prefers-reduced-motion`'da
+  kapalıdır (`animate-enter` CSS'te, metre `useReducedMotion` ile). Bu desen
+  sayfa açılışına özeldir — state değişimlerinde yeniden tetiklenmez.
 - Hover/press geçişleri: `transition-colors duration-150`; asla
   `transition-all`. Basma geri bildirimi `active:scale-[0.99]`'u geçmez.
 - `prefers-reduced-motion` her girişte ve press efektinde saygı görür; ikon
