@@ -5,7 +5,7 @@ import { Package } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { ProductRow } from '@/lib/products/types';
 import { StatusBadge } from '@/components/shared/badges/StatusBadge';
-import { ProductThumb } from './atoms';
+import { ProductThumb } from '@/components/shared/filters/atoms';
 
 interface ProductTableProps {
   rows: ProductRow[];

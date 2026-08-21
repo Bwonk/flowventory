@@ -7,7 +7,7 @@ import { PageContainer } from '@/components/layout/PageContainer';
 import { PageHeader } from '@/components/layout/PageHeader';
 import type { HomePageProps, Product } from '@/lib/products/types';
 import { useProductFilters } from './hooks/use-product-filters';
-import { MonoLabel } from './components/atoms';
+import { MonoLabel } from '@/components/shared/filters/atoms';
 import { FilterBar } from './components/FilterBar';
 import { ProductTable } from './components/ProductTable';
 import { ProductDetailModal } from './product-detail/ProductDetailModal';

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useStockThreshold, DEFAULT_STOCK_THRESHOLD } from '@/lib/stock-threshold';
-import { Dropdown } from './Dropdown';
+import { Dropdown } from '@/components/shared/filters/Dropdown';
 
 /**
  * Stok eşiği kontrolü: tetikleyici dropdown + geçici (temp) kritik/az kalan girişleri.

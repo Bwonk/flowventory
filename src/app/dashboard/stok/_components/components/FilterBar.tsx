@@ -13,9 +13,9 @@ import {
   STOCK_RANGE_LABELS,
   STOCK_RANGE_OPTIONS,
 } from '@/lib/products/constants';
-import { Dropdown, OptionButton } from './Dropdown';
+import { Dropdown, OptionButton } from '@/components/shared/filters/Dropdown';
 import { ThresholdControl } from './ThresholdControl';
-import { FilterChip } from './atoms';
+import { FilterChip } from '@/components/shared/filters/atoms';
 
 interface FilterBarProps {
   query: string;
