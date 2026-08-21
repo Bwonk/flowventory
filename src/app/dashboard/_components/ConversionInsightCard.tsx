@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Eye } from 'lucide-react';
+import { AlertTriangle, Eye } from 'lucide-react';
 import type { ConversionInsightApiResponse } from '@/app/api/insights/conversion/route';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -31,8 +31,30 @@ const MAX_ROWS = 8;
  * "çok görüntülenen ama az satan" ürünleri öne çıkarır (fiyat/görsel/açıklama
  * sorununun en güçlü sinyali).
  */
-export function ConversionInsightCard({ insight }: { insight: ConversionInsightApiResponse | null }) {
+export function ConversionInsightCard({
+  insight,
+  error,
+  onRetry,
+}: {
+  insight: ConversionInsightApiResponse | null;
+  /** Fetch düştü — onboarding kopyası yerine yeniden dene durumu gösterilir. */
+  error?: boolean;
+  onRetry?: () => void;
+}) {
   const router = useRouter();
+
+  if (error) {
+    return (
+      <DashboardListSection title={TITLE}>
+        <EmptyState
+          icon={AlertTriangle}
+          message="Dönüşüm verisi alınamadı."
+          actionLabel={onRetry ? 'Tekrar dene' : undefined}
+          onAction={onRetry}
+        />
+      </DashboardListSection>
+    );
+  }
 
   if (!insight || insight.totalViews === 0) {
     return (

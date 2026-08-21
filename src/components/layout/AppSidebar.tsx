@@ -36,7 +36,7 @@ interface NavItem {
 }
 
 const NAV_ITEMS: ReadonlyArray<NavItem> = [
-  { label: 'Dashboard', href: '/dashboard', icon: RectangleGroupIcon, exact: true },
+  { label: 'Genel Bakış', href: '/dashboard', icon: RectangleGroupIcon, exact: true },
   { label: 'Stok Takibi', href: '/dashboard/stok', icon: CubeIcon },
   { label: 'Satın Alma', href: '/dashboard/rapor', icon: ClipboardDocumentListIcon },
   { label: 'Analiz', href: '/dashboard/analiz', icon: PresentationChartLineIcon },

@@ -25,6 +25,7 @@ import { StatusBadge } from '@/components/shared/badges/StatusBadge';
 import { Badge } from '@/components/ui/badge';
 import { TrendBadge } from '@/components/shared/badges/TrendBadge';
 import { ErrorState } from '@/components/shared/ErrorState';
+import { EmptyState } from '@/components/shared/data-table/EmptyState';
 import { DashboardSkeleton } from './_components/DashboardSkeleton';
 import { useDashboardData } from './hooks/use-dashboard-data';
 import {
@@ -54,10 +55,11 @@ export default function DashboardPage() {
     isMockData,
     loading,
     error,
+    sectionErrors,
     reload,
   } = useDashboardData();
 
-  const { threshold } = useStockThreshold();
+  const { threshold, hydrated: thresholdHydrated } = useStockThreshold();
   const { max: maxThreshold } = threshold;
 
   // Mağaza para birimini tazeler; formatPrice aktif kodu okur.
@@ -84,6 +86,10 @@ export default function DashboardPage() {
     () => computeAvgDaysRemaining(products, salesByVariant),
     [products, salesByVariant],
   );
+
+  // Ölü stok / stok ömrü hem ürün hem satış verisine bağlı: satışlar gelmezse
+  // tüm ürünler "180+ gündür satılmıyor" gibi görünür — yanıltıcı, degrade et.
+  const deadStockUnavailable = sectionErrors.products || sectionErrors.analytics;
 
   const totalRevenue = analytics?.totalRevenue ?? 0;
   const revenueChange = analytics?.revenueChange ?? 0;
@@ -153,7 +159,9 @@ export default function DashboardPage() {
     [lowStockProducts],
   );
 
-  if (loading) {
+  // Eşik localStorage'dan okunana kadar bekle: varsayılan (5/10) ile boyayıp
+  // sonra güncellemek KPI sayılarını göz önünde değiştiriyordu.
+  if (loading || !thresholdHydrated) {
     return <DashboardSkeleton />;
   }
 
@@ -164,14 +172,15 @@ export default function DashboardPage() {
   return (
     <PageContainer>
       <PageHeader
-        eyebrow="GENEL BAKIŞ"
-        title="Dashboard"
+        eyebrow="ÖZET"
+        title="Genel Bakış"
         description="Envanter ve satış performansının özeti"
       />
 
+      <div className="space-y-4">
       {/* Mock veri uyarısı — sadece development'ta, sipariş yokken görünür */}
       {isMockData && (
-        <div className="mb-4 rounded-lg border border-hairline bg-muted px-4 py-2.5">
+        <div className="rounded-lg border border-hairline bg-muted px-4 py-2.5">
           <p className="text-xs text-muted-foreground">
             <span className="font-medium text-foreground">Demo verisi:</span> Mağazada henüz sipariş
             olmadığı için satış grafikleri sentetik veriyle dolduruldu. Gerçek sipariş geldiğinde
@@ -188,79 +197,102 @@ export default function DashboardPage() {
         kenarlık olarak veriliyor; grid'in -mr/-mb px'i son sütun ve satırın fazladan
         çizgisini overflow-hidden ile kırpıyor, böylece sütun sayısı serbestçe değişebilir.
       */}
-      <section className="@container mb-4 rounded-lg border border-hairline bg-card overflow-hidden">
+      <section className="@container rounded-lg border border-hairline bg-card overflow-hidden">
         <div className="-mr-px -mb-px grid grid-cols-1 @lg:grid-cols-2 @3xl:grid-cols-3 @6xl:grid-cols-5">
           <KpiTile
             icon={DollarSign}
             label="SON 30 GÜN CİRO"
-            value={formatPrice(totalRevenue)}
+            value={sectionErrors.analytics ? '—' : formatPrice(totalRevenue)}
             footer={
-              <>
-                <TrendBadge value={revenueChange} size="sm" />
-                <p className="mt-1.5 text-xs text-muted-foreground">
-                  {revenueChange === 0 ? 'Geçen döneme göre değişmedi' : `Geçen ay: ${formatPrice(previousRevenue)}`}
-                </p>
-              </>
+              sectionErrors.analytics ? (
+                <p className="text-xs text-muted-foreground">Satış verisi alınamadı</p>
+              ) : (
+                <>
+                  <TrendBadge value={revenueChange} size="sm" />
+                  <p className="mt-1.5 text-xs text-muted-foreground">
+                    {revenueChange === 0 ? 'Geçen döneme göre değişmedi' : `Geçen ay: ${formatPrice(previousRevenue)}`}
+                  </p>
+                </>
+              )
             }
           />
 
           <KpiTile
             icon={Package}
             label="AKTİF ÜRÜN"
-            value={`${products.length} ürün`}
+            value={sectionErrors.products ? '—' : `${products.length} ürün`}
             footer={
-              <>
-                <Badge variant="neutral">{skuHealth.total} SKU</Badge>
-                <p className="mt-1.5 text-xs text-muted-foreground">Varyant bazlı takip</p>
-              </>
+              sectionErrors.products ? (
+                <p className="text-xs text-muted-foreground">Ürün verisi alınamadı</p>
+              ) : (
+                <>
+                  <Badge variant="neutral">{skuHealth.total} SKU</Badge>
+                  <p className="mt-1.5 text-xs text-muted-foreground">Varyant bazlı takip</p>
+                </>
+              )
             }
           />
 
           <KpiTile
             icon={AlertTriangle}
             label="KRİTİK STOK"
-            value={`${criticalCount + warningCount} ürün`}
+            value={sectionErrors.products ? '—' : `${criticalCount + warningCount} ürün`}
             href="/dashboard/stok"
             cta="Ürünleri görüntüle"
             footer={
-              <div className="mb-2 flex flex-wrap gap-1.5">
-                {criticalCount > 0 && (
-                  <StatusBadge status="out" label={`${criticalCount} tükendi`} size="sm" />
-                )}
-                {warningCount > 0 && (
-                  <StatusBadge status="warning" label={`${warningCount} eşik altında`} size="sm" />
-                )}
-              </div>
+              sectionErrors.products ? (
+                <p className="mb-2 text-xs text-muted-foreground">Ürün verisi alınamadı</p>
+              ) : (
+                <div className="mb-2 flex flex-wrap gap-1.5">
+                  {criticalCount > 0 && (
+                    <StatusBadge status="out" label={`${criticalCount} tükendi`} size="sm" />
+                  )}
+                  {warningCount > 0 && (
+                    <StatusBadge status="warning" label={`${warningCount} eşik altında`} size="sm" />
+                  )}
+                </div>
+              )
             }
           />
 
           <KpiTile
             icon={Archive}
             label="ÖLÜ STOK"
-            value={formatPrice(lockedCapital.total)}
+            value={deadStockUnavailable ? '—' : formatPrice(lockedCapital.total)}
             valueSuffix={
+              !deadStockUnavailable &&
               lockedCapital.isEstimate && (
-                <span
-                  className="block font-sans text-xs font-normal text-muted-foreground"
-                  title="Bazı ürünlerde alış fiyatı tanımlı değil; satış fiyatı kullanıldı"
-                >
-                  ~tahmini
-                </span>
+                <span className="block font-sans text-xs font-normal text-muted-foreground">~tahmini</span>
               )
             }
             href="/dashboard/analiz?action=eritme-adayi"
             cta="Eritme adaylarını görüntüle"
             footer={
-              <p className="mb-2 text-xs text-muted-foreground">{deadStock.length} ürün · 180+ gündür satılmıyor</p>
+              deadStockUnavailable ? (
+                <p className="mb-2 text-xs text-muted-foreground">Veri alınamadı</p>
+              ) : (
+                <div className="mb-2">
+                  <p className="text-xs text-muted-foreground">{deadStock.length} ürün · 180+ gündür satılmıyor</p>
+                  {lockedCapital.isEstimate && (
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      ~tahmini: alış fiyatı eksik ürünlerde satış fiyatı kullanıldı
+                    </p>
+                  )}
+                </div>
+              )
             }
           />
 
           <KpiTile
             icon={Clock}
             label="ORT. STOK ÖMRÜ"
-            value={avgDaysRemaining !== null ? formatStockAge(avgDaysRemaining).primary : '—'}
+            value={
+              deadStockUnavailable || avgDaysRemaining === null ? '—' : formatStockAge(avgDaysRemaining).primary
+            }
             footer={
-              avgDaysRemaining !== null ? (
+              deadStockUnavailable ? (
+                <p className="text-xs text-muted-foreground">Veri alınamadı</p>
+              ) : avgDaysRemaining !== null ? (
                 <>
                   <p className="text-xs text-muted-foreground">{formatStockAge(avgDaysRemaining).secondary}</p>
                   <p className="mt-0.5 text-xs text-muted-foreground">Satış hızına göre hesaplandı</p>
@@ -274,7 +306,7 @@ export default function DashboardPage() {
       </section>
 
       {/* SECTION 2 — Stok Sağlığı */}
-      <section className="mb-4 rounded-lg border border-hairline bg-card p-5">
+      <section className="@container rounded-lg border border-hairline bg-card p-5">
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h2 className="text-sm font-medium text-foreground">Stok Sağlığı</h2>
@@ -282,56 +314,84 @@ export default function DashboardPage() {
               Toplam {skuHealth.total} SKU&apos;nun stok durumu dağılımı
             </p>
           </div>
-          <Link
-            href="/dashboard/stok"
-            className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Tüm stokları görüntüle
-            <span>&rarr;</span>
-          </Link>
-        </div>
-
-        <div
-          className="flex h-2.5 w-full overflow-hidden rounded-full"
-          role="img"
-          aria-label={`Sağlıklı ${skuHealth.healthy}, Az kalan ${skuHealth.warning}, Tükendi ${skuHealth.critical}`}
-        >
-          {skuHealth.healthy > 0 && (
-            <div className="bg-status-healthy" style={{ width: `${skuHealth.segments.healthy}%` }} />
-          )}
-          {skuHealth.warning > 0 && (
-            <div className="bg-status-warning" style={{ width: `${skuHealth.segments.warning}%` }} />
-          )}
-          {skuHealth.critical > 0 && (
-            <div className="bg-status-critical" style={{ width: `${skuHealth.segments.critical}%` }} />
+          {!sectionErrors.products && skuHealth.total > 0 && (
+            <Link
+              href="/dashboard/stok"
+              className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Tüm stokları görüntüle
+              <span>&rarr;</span>
+            </Link>
           )}
         </div>
 
-        <div className="mt-4 grid grid-cols-3 gap-4">
-          {[
-            { dot: 'bg-status-healthy', label: 'Sağlıklı', count: skuHealth.healthy, pct: skuHealth.segments.healthy },
-            { dot: 'bg-status-warning', label: 'Az Kalan', count: skuHealth.warning, pct: skuHealth.segments.warning },
-            { dot: 'bg-status-critical', label: 'Tükendi', count: skuHealth.critical, pct: skuHealth.segments.critical },
-          ].map(item => (
-            <div key={item.label} className="flex flex-col gap-1.5">
-              <div className="flex items-center gap-2">
-                <span className={`size-2 rounded-full ${item.dot}`} />
-                <span className="text-xs text-muted-foreground">{item.label}</span>
-              </div>
-              <p>
-                <span className="font-mono text-xl font-medium tabular-nums text-foreground">{item.count}</span>
-                <span className="ml-1 text-xs text-muted-foreground">SKU</span>
-              </p>
-              <p className="text-xs text-muted-foreground">
-                %{item.pct.toLocaleString('tr-TR', { maximumFractionDigits: 1 })}
-              </p>
+        {sectionErrors.products ? (
+          <EmptyState
+            icon={AlertTriangle}
+            message="Ürün verisi alınamadı."
+            actionLabel="Tekrar dene"
+            onAction={reload}
+          />
+        ) : skuHealth.total === 0 ? (
+          <EmptyState icon={Package} message="Henüz ürün bulunmuyor." />
+        ) : (
+          <>
+            <div
+              className="flex h-2.5 w-full overflow-hidden rounded-full"
+              role="img"
+              aria-label={`Sağlıklı ${skuHealth.healthy}, Az kalan ${skuHealth.warning}, Tükendi ${skuHealth.critical}`}
+            >
+              {skuHealth.healthy > 0 && (
+                <div className="bg-status-healthy" style={{ width: `${skuHealth.segments.healthy}%` }} />
+              )}
+              {skuHealth.warning > 0 && (
+                <div className="bg-status-warning" style={{ width: `${skuHealth.segments.warning}%` }} />
+              )}
+              {skuHealth.critical > 0 && (
+                <div className="bg-status-critical" style={{ width: `${skuHealth.segments.critical}%` }} />
+              )}
             </div>
-          ))}
-        </div>
+
+            <div className="mt-4 grid grid-cols-1 gap-4 @md:grid-cols-3">
+              {[
+                { dot: 'bg-status-healthy', label: 'Sağlıklı', count: skuHealth.healthy, pct: skuHealth.segments.healthy },
+                { dot: 'bg-status-warning', label: 'Az Kalan', count: skuHealth.warning, pct: skuHealth.segments.warning },
+                { dot: 'bg-status-critical', label: 'Tükendi', count: skuHealth.critical, pct: skuHealth.segments.critical },
+              ].map(item => (
+                <div key={item.label} className="flex flex-col gap-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className={`size-2 rounded-full ${item.dot}`} />
+                    <span className="text-xs text-muted-foreground">{item.label}</span>
+                  </div>
+                  <p>
+                    <span className="font-mono text-xl font-medium tabular-nums text-foreground">{item.count}</span>
+                    <span className="ml-1 text-xs text-muted-foreground">SKU</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    %{item.pct.toLocaleString('tr-TR', { maximumFractionDigits: 1 })}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </section>
 
       {/* SECTION 3 — Performans Trendi */}
-      <div className="mb-4">
+      {sectionErrors.analytics ? (
+        <section
+          aria-label="Performans Trendi"
+          className="rounded-lg border border-hairline bg-card p-5"
+        >
+          <h2 className="text-sm font-medium text-foreground">Performans Trendi</h2>
+          <EmptyState
+            icon={AlertTriangle}
+            message="Satış verisi alınamadı."
+            actionLabel="Tekrar dene"
+            onAction={reload}
+          />
+        </section>
+      ) : (
         <TrendChart
           title="Performans Trendi"
           subtitle="Ciro, satış ve görüntülenme hareketleri"
@@ -343,41 +403,64 @@ export default function DashboardPage() {
           hourlyFetch={fetchHourly}
           hourlyViewFetch={fetchHourlyViews}
         />
-      </div>
+      )}
 
       {/* SECTIONS 4 & 5 — En Çok Satanlar + Az Kalan Ürünler (side by side) */}
-      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <ProductListCard
-          title="En Çok Satanlar"
-          subtitle="Son 30 gün"
-          items={topSellerItems}
-          valueHeader="Adet"
-          emptyState={{
-            icon: BarChart2,
-            message: 'Henüz satış verisi yok',
-            description: 'Satış gerçekleşince burada görünecek.',
-          }}
-        />
-        <ProductListCard
-          title="Az Kalan Ürünler"
-          subtitle={`Stok eşiği (${maxThreshold} adet) altına düşen ve tükenen ürünler`}
-          badge={lowStockProducts.length > 0 ? { label: `${lowStockProducts.length} ürün`, variant: 'critical' } : undefined}
-          items={lowStockListItems}
-          valueHeader="Stok"
-          statusHeader="Durum"
-          totalCount={lowStockProducts.length}
-          viewAllHref="/dashboard/stok"
-          emptyState={{
-            icon: CheckCircle,
-            message: 'Tüm ürünler sağlıklı',
-            description: 'Stok eşiği altında ürün bulunmuyor.',
-          }}
-        />
+      <div className="@container">
+        <div className="grid grid-cols-1 gap-4 @3xl:grid-cols-2">
+          <ProductListCard
+            title="En Çok Satanlar"
+            subtitle="Son 30 gün"
+            items={sectionErrors.analytics ? [] : topSellerItems}
+            valueHeader="Adet"
+            emptyState={
+              sectionErrors.analytics
+                ? {
+                    icon: AlertTriangle,
+                    message: 'Satış verisi alınamadı.',
+                    actionLabel: 'Tekrar dene',
+                    onAction: reload,
+                  }
+                : {
+                    icon: BarChart2,
+                    message: 'Henüz satış verisi yok',
+                    description: 'Satış gerçekleşince burada görünecek.',
+                  }
+            }
+          />
+          <ProductListCard
+            title="Az Kalan Ürünler"
+            subtitle={`Stok eşiği (${maxThreshold} adet) altına düşen ve tükenen ürünler`}
+            badge={lowStockProducts.length > 0 ? { label: `${lowStockProducts.length} ürün`, variant: 'critical' } : undefined}
+            items={sectionErrors.products ? [] : lowStockListItems}
+            valueHeader="Stok"
+            statusHeader="Durum"
+            totalCount={lowStockProducts.length}
+            viewAllHref="/dashboard/stok"
+            emptyState={
+              sectionErrors.products
+                ? {
+                    icon: AlertTriangle,
+                    message: 'Ürün verisi alınamadı.',
+                    actionLabel: 'Tekrar dene',
+                    onAction: reload,
+                  }
+                : {
+                    icon: CheckCircle,
+                    message: 'Tüm ürünler sağlıklı',
+                    description: 'Stok eşiği altında ürün bulunmuyor.',
+                  }
+            }
+          />
+        </div>
       </div>
 
       {/* SECTION 6 — Görüntülenme → Satış Dönüşümü */}
-      <div className="mt-4">
-        <ConversionInsightCard insight={conversionInsight} />
+      <ConversionInsightCard
+        insight={conversionInsight}
+        error={sectionErrors.insight}
+        onRetry={reload}
+      />
       </div>
     </PageContainer>
   );

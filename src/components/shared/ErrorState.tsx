@@ -1,6 +1,7 @@
 'use client';
 
 import { AlertTriangle, RotateCcw } from 'lucide-react';
+import { PageContainer } from '@/components/layout/PageContainer';
 
 /**
  * Veri çekilemediğinde gösterilen hata paneli.
@@ -19,7 +20,7 @@ export function ErrorState({
   onRetry?: () => void;
 }) {
   return (
-    <div className="mx-auto max-w-7xl p-6">
+    <PageContainer>
       <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-hairline bg-card px-6 py-16 text-center">
         <AlertTriangle className="h-8 w-8 text-muted-foreground" aria-hidden />
         <div>
@@ -37,6 +38,6 @@ export function ErrorState({
           </button>
         )}
       </div>
-    </div>
+    </PageContainer>
   );
 }

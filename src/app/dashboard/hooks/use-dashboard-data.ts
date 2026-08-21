@@ -9,6 +9,21 @@ import type { ConversionInsightApiResponse } from '@/app/api/insights/conversion
 import type { DailyViewStatsResponse } from '@/app/api/product-view/stats/route';
 import type { Product } from '@/lib/products/types';
 
+/** Hangi veri kaynağının düştüğü — bölüm bazlı degrade UI için. */
+export interface DashboardSectionErrors {
+  products: boolean;
+  analytics: boolean;
+  viewStats: boolean;
+  insight: boolean;
+}
+
+const NO_SECTION_ERRORS: DashboardSectionErrors = {
+  products: false,
+  analytics: false,
+  viewStats: false,
+  insight: false,
+};
+
 export interface DashboardData {
   token: string | null;
   products: Product[];
@@ -18,6 +33,7 @@ export interface DashboardData {
   isMockData: boolean;
   loading: boolean;
   error: string | null;
+  sectionErrors: DashboardSectionErrors;
   /** Tüm verileri yeniden çeker (retry butonu için). */
   reload: () => void;
 }
@@ -35,10 +51,12 @@ export function useDashboardData(): DashboardData {
   const [isMockData, setIsMockData] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sectionErrors, setSectionErrors] = useState<DashboardSectionErrors>(NO_SECTION_ERRORS);
 
   const initialize = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setSectionErrors(NO_SECTION_ERRORS);
     try {
       const fetchedToken = await TokenHelpers.getTokenForIframeApp();
       setToken(fetchedToken || null);
@@ -47,8 +65,9 @@ export function useDashboardData(): DashboardData {
         return;
       }
 
-      // Kritik: ürünler + analytics. Yan veriler (view, insight) hatada sessiz kalır.
-      const [productsOk, analyticsOk] = await Promise.all([
+      // Kritik: ürünler + analytics (ikisi birden düşerse tam sayfa hata).
+      // Yan veriler (view, insight) düşerse bölüm bazlı degrade edilir.
+      const [productsOk, analyticsOk, viewStatsOk, insightOk] = await Promise.all([
         ApiRequests.ikas
           .listProducts(fetchedToken)
           .then(res => {
@@ -79,16 +98,37 @@ export function useDashboardData(): DashboardData {
         ApiRequests.productView
           .getDailyViewStats(fetchedToken)
           .then(res => {
-            if (res.status === 200 && res.data?.data) setDailyViewStats(res.data.data);
+            if (res.status === 200 && res.data?.data) {
+              setDailyViewStats(res.data.data);
+              return true;
+            }
+            return false;
           })
-          .catch(error => logger.error('Error fetching daily view stats', { error })),
+          .catch(error => {
+            logger.error('Error fetching daily view stats', { error });
+            return false;
+          }),
         ApiRequests.insights
           .conversion(fetchedToken)
           .then(res => {
-            if (res.status === 200 && res.data?.data) setConversionInsight(res.data.data);
+            if (res.status === 200 && res.data?.data) {
+              setConversionInsight(res.data.data);
+              return true;
+            }
+            return false;
           })
-          .catch(error => logger.error('Error fetching conversion insight', { error })),
+          .catch(error => {
+            logger.error('Error fetching conversion insight', { error });
+            return false;
+          }),
       ]);
+
+      setSectionErrors({
+        products: !productsOk,
+        analytics: !analyticsOk,
+        viewStats: !viewStatsOk,
+        insight: !insightOk,
+      });
 
       if (!productsOk && !analyticsOk) {
         setError('Mağaza verileri alınamadı.');
@@ -114,6 +154,7 @@ export function useDashboardData(): DashboardData {
     isMockData,
     loading,
     error,
+    sectionErrors,
     reload: initialize,
   };
 }

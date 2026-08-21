@@ -13,12 +13,8 @@ export function StokSkeleton() {
         <Skeleton className="h-9 w-28 rounded-md" />
       </div>
 
-      {/* Tek kart: başlık şeridi + filtre satırı + tablo satırları */}
+      {/* Tek kart: filtre satırı + tablo satırları (başlık şeridi yok — ac1e03e) */}
       <div className="overflow-hidden rounded-lg border border-hairline bg-card">
-        <div className="border-b border-border px-5 py-3">
-          <Skeleton className="mb-1.5 h-4 w-20" />
-          <Skeleton className="h-3 w-32" />
-        </div>
         <div className="border-b border-border p-2">
           <Skeleton className="h-10 w-full" />
         </div>

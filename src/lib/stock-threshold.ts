@@ -64,12 +64,16 @@ function writeLocalThreshold(next: StockThreshold) {
 
 export function useStockThreshold(): {
   threshold: StockThreshold;
+  /** localStorage okunduktan sonra true — ilk boyamadaki varsayılan-değer zıplamasını gizlemek için. */
+  hydrated: boolean;
   setThreshold: (value: Partial<StockThreshold>) => void;
 } {
   const [threshold, setState] = useState<StockThreshold>(DEFAULT_STOCK_THRESHOLD);
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     setState(readStockThreshold());
+    setHydrated(true);
     const sync = () => setState(readStockThreshold());
     window.addEventListener(CHANGE_EVENT, sync);
     window.addEventListener('storage', sync);
@@ -127,5 +131,5 @@ export function useStockThreshold(): {
     });
   }, []);
 
-  return { threshold, setThreshold };
+  return { threshold, hydrated, setThreshold };
 }

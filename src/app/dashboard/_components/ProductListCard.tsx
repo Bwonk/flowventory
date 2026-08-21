@@ -43,7 +43,13 @@ interface ProductListCardProps {
   /** Tam sonuç sayısı; items.length'ten büyükse kesme notu gösterilir. */
   totalCount?: number;
   viewAllHref?: string;
-  emptyState: { icon: LucideIcon; message: string; description?: string };
+  emptyState: {
+    icon: LucideIcon;
+    message: string;
+    description?: string;
+    actionLabel?: string;
+    onAction?: () => void;
+  };
 }
 
 /** Dashboard ürün listesi — kanonik DataTable düzeni (stok tablosuyla aynı dialekt). */
@@ -68,7 +74,13 @@ export const ProductListCard: React.FC<ProductListCardProps> = ({
       badge={badge && <Badge variant={badge.variant}>{badge.label}</Badge>}
     >
       {items.length === 0 ? (
-        <EmptyState icon={emptyState.icon} message={emptyState.message} description={emptyState.description} />
+        <EmptyState
+          icon={emptyState.icon}
+          message={emptyState.message}
+          description={emptyState.description}
+          actionLabel={emptyState.actionLabel}
+          onAction={emptyState.onAction}
+        />
       ) : (
         <>
           <DataTable>
