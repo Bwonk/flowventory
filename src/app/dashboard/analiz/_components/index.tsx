@@ -13,6 +13,7 @@ import type { ActionKey } from '@/lib/reports/actions';
 import type { SellThroughBand } from '@/lib/reports/sell-through';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { TableSection } from '@/components/shared/data-table/TableSection';
 import { SegmentedControl } from '@/components/shared/trend-chart/SegmentedControl';
 import { formatNumber } from '@/lib/format';
 import { AbcSection, type NormalizedAbcRow } from './AbcSection';
@@ -191,11 +192,11 @@ export function AnalizContent({ insight, token, initialFilters, onWindowChange }
 
       <AgingSection buckets={insight.agingBuckets} selected={filters.aging} onSelect={handleAgingSelect} />
 
-      <section ref={tableRef} className="scroll-mt-4 overflow-hidden rounded-lg border border-hairline bg-card">
-        <div className="border-b border-border px-5 py-3">
-          <h2 className="text-sm font-medium text-foreground">Ürün Detayı</h2>
-          <p className="text-xs text-muted-foreground">{formatNumber(filters.totalResults)} ürün listeleniyor</p>
-        </div>
+      <TableSection
+        title="Ürün Detayı"
+        count={`${formatNumber(filters.totalResults)} ürün listeleniyor`}
+        sectionRef={tableRef}
+      >
         <AnalysisFilterBar filters={filters} />
         <AnalysisTable
           rows={filters.displayedRows}
@@ -210,7 +211,7 @@ export function AnalizContent({ insight, token, initialFilters, onWindowChange }
           onSelectProduct={handleSelectProduct}
           pendingProductId={pendingProductId}
         />
-      </section>
+      </TableSection>
 
       <ProductDetailModal
         product={selectedProduct}

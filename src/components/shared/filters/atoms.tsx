@@ -13,15 +13,16 @@ export const MonoLabel: React.FC<{ children: React.ReactNode; className?: string
 );
 
 /** Ürün görseli; kaynak yoksa veya yüklenemezse nötr placeholder'a düşer. */
-export const ProductThumb: React.FC<{ src?: string; alt: string; sizeClass?: string }> = ({
+export const ProductThumb: React.FC<{ src?: string; alt: string; sizeClass?: string; roundedClass?: string }> = ({
   src,
   alt,
   sizeClass = 'h-10 w-10',
+  roundedClass = 'rounded-lg',
 }) => {
   const [errored, setErrored] = useState(false);
   if (!src || errored) {
     return (
-      <div className={`flex ${sizeClass} items-center justify-center rounded-lg bg-muted`}>
+      <div className={`flex ${sizeClass} shrink-0 items-center justify-center ${roundedClass} bg-muted`}>
         <Package className="h-4 w-4 text-muted-foreground" />
       </div>
     );
@@ -33,7 +34,7 @@ export const ProductThumb: React.FC<{ src?: string; alt: string; sizeClass?: str
       alt={alt}
       loading="lazy"
       onError={() => setErrored(true)}
-      className={`${sizeClass} rounded-lg object-cover`}
+      className={`${sizeClass} shrink-0 ${roundedClass} object-cover`}
     />
   );
 };

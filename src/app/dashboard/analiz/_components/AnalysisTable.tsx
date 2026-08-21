@@ -1,12 +1,19 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import Image from 'next/image';
-import { Package } from 'lucide-react';
 import type { InventoryInsightItem } from '@/app/api/insights/inventory/route';
 import { SellThroughBadge } from '@/components/shared/badges/SellThroughBadge';
 import { StockLifeBadge } from '@/components/shared/badges/StockLifeBadge';
 import { TrendBadge } from '@/components/shared/badges/TrendBadge';
+import {
+  DataTable,
+  DataTableCell,
+  DataTableHeadCell,
+  DataTableHeaderRow,
+  DataTableRow,
+} from '@/components/shared/data-table/data-table';
+import { EmptyState } from '@/components/shared/data-table/EmptyState';
+import { InfiniteScrollFooter } from '@/components/shared/data-table/InfiniteScrollFooter';
+import { ProductThumb } from '@/components/shared/filters/atoms';
 import { formatPrice } from '@/lib/currency';
 import { formatDateKey } from '@/lib/format';
 import { ABC_BADGE_CLASS, type AnalysisMetric } from './constants';
@@ -52,91 +59,53 @@ export function AnalysisTable({
   onSelectProduct,
   pendingProductId,
 }: AnalysisTableProps) {
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel || !hasMore || loadingMore) return;
-    const observer = new IntersectionObserver(
-      entries => {
-        if (entries[0].isIntersecting) onLoadMore();
-      },
-      { rootMargin: '300px' },
-    );
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [hasMore, loadingMore, onLoadMore]);
-
   if (rows.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-3 py-16 text-center">
-        <Package className="h-8 w-8 text-hairline" />
-        <p className="text-sm text-muted-foreground">
-          {hasActiveFilters ? 'Seçili filtrelerle eşleşen ürün bulunamadı.' : 'Henüz ürün bulunamadı.'}
-        </p>
-        {hasActiveFilters && (
-          <button
-            type="button"
-            onClick={onClearFilters}
-            className="text-sm font-medium text-accent-blue underline-offset-4 hover:underline"
-          >
-            Filtreleri temizle
-          </button>
-        )}
-      </div>
+      <EmptyState
+        message={hasActiveFilters ? 'Seçili filtrelerle eşleşen ürün bulunamadı.' : 'Henüz ürün bulunamadı.'}
+        actionLabel={hasActiveFilters ? 'Filtreleri temizle' : undefined}
+        onAction={hasActiveFilters ? onClearFilters : undefined}
+      />
     );
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-border text-left font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-            <th className="px-5 py-2 font-normal">Ürün</th>
-            <th className="px-3 py-2 text-center font-normal">Sınıf</th>
-            <th className="px-3 py-2 text-right font-normal">
-              {metric === 'kar' ? 'Kâr' : 'Ciro'} ({windowDays}g)
-            </th>
-            {showTrend && (
-              <th className="px-3 py-2 text-right font-normal" title={`Ciro, önceki ${windowDays} güne göre`}>
-                Trend
-              </th>
-            )}
-            <th className="px-3 py-2 text-right font-normal">Satış</th>
-            <th className="px-3 py-2 text-right font-normal">Stok</th>
-            <th className="px-3 py-2 text-right font-normal" title="Satılan ÷ (satılan + kalan)">
-              Sell-through
-            </th>
-            <th className="px-3 py-2 text-right font-normal">Stok Ömrü</th>
-            <th className="px-3 py-2 text-right font-normal">Tükeniş</th>
-            <th className="px-5 py-2 text-right font-normal">Bağlı Sermaye</th>
-          </tr>
-        </thead>
+    <>
+      <DataTable>
+        <DataTableHeaderRow>
+          <DataTableHeadCell edge>Ürün</DataTableHeadCell>
+          <DataTableHeadCell align="center">Sınıf</DataTableHeadCell>
+          <DataTableHeadCell align="right">
+            {metric === 'kar' ? 'Kâr' : 'Ciro'} ({windowDays}g)
+          </DataTableHeadCell>
+          {showTrend && (
+            <DataTableHeadCell align="right" title={`Ciro, önceki ${windowDays} güne göre`}>
+              Trend
+            </DataTableHeadCell>
+          )}
+          <DataTableHeadCell align="right">Satış</DataTableHeadCell>
+          <DataTableHeadCell align="right">Stok</DataTableHeadCell>
+          <DataTableHeadCell align="right" title="Satılan ÷ (satılan + kalan)">
+            Sell-through
+          </DataTableHeadCell>
+          <DataTableHeadCell align="right">Stok Ömrü</DataTableHeadCell>
+          <DataTableHeadCell align="right">Tükeniş</DataTableHeadCell>
+          <DataTableHeadCell align="right" edge>Bağlı Sermaye</DataTableHeadCell>
+        </DataTableHeaderRow>
         <tbody>
           {rows.map(item => (
-            <tr
+            <DataTableRow
               key={item.productId}
               onClick={() => onSelectProduct(item.productId)}
-              className={`cursor-pointer border-b border-border transition-colors last:border-b-0 hover:bg-muted/40 ${
-                pendingProductId === item.productId ? 'opacity-60' : ''
-              }`}
+              pending={pendingProductId === item.productId}
             >
-              <td className="px-5 py-2.5">
+              <DataTableCell edge>
                 <div className="flex items-center gap-2.5">
-                  {item.imageUrl && (
-                    <Image
-                      src={item.imageUrl}
-                      alt=""
-                      width={28}
-                      height={28}
-                      className="h-7 w-7 shrink-0 rounded object-cover"
-                      unoptimized
-                    />
-                  )}
+                  <ProductThumb src={item.imageUrl ?? undefined} alt="" sizeClass="h-7 w-7" roundedClass="rounded" />
                   <span className="truncate font-medium text-foreground">{item.productName}</span>
                 </div>
-              </td>
-              <td className="px-3 py-2.5 text-center">
+              </DataTableCell>
+              <DataTableCell align="center">
                 <span
                   className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-semibold ${
                     ABC_BADGE_CLASS[metric === 'kar' ? item.profitAbcClass : item.abcClass]
@@ -144,35 +113,35 @@ export function AnalysisTable({
                 >
                   {metric === 'kar' ? item.profitAbcClass : item.abcClass}
                 </span>
-              </td>
-              <td className="px-3 py-2.5 text-right tabular-nums">
+              </DataTableCell>
+              <DataTableCell numeric>
                 {formatPrice(metric === 'kar' ? item.profit : item.revenue)}
                 {metric === 'kar' && item.profitIsEstimate && (
                   <span className="text-xs text-muted-foreground" title="Alış fiyatı eksik — kâr yaklaşık">~</span>
                 )}
-              </td>
+              </DataTableCell>
               {showTrend && (
-                <td className="px-3 py-2.5 text-right">
+                <DataTableCell align="right">
                   {item.revenueTrendPct === null ? (
                     <span className="text-xs text-muted-foreground">—</span>
                   ) : (
                     <TrendBadge value={item.revenueTrendPct} size="sm" />
                   )}
-                </td>
+                </DataTableCell>
               )}
-              <td className="px-3 py-2.5 text-right tabular-nums">{item.soldQty}</td>
-              <td className="px-3 py-2.5 text-right tabular-nums">{item.totalStock}</td>
-              <td className="px-3 py-2.5 text-right">
+              <DataTableCell numeric>{item.soldQty}</DataTableCell>
+              <DataTableCell numeric>{item.totalStock}</DataTableCell>
+              <DataTableCell align="right">
                 <SellThroughBadge rate={item.sellThrough} band={item.sellThroughBand} />
-              </td>
-              <td className="px-3 py-2.5 text-right">
+              </DataTableCell>
+              <DataTableCell align="right">
                 {item.totalStock === 0 ? (
                   <span className="text-muted-foreground">—</span>
                 ) : (
                   <StockLifeBadge days={item.daysOfStock} />
                 )}
-              </td>
-              <td className="px-3 py-2.5 text-right text-xs tabular-nums">
+              </DataTableCell>
+              <DataTableCell numeric className="text-xs">
                 <span
                   className={
                     item.stockoutBeforeLeadTime && item.totalStock > 0
@@ -182,27 +151,19 @@ export function AnalysisTable({
                 >
                   {stockoutLabel(item)}
                 </span>
-              </td>
-              <td className="px-5 py-2.5 text-right font-medium tabular-nums">
+              </DataTableCell>
+              <DataTableCell numeric edge className="font-medium">
                 {formatPrice(item.stockValue)}
                 {item.isEstimate && item.totalStock > 0 && (
                   <span className="text-xs text-muted-foreground" title="Alış fiyatı tanımlı değil">~</span>
                 )}
-              </td>
-            </tr>
+              </DataTableCell>
+            </DataTableRow>
           ))}
         </tbody>
-      </table>
+      </DataTable>
 
-      {hasMore && <div ref={sentinelRef} className="h-px" />}
-      {loadingMore && (
-        <p className="border-t border-border px-5 py-3 text-center text-xs text-muted-foreground">Yükleniyor…</p>
-      )}
-      {!hasMore && rows.length > 0 && (
-        <p className="border-t border-border px-5 py-3 text-center text-xs text-muted-foreground">
-          Tüm ürünler listelendi
-        </p>
-      )}
-    </div>
+      <InfiniteScrollFooter hasMore={hasMore} loadingMore={loadingMore} onLoadMore={onLoadMore} itemCount={rows.length} />
+    </>
   );
 }
