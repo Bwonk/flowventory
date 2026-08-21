@@ -19,6 +19,7 @@ import { formatPrice, useMerchantCurrency } from '@/lib/currency';
 import { getTotalStock } from '@/lib/products/product';
 import { ProductListCard, type ProductListItem } from './_components/ProductListCard';
 import { ConversionInsightCard } from './_components/ConversionInsightCard';
+import { KpiTile } from './_components/KpiTile';
 import { TrendChart, type TrendDataPoint } from '@/components/shared/TrendChart';
 import { StatusBadge } from '@/components/shared/badges/StatusBadge';
 import { Badge } from '@/components/ui/badge';
@@ -189,46 +190,40 @@ export default function DashboardPage() {
       */}
       <section className="@container mb-4 rounded-lg border border-hairline bg-card overflow-hidden">
         <div className="-mr-px -mb-px grid grid-cols-1 @lg:grid-cols-2 @3xl:grid-cols-3 @6xl:grid-cols-5">
-          {/* 1 — Son 30 Gün Ciro */}
-          <div className="flex flex-col border-b border-r border-border p-5">
-            <div className="flex items-center gap-1.5 mb-1">
-              <DollarSign className="h-3 w-3 text-muted-foreground" />
-              <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">SON 30 GÜN CİRO</p>
-            </div>
-            <p className="mt-2 font-mono text-xl font-medium tabular-nums @7xl:text-2xl text-foreground">{formatPrice(totalRevenue)}</p>
-            <div className="mt-auto pt-3">
-              <TrendBadge value={revenueChange} size="sm" />
-              <p className="text-xs text-muted-foreground mt-1.5">
-                {revenueChange === 0 ? 'Geçen döneme göre değişmedi' : `Geçen ay: ${formatPrice(previousRevenue)}`}
-              </p>
-            </div>
-          </div>
+          <KpiTile
+            icon={DollarSign}
+            label="SON 30 GÜN CİRO"
+            value={formatPrice(totalRevenue)}
+            footer={
+              <>
+                <TrendBadge value={revenueChange} size="sm" />
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  {revenueChange === 0 ? 'Geçen döneme göre değişmedi' : `Geçen ay: ${formatPrice(previousRevenue)}`}
+                </p>
+              </>
+            }
+          />
 
-          {/* 2 — Aktif Ürün */}
-          <div className="flex flex-col border-b border-r border-border p-5">
-            <div className="flex items-center gap-1.5 mb-1">
-              <Package className="h-3 w-3 text-muted-foreground" />
-              <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">AKTİF ÜRÜN</p>
-            </div>
-            <p className="mt-2 font-mono text-xl font-medium tabular-nums @7xl:text-2xl text-foreground">{products.length} ürün</p>
-            <div className="mt-auto pt-3">
-              <Badge variant="neutral">{skuHealth.total} SKU</Badge>
-              <p className="text-xs text-muted-foreground mt-1.5">Varyant bazlı takip</p>
-            </div>
-          </div>
+          <KpiTile
+            icon={Package}
+            label="AKTİF ÜRÜN"
+            value={`${products.length} ürün`}
+            footer={
+              <>
+                <Badge variant="neutral">{skuHealth.total} SKU</Badge>
+                <p className="mt-1.5 text-xs text-muted-foreground">Varyant bazlı takip</p>
+              </>
+            }
+          />
 
-          {/* 3 — Kritik Stok (tıklanabilir) */}
-          <Link
+          <KpiTile
+            icon={AlertTriangle}
+            label="KRİTİK STOK"
+            value={`${criticalCount + warningCount} ürün`}
             href="/dashboard/stok"
-            className="group flex flex-col border-b border-r border-border p-5 cursor-pointer transition-[transform,box-shadow] duration-200 hover:-translate-y-[1px] hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          >
-            <div className="flex items-center gap-1.5 mb-1">
-              <AlertTriangle className="h-3 w-3 text-muted-foreground" />
-              <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">KRİTİK STOK</p>
-            </div>
-            <p className="mt-2 font-mono text-xl font-medium tabular-nums @7xl:text-2xl text-foreground">{criticalCount + warningCount} ürün</p>
-            <div className="mt-auto pt-3">
-              <div className="flex flex-wrap gap-1.5 mb-2">
+            cta="Ürünleri görüntüle"
+            footer={
+              <div className="mb-2 flex flex-wrap gap-1.5">
                 {criticalCount > 0 && (
                   <StatusBadge status="out" label={`${criticalCount} tükendi`} size="sm" />
                 )}
@@ -236,65 +231,45 @@ export default function DashboardPage() {
                   <StatusBadge status="warning" label={`${warningCount} eşik altında`} size="sm" />
                 )}
               </div>
-              <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors">
-                Ürünleri görüntüle
-                <span className="inline-block transition-transform duration-200 group-hover:translate-x-0.5">&rarr;</span>
-              </span>
-            </div>
-          </Link>
+            }
+          />
 
-          {/* 4 — Ölü Stok (tıklanabilir) */}
-          <Link
-            href="/dashboard/analiz?action=eritme-adayi"
-            className="group flex flex-col border-b border-r border-border p-5 cursor-pointer transition-[transform,box-shadow] duration-200 hover:-translate-y-[1px] hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          >
-            <div className="flex items-center gap-1.5 mb-1">
-              <Archive className="h-3 w-3 text-muted-foreground" />
-              <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">ÖLÜ STOK</p>
-            </div>
-            <p className="mt-2 font-mono text-xl font-medium tabular-nums @7xl:text-2xl text-foreground">
-              {formatPrice(lockedCapital.total)}
-              {lockedCapital.isEstimate && (
-                <span className="block font-sans text-xs font-normal text-muted-foreground" title="Bazı ürünlerde alış fiyatı tanımlı değil; satış fiyatı kullanıldı">
+          <KpiTile
+            icon={Archive}
+            label="ÖLÜ STOK"
+            value={formatPrice(lockedCapital.total)}
+            valueSuffix={
+              lockedCapital.isEstimate && (
+                <span
+                  className="block font-sans text-xs font-normal text-muted-foreground"
+                  title="Bazı ürünlerde alış fiyatı tanımlı değil; satış fiyatı kullanıldı"
+                >
                   ~tahmini
                 </span>
-              )}
-            </p>
-            <div className="mt-auto pt-3">
-              <p className="text-xs text-muted-foreground mb-2">{deadStock.length} ürün · 180+ gündür satılmıyor</p>
-              <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors">
-                Eritme adaylarını görüntüle
-                <span className="inline-block transition-transform duration-200 group-hover:translate-x-0.5">&rarr;</span>
-              </span>
-            </div>
-          </Link>
+              )
+            }
+            href="/dashboard/analiz?action=eritme-adayi"
+            cta="Eritme adaylarını görüntüle"
+            footer={
+              <p className="mb-2 text-xs text-muted-foreground">{deadStock.length} ürün · 180+ gündür satılmıyor</p>
+            }
+          />
 
-          {/* 5 — Ortalama Stok Ömrü */}
-          <div className="flex flex-col border-b border-r border-border p-5">
-            <div className="flex items-center gap-1.5 mb-1">
-              <Clock className="h-3 w-3 text-muted-foreground" />
-              <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">ORT. STOK ÖMRÜ</p>
-            </div>
-            {avgDaysRemaining !== null ? (() => {
-              const age = formatStockAge(avgDaysRemaining);
-              return (
+          <KpiTile
+            icon={Clock}
+            label="ORT. STOK ÖMRÜ"
+            value={avgDaysRemaining !== null ? formatStockAge(avgDaysRemaining).primary : '—'}
+            footer={
+              avgDaysRemaining !== null ? (
                 <>
-                  <p className="mt-2 font-mono text-xl font-medium tabular-nums @7xl:text-2xl text-foreground">{age.primary}</p>
-                  <div className="mt-auto pt-3">
-                    <p className="text-xs text-muted-foreground">{age.secondary}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Satış hızına göre hesaplandı</p>
-                  </div>
+                  <p className="text-xs text-muted-foreground">{formatStockAge(avgDaysRemaining).secondary}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">Satış hızına göre hesaplandı</p>
                 </>
-              );
-            })() : (
-              <>
-                <p className="mt-2 font-mono text-xl font-medium tabular-nums @7xl:text-2xl text-foreground">—</p>
-                <div className="mt-auto pt-3">
-                  <p className="text-xs text-muted-foreground">Yeterli satış verisi yok</p>
-                </div>
-              </>
-            )}
-          </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">Yeterli satış verisi yok</p>
+              )
+            }
+          />
         </div>
       </section>
 
