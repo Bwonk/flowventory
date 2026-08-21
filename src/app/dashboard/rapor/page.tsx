@@ -7,6 +7,7 @@ import { AlertTriangle, Printer } from 'lucide-react';
 import { TokenHelpers } from '@/helpers/token-helpers';
 import { ApiRequests } from '@/lib/api-requests';
 import type { PurchaseReportApiResponse } from '@/app/api/reports/purchase/route';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PageContainer } from '@/components/layout/PageContainer';
@@ -261,10 +262,10 @@ export default function RaporPage() {
                             <p className="truncate font-medium text-foreground">
                               {line.productName}
                               {line.urgent && (
-                                <span className="ml-1.5 inline-flex items-center gap-0.5 rounded-full bg-destructive/10 px-1.5 py-0.5 text-[10px] font-medium text-destructive align-middle">
+                                <Badge variant="critical" className="ml-1.5 align-middle">
                                   <AlertTriangle className="h-2.5 w-2.5" aria-hidden />
                                   acil
-                                </span>
+                                </Badge>
                               )}
                             </p>
                             {line.variantName && (
