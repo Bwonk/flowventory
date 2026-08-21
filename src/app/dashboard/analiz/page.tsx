@@ -27,6 +27,9 @@ function AnalizPageContent() {
     }),
     [searchParams],
   );
+  // Analiz penceresi — değişince API'den taze veri çekilir (URL: ?window=60).
+  const [windowDays, setWindowDays] = useState<30 | 60>(searchParams.get('window') === '60' ? 60 : 30);
+
   const [insight, setInsight] = useState<InventoryInsightApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +43,7 @@ function AnalizPageContent() {
         setError('Oturum doğrulanamadı. Uygulamayı ikas panelinden yeniden açmayı deneyin.');
         return;
       }
-      const res = await ApiRequests.insights.inventory(token);
+      const res = await ApiRequests.insights.inventory(token, windowDays);
       if (res.status === 200 && res.data?.data) {
         setInsight(res.data.data);
       } else {
@@ -52,7 +55,7 @@ function AnalizPageContent() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [windowDays]);
 
   useEffect(() => {
     initialize();
@@ -62,7 +65,7 @@ function AnalizPageContent() {
   if (error) return <ErrorState description={error} onRetry={initialize} />;
   if (!insight) return null;
 
-  return <AnalizContent insight={insight} initialFilters={initialFilters} />;
+  return <AnalizContent insight={insight} initialFilters={initialFilters} onWindowChange={setWindowDays} />;
 }
 
 export default function AnalizPage() {

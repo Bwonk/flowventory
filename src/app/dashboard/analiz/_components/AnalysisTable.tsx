@@ -6,13 +6,17 @@ import { Package } from 'lucide-react';
 import type { InventoryInsightItem } from '@/app/api/insights/inventory/route';
 import { SellThroughBadge } from '@/components/shared/badges/SellThroughBadge';
 import { StockLifeBadge } from '@/components/shared/badges/StockLifeBadge';
+import { TrendBadge } from '@/components/shared/badges/TrendBadge';
 import { formatPrice } from '@/lib/currency';
 import { formatDateKey } from '@/lib/format';
-import { ABC_BADGE_CLASS } from './constants';
+import { ABC_BADGE_CLASS, type AnalysisMetric } from './constants';
 
 interface AnalysisTableProps {
   rows: InventoryInsightItem[];
   windowDays: number;
+  metric: AnalysisMetric;
+  /** Trend kolonu yalnızca önceki dönem verisi varken (window=30) çizilir. */
+  showTrend: boolean;
   hasMore: boolean;
   loadingMore: boolean;
   onLoadMore: () => void;
@@ -35,6 +39,8 @@ function stockoutLabel(item: InventoryInsightItem): string {
 export function AnalysisTable({
   rows,
   windowDays,
+  metric,
+  showTrend,
   hasMore,
   loadingMore,
   onLoadMore,
@@ -83,7 +89,14 @@ export function AnalysisTable({
           <tr className="border-b border-border text-left font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
             <th className="px-5 py-2 font-normal">Ürün</th>
             <th className="px-3 py-2 text-center font-normal">Sınıf</th>
-            <th className="px-3 py-2 text-right font-normal">Ciro ({windowDays}g)</th>
+            <th className="px-3 py-2 text-right font-normal">
+              {metric === 'kar' ? 'Kâr' : 'Ciro'} ({windowDays}g)
+            </th>
+            {showTrend && (
+              <th className="px-3 py-2 text-right font-normal" title={`Ciro, önceki ${windowDays} güne göre`}>
+                Trend
+              </th>
+            )}
             <th className="px-3 py-2 text-right font-normal">Satış</th>
             <th className="px-3 py-2 text-right font-normal">Stok</th>
             <th className="px-3 py-2 text-right font-normal" title="Satılan ÷ (satılan + kalan)">
@@ -113,11 +126,29 @@ export function AnalysisTable({
                 </div>
               </td>
               <td className="px-3 py-2.5 text-center">
-                <span className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-semibold ${ABC_BADGE_CLASS[item.abcClass]}`}>
-                  {item.abcClass}
+                <span
+                  className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-semibold ${
+                    ABC_BADGE_CLASS[metric === 'kar' ? item.profitAbcClass : item.abcClass]
+                  }`}
+                >
+                  {metric === 'kar' ? item.profitAbcClass : item.abcClass}
                 </span>
               </td>
-              <td className="px-3 py-2.5 text-right tabular-nums">{formatPrice(item.revenue)}</td>
+              <td className="px-3 py-2.5 text-right tabular-nums">
+                {formatPrice(metric === 'kar' ? item.profit : item.revenue)}
+                {metric === 'kar' && item.profitIsEstimate && (
+                  <span className="text-xs text-muted-foreground" title="Alış fiyatı eksik — kâr yaklaşık">~</span>
+                )}
+              </td>
+              {showTrend && (
+                <td className="px-3 py-2.5 text-right">
+                  {item.revenueTrendPct === null ? (
+                    <span className="text-xs text-muted-foreground">—</span>
+                  ) : (
+                    <TrendBadge value={item.revenueTrendPct} size="sm" />
+                  )}
+                </td>
+              )}
               <td className="px-3 py-2.5 text-right tabular-nums">{item.soldQty}</td>
               <td className="px-3 py-2.5 text-right tabular-nums">{item.totalStock}</td>
               <td className="px-3 py-2.5 text-right">

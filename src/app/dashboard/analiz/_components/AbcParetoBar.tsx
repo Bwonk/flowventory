@@ -1,11 +1,13 @@
 'use client';
 
-import type { InventoryInsightApiResponse } from '@/app/api/insights/inventory/route';
 import type { AbcClass } from '@/lib/reports/abc';
 import { formatPercent } from '@/lib/format';
+import type { AnalysisMetric } from './constants';
+import type { NormalizedAbcRow } from './AbcSection';
 
 interface AbcParetoBarProps {
-  summary: InventoryInsightApiResponse['abcSummary'];
+  rows: NormalizedAbcRow[];
+  metric: AnalysisMetric;
 }
 
 const CLASS_ORDER: AbcClass[] = ['A', 'B', 'C'];
@@ -45,17 +47,17 @@ function BarRow({ label, shares }: BarRowProps) {
 }
 
 /**
- * Pareto karşılaştırma barları — sınıf başına ciro payı ile bağlı sermaye payını
- * yan yana koyar. Asıl içgörü uyumsuzluk: C sınıfı cironun küçük bir dilimini
- * üretirken sermayenin büyük dilimini bağlıyorsa ölü ağırlık orada.
+ * Pareto karşılaştırma barları — sınıf başına metrik payı ile bağlı sermaye
+ * payını yan yana koyar. Asıl içgörü uyumsuzluk: C sınıfı cironun/kârın küçük
+ * bir dilimini üretirken sermayenin büyük dilimini bağlıyorsa ölü ağırlık orada.
  */
-export function AbcParetoBar({ summary }: AbcParetoBarProps) {
-  const totalStockValue = summary.reduce((s, r) => s + r.stockValue, 0);
-  const totalCount = summary.reduce((s, r) => s + r.productCount, 0);
+export function AbcParetoBar({ rows, metric }: AbcParetoBarProps) {
+  const totalStockValue = rows.reduce((s, r) => s + r.stockValue, 0);
+  const totalCount = rows.reduce((s, r) => s + r.productCount, 0);
   if (totalCount === 0) return null;
 
-  const byClass = new Map(summary.map(r => [r.class, r]));
-  const share = (fn: (row: (typeof summary)[0]) => number): Record<AbcClass, number> => {
+  const byClass = new Map(rows.map(r => [r.class, r]));
+  const share = (fn: (row: NormalizedAbcRow) => number): Record<AbcClass, number> => {
     const result = {} as Record<AbcClass, number>;
     for (const cls of CLASS_ORDER) {
       const row = byClass.get(cls);
@@ -64,20 +66,21 @@ export function AbcParetoBar({ summary }: AbcParetoBarProps) {
     return result;
   };
 
-  const revenueShares = share(r => r.revenueShare);
+  const metricWord = metric === 'kar' ? 'kârın' : 'cironun';
+  const metricShares = share(r => r.share);
   const stockShares = share(r => (totalStockValue > 0 ? r.stockValue / totalStockValue : 0));
   const countShares = share(r => r.productCount / totalCount);
 
   const cRow = byClass.get('C');
   const insight =
     cRow && totalStockValue > 0 && cRow.stockValue > 0
-      ? `C sınıfı cironun ${formatPercent(revenueShares.C, 0)}'ini üretip sermayenin ${formatPercent(stockShares.C, 0)}'ini bağlıyor.`
+      ? `C sınıfı ${metricWord} ${formatPercent(metricShares.C, 0)}'ini üretip sermayenin ${formatPercent(stockShares.C, 0)}'ini bağlıyor.`
       : null;
 
   return (
     <div className="border-t border-border px-5 py-4">
       <div className="space-y-2.5">
-        <BarRow label="Ciro payı" shares={revenueShares} />
+        <BarRow label={metric === 'kar' ? 'Kâr payı' : 'Ciro payı'} shares={metricShares} />
         <BarRow label="Bağlı sermaye" shares={stockShares} />
         <BarRow label="Ürün adedi" shares={countShares} />
       </div>

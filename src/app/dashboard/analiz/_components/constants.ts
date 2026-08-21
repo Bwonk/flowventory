@@ -3,11 +3,31 @@ import { AGING_BUCKET_ORDER } from '@/lib/reports/abc';
 import type { ActionKey } from '@/lib/reports/actions';
 import type { SellThroughBand } from '@/lib/reports/sell-through';
 
+export type AnalysisMetric = 'ciro' | 'kar';
+
 export const ABC_LABELS: Record<AbcClass, { title: string; description: string }> = {
   A: { title: 'A Sınıfı', description: 'Cironun ~%80\'i — sürekli izle, asla tükettirme' },
   B: { title: 'B Sınıfı', description: 'Cironun ~%15\'i — düzenli kontrol yeterli' },
   C: { title: 'C Sınıfı', description: 'Cironun ~%5\'i — stok bağlama, azaltmayı düşün' },
 };
+
+export const ABC_LABELS_PROFIT: Record<AbcClass, { title: string; description: string }> = {
+  A: { title: 'A Sınıfı', description: 'Kârın ~%80\'i — asıl para kazandıranlar' },
+  B: { title: 'B Sınıfı', description: 'Kârın ~%15\'i — düzenli kontrol yeterli' },
+  C: { title: 'C Sınıfı', description: 'Kârın ~%5\'i — marjı ya da stoğu gözden geçir' },
+};
+
+export const ANALYSIS_METRIC_OPTIONS: Array<{ value: AnalysisMetric; label: string }> = [
+  { value: 'ciro', label: 'Ciro' },
+  { value: 'kar', label: 'Kâr' },
+];
+
+export type WindowOption = '30' | '60';
+
+export const WINDOW_OPTIONS: Array<{ value: WindowOption; label: string }> = [
+  { value: '30', label: '30 gün' },
+  { value: '60', label: '60 gün' },
+];
 
 export const SELL_THROUGH_BAND_ORDER: SellThroughBand[] = ['yüksek', 'normal', 'düşük', 'satışsız'];
 

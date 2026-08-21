@@ -3,11 +3,14 @@
 import Link from 'next/link';
 import type { InventoryInsightApiResponse } from '@/app/api/insights/inventory/route';
 import type { SellThroughBand } from '@/lib/reports/sell-through';
+import { TrendBadge } from '@/components/shared/badges/TrendBadge';
 import { formatDateKey, formatNumber, formatPercent } from '@/lib/format';
 import { SELL_THROUGH_BAND_DOT, SELL_THROUGH_BAND_LABEL, SELL_THROUGH_BAND_ORDER, type BandFilter } from './constants';
 
 interface VelocitySectionProps {
   sellThrough: InventoryInsightApiResponse['sellThroughSummary'];
+  /** Önceki eşit döneme göre değişim — window=60'ta null, hiç gösterilmez. */
+  trend: InventoryInsightApiResponse['trend'];
   windowDays: number;
   leadTimeDays: number;
   selectedBand: BandFilter;
@@ -15,13 +18,34 @@ interface VelocitySectionProps {
 }
 
 /** Satış hızı — mağaza geneli sell-through, yıllık devir, bant dağılımı, tükeniş riski. */
-export function VelocitySection({ sellThrough, windowDays, leadTimeDays, selectedBand, onSelectBand }: VelocitySectionProps) {
+export function VelocitySection({ sellThrough, trend, windowDays, leadTimeDays, selectedBand, onSelectBand }: VelocitySectionProps) {
+  const hasTrendBadges = trend !== null && (trend.revenueDeltaPct !== null || trend.soldUnitsDeltaPct !== null);
+
   return (
     <section className="mb-4 rounded-lg border border-hairline bg-card p-5">
-      <h2 className="text-sm font-medium text-foreground">Satış Hızı</h2>
-      <p className="mt-0.5 text-xs text-muted-foreground">
-        Son {windowDays} günde satılan mal, eldeki mala oranla ne kadar eridi
-      </p>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h2 className="text-sm font-medium text-foreground">Satış Hızı</h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Son {windowDays} günde satılan mal, eldeki mala oranla ne kadar eridi
+          </p>
+        </div>
+        {hasTrendBadges && (
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            {trend.revenueDeltaPct !== null && (
+              <span className="flex items-center gap-1.5">
+                Ciro <TrendBadge value={trend.revenueDeltaPct} size="sm" />
+              </span>
+            )}
+            {trend.soldUnitsDeltaPct !== null && (
+              <span className="flex items-center gap-1.5">
+                Adet <TrendBadge value={trend.soldUnitsDeltaPct} size="sm" />
+              </span>
+            )}
+            <span className="text-[11px]">önceki {windowDays} güne göre</span>
+          </div>
+        )}
+      </div>
 
       <div className="mt-4 grid gap-6 md:grid-cols-3">
         <div>

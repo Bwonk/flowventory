@@ -8,13 +8,12 @@ import {
   type AbcFilter,
   type ActionFilter,
   type AgingFilter,
+  type AnalysisMetric,
   type AnalysisSortBy,
   type BandFilter,
 } from '../constants';
 
 const ITEMS_PER_PAGE = 20;
-
-export type AnalysisMetric = 'ciro' | 'kar';
 
 export interface AnalysisInitialFilters {
   abc?: AbcFilter;
