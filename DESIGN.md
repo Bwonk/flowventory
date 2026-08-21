@@ -55,7 +55,8 @@ gelir. **Arbitrary hex yasak**; tek istisna print-only siyah/beyaz düzeltmeleri
 | Accent (tek mavi) | `--accent-blue` #1863dc — `text-accent-blue`, `--ring`, `--chart-1` |
 | Hairline ayraç | `border-hairline` (#e4e4e7) |
 | Durum: sağlıklı / uyarı / kritik | `bg-status-healthy` #059669 / `bg-status-warning` #d97706 / `bg-status-critical` #dc2626 |
-| Yıkıcı aksiyon | `bg-destructive` |
+| Rozet kritik zemin/metin | `--critical` #fef2f2 / `--critical-foreground` #b91c1c (success/warning/info çiftlerinin dördüncüsü; `bg-destructive/10` türetmesi kaldırıldı) |
+| Yıkıcı aksiyon | `bg-destructive` — yalnız yıkıcı butonlar ve solid sayaç pili (bildirim sayacı) |
 
 **Accent bütçesi: sayfa başına tek mavi ailesi.** Mavi yalnızca: aktif nav
 öğesi, link, birincil grafik serisi, focus ring. Butonlar mavi DEĞİL —
@@ -113,7 +114,7 @@ Yüzey tarifleri:
 | İkincil/açıklama | `text-sm text-muted-foreground` |
 | Mikro-etiket (tablo başlığı, KPI etiketi) | `font-mono text-[10px] uppercase tracking-wider text-muted-foreground` |
 | KPI değeri | `font-mono text-2xl font-medium tabular-nums text-foreground` |
-| Tablo sayısal hücre | `font-mono text-sm tabular-nums` sağa hizalı |
+| Tablo sayısal hücre | `text-sm tabular-nums` sağa hizalı, çıplak sayı (birim kolon başlığında); `font-mono` yalnız KPI/eyebrow/kod/sıra numarası |
 | Kod/SKU | `font-mono text-xs text-muted-foreground` |
 
 Kurallar: büyük harf yalnızca mono mikro-etiketlerde (`uppercase` +
@@ -142,11 +143,19 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
 ## 5. Bileşenler ve motifler
 
 - **Badge:** [src/components/ui/badge.tsx](src/components/ui/badge.tsx) cva
-  varyantları (`neutral | success | warning | critical | info | outline`);
-  domain sarmalayıcıları ([src/components/shared/badges/](src/components/shared/badges/))
-  ince adaptördür, kendi renk haritası tutmaz.
-- **Durum noktası:** `size-2 rounded-full bg-status-*` + yanında metin;
-  renk tek başına sinyal olamaz (erişilebilirlik).
+  varyantları (`neutral | success | warning | critical | info | outline`) ×
+  boyutları (`sm` varsayılan — tablolar/listeler; `md` yalnız başlık/dialog
+  bağlamı). Domain sarmalayıcıları
+  ([src/components/shared/badges/](src/components/shared/badges/):
+  Status/Trend/SellThrough/StockLife/Category/Abc) ince adaptördür, kendi
+  renk haritası tutmaz — yalnız domain→variant eşler. `StatusBadge`'in
+  `label` override'ı sayaç pili olarak sanksiyonludur ("8 tükendi").
+  **Bilinçli istisna:** `AbcBadge` renkli taksonomidir (A=success, B=warning,
+  C=neutral) — sınıf renk kodu tarama hızı için durum çiftlerini ödünç alır.
+- **Durum noktası:** tüm sinyal dotları `size-2 rounded-full bg-status-*`
+  (nötr: `bg-muted-foreground`) + yanında metin; renk tek başına sinyal
+  olamaz (erişilebilirlik). Okunmamış bildirim sinyali kırmızıdır
+  (`bg-status-critical`); accent-blue dot kullanılmaz.
 - **Tablolar:** [src/components/ui/table.tsx](src/components/ui/table.tsx);
   hairline satır ayrımı, mono tablo başlıkları, sayısal kolonlar sağa dayalı
   `tabular-nums`.
