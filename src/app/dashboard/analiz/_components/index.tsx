@@ -3,10 +3,13 @@
 import type { InventoryInsightApiResponse } from '@/app/api/insights/inventory/route';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { formatNumber } from '@/lib/format';
 import { AbcSection } from './AbcSection';
 import { AgingSection } from './AgingSection';
+import { AnalysisFilterBar } from './AnalysisFilterBar';
 import { AnalysisTable } from './AnalysisTable';
 import { VelocitySection } from './VelocitySection';
+import { useAnalysisFilters } from './hooks/use-analysis-filters';
 
 interface AnalizContentProps {
   insight: InventoryInsightApiResponse;
@@ -18,6 +21,8 @@ interface AnalizContentProps {
  */
 export function AnalizContent({ insight }: AnalizContentProps) {
   const hasEstimate = insight.items.some(i => i.isEstimate && i.totalStock > 0);
+
+  const filters = useAnalysisFilters(insight.items, insight.targetStockDays, 'ciro');
 
   return (
     <PageContainer>
@@ -37,7 +42,22 @@ export function AnalizContent({ insight }: AnalizContentProps) {
 
       <AgingSection buckets={insight.agingBuckets} />
 
-      <AnalysisTable items={insight.items} windowDays={insight.windowDays} />
+      <section className="overflow-hidden rounded-lg border border-hairline bg-card">
+        <div className="border-b border-border px-5 py-3">
+          <h2 className="text-sm font-medium text-foreground">Ürün Detayı</h2>
+          <p className="text-xs text-muted-foreground">{formatNumber(filters.totalResults)} ürün listeleniyor</p>
+        </div>
+        <AnalysisFilterBar filters={filters} />
+        <AnalysisTable
+          rows={filters.displayedRows}
+          windowDays={insight.windowDays}
+          hasMore={filters.hasMore}
+          loadingMore={filters.loadingMore}
+          onLoadMore={filters.loadMore}
+          hasActiveFilters={filters.hasActiveFilters}
+          onClearFilters={filters.clearAllFilters}
+        />
+      </section>
     </PageContainer>
   );
 }
