@@ -247,7 +247,9 @@ export function NotificationDrawer() {
 
   const drawerBody = (
     <>
-      <div className="flex items-center gap-1 border-b border-border px-4 py-3">
+      {/* h-16: sidebar logo bölümüyle (SidebarHeader h-16) aynı yükseklik —
+          iki panelin başlık altı hairline'ları aynı hizada oturur. */}
+      <div className="flex h-16 shrink-0 items-center gap-1 border-b border-border px-4">
         <SheetTitle className="text-sm font-medium text-foreground">Bildirimler</SheetTitle>
         <div className="ml-auto flex items-center gap-1">
           {unreadCount > 0 && (
