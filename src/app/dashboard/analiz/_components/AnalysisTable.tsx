@@ -22,6 +22,9 @@ interface AnalysisTableProps {
   onLoadMore: () => void;
   hasActiveFilters: boolean;
   onClearFilters: () => void;
+  onSelectProduct: (productId: string) => void;
+  /** Detay verisi çekilirken tıklanan satır (hafif bekleme durumu). */
+  pendingProductId: string | null;
 }
 
 /**
@@ -46,6 +49,8 @@ export function AnalysisTable({
   onLoadMore,
   hasActiveFilters,
   onClearFilters,
+  onSelectProduct,
+  pendingProductId,
 }: AnalysisTableProps) {
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
@@ -109,7 +114,13 @@ export function AnalysisTable({
         </thead>
         <tbody>
           {rows.map(item => (
-            <tr key={item.productId} className="border-b border-border last:border-b-0">
+            <tr
+              key={item.productId}
+              onClick={() => onSelectProduct(item.productId)}
+              className={`cursor-pointer border-b border-border transition-colors last:border-b-0 hover:bg-muted/40 ${
+                pendingProductId === item.productId ? 'opacity-60' : ''
+              }`}
+            >
               <td className="px-5 py-2.5">
                 <div className="flex items-center gap-2.5">
                   {item.imageUrl && (

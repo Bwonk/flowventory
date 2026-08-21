@@ -1,7 +1,13 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { logger } from '@/lib/logger';
+import type { AnalyticsApiResponse } from '@/app/api/ikas/analytics/route';
 import type { InventoryInsightApiResponse } from '@/app/api/insights/inventory/route';
+import { ProductDetailModal } from '@/app/dashboard/stok/_components/product-detail/ProductDetailModal';
+import { ApiRequests } from '@/lib/api-requests';
+import type { Product } from '@/lib/products/types';
 import type { AbcClass, AgingBucketKey } from '@/lib/reports/abc';
 import type { ActionKey } from '@/lib/reports/actions';
 import type { SellThroughBand } from '@/lib/reports/sell-through';
@@ -20,15 +26,24 @@ import { useAnalysisFilters, type AnalysisInitialFilters } from './hooks/use-ana
 
 interface AnalizContentProps {
   insight: InventoryInsightApiResponse;
+  token: string | null;
   initialFilters?: AnalysisInitialFilters;
   onWindowChange: (windowDays: 30 | 60) => void;
+}
+
+/** Modal'ın ihtiyaç duyduğu, ilk satır tıklamasında tembel çekilen veri seti. */
+interface DetailData {
+  products: Product[];
+  analytics: AnalyticsApiResponse | null;
+  viewStats: Record<string, number> | null;
 }
 
 /**
  * Analiz sayfası — ABC (ciro/kâr Pareto'su) + stok yaşlandırma + aksiyon paneli.
  * Hangi ürüne dikkat, hangisine sermaye azaltma kararı için tek ekran.
  */
-export function AnalizContent({ insight, initialFilters, onWindowChange }: AnalizContentProps) {
+export function AnalizContent({ insight, token, initialFilters, onWindowChange }: AnalizContentProps) {
+  const router = useRouter();
   const hasEstimate = insight.items.some(i => i.isEstimate && i.totalStock > 0);
   const hasProfitEstimate = insight.items.some(i => i.profitIsEstimate);
 
@@ -79,6 +94,57 @@ export function AnalizContent({ insight, initialFilters, onWindowChange }: Anali
     filters.setAction(clearing ? 'all' : action);
     if (!clearing) scrollToTable();
   };
+
+  // Ürün detay modalı — verisi ilk satır tıklamasında çekilir, oturum boyunca cache'lenir.
+  const [detailData, setDetailData] = useState<DetailData | null>(null);
+  const [pendingProductId, setPendingProductId] = useState<string | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+
+  const ensureDetailData = useCallback(async (): Promise<DetailData | null> => {
+    if (detailData) return detailData;
+    if (!token) return null;
+    try {
+      const [productsRes, analyticsRes, viewStatsRes] = await Promise.all([
+        ApiRequests.ikas.listProducts(token),
+        ApiRequests.ikas.getAnalytics(token),
+        ApiRequests.productView.getViewStats(token),
+      ]);
+      const products =
+        productsRes.status === 200 && productsRes.data?.data?.products ? productsRes.data.data.products : [];
+      if (products.length === 0) return null;
+      const data: DetailData = {
+        products,
+        analytics: analyticsRes.status === 200 && analyticsRes.data?.data ? analyticsRes.data.data : null,
+        viewStats:
+          viewStatsRes.status === 200 && viewStatsRes.data?.data
+            ? (viewStatsRes.data.data as Record<string, number>)
+            : null,
+      };
+      setDetailData(data);
+      return data;
+    } catch (error) {
+      logger.error('Error fetching product detail data', { error });
+      return null;
+    }
+  }, [detailData, token]);
+
+  const handleSelectProduct = useCallback(
+    async (productId: string) => {
+      if (pendingProductId) return;
+      setPendingProductId(productId);
+      const data = await ensureDetailData();
+      setPendingProductId(null);
+      const product = data?.products.find(p => p.id === productId) ?? null;
+      if (!product) {
+        // Veri çekilemedi ya da ürün listede yok (aradaki sync'te silinmiş olabilir):
+        // stok sayfası ?product paramını zaten destekliyor, oraya düş.
+        router.push(`/dashboard/stok?product=${productId}`);
+        return;
+      }
+      setSelectedProduct(product);
+    },
+    [pendingProductId, ensureDetailData, router],
+  );
 
   return (
     <PageContainer>
@@ -141,8 +207,18 @@ export function AnalizContent({ insight, initialFilters, onWindowChange }: Anali
           onLoadMore={filters.loadMore}
           hasActiveFilters={filters.hasActiveFilters}
           onClearFilters={filters.clearAllFilters}
+          onSelectProduct={handleSelectProduct}
+          pendingProductId={pendingProductId}
         />
       </section>
+
+      <ProductDetailModal
+        product={selectedProduct}
+        analytics={detailData?.analytics ?? null}
+        token={token}
+        viewStats={detailData?.viewStats}
+        onClose={() => setSelectedProduct(null)}
+      />
     </PageContainer>
   );
 }
