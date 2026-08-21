@@ -21,6 +21,7 @@ import { ProductListCard, type ProductListItem } from './_components/ProductList
 import { ConversionInsightCard } from './_components/ConversionInsightCard';
 import { TrendChart, type TrendDataPoint } from '@/components/shared/TrendChart';
 import { StatusBadge } from '@/components/shared/badges/StatusBadge';
+import { Badge } from '@/components/ui/badge';
 import { TrendBadge } from '@/components/shared/badges/TrendBadge';
 import { ErrorState } from '@/components/shared/ErrorState';
 import { DashboardSkeleton } from './_components/DashboardSkeleton';
@@ -209,9 +210,7 @@ export default function DashboardPage() {
             </div>
             <p className="mt-2 font-mono text-xl font-medium tabular-nums @7xl:text-2xl text-foreground">{products.length} ürün</p>
             <div className="mt-auto pt-3">
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-muted text-muted-foreground">
-                {skuHealth.total} SKU
-              </span>
+              <Badge variant="neutral">{skuHealth.total} SKU</Badge>
               <p className="text-xs text-muted-foreground mt-1.5">Varyant bazlı takip</p>
             </div>
           </div>
@@ -219,7 +218,7 @@ export default function DashboardPage() {
           {/* 3 — Kritik Stok (tıklanabilir) */}
           <Link
             href="/dashboard/stok"
-            className="group flex flex-col border-b border-r border-border p-5 cursor-pointer transition-all duration-200 hover:-translate-y-[1px] hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="group flex flex-col border-b border-r border-border p-5 cursor-pointer transition-[transform,box-shadow] duration-200 hover:-translate-y-[1px] hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <div className="flex items-center gap-1.5 mb-1">
               <AlertTriangle className="h-3 w-3 text-muted-foreground" />
@@ -245,7 +244,7 @@ export default function DashboardPage() {
           {/* 4 — Ölü Stok (tıklanabilir) */}
           <Link
             href="/dashboard/analiz?action=eritme-adayi"
-            className="group flex flex-col border-b border-r border-border p-5 cursor-pointer transition-all duration-200 hover:-translate-y-[1px] hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="group flex flex-col border-b border-r border-border p-5 cursor-pointer transition-[transform,box-shadow] duration-200 hover:-translate-y-[1px] hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <div className="flex items-center gap-1.5 mb-1">
               <Archive className="h-3 w-3 text-muted-foreground" />
@@ -339,7 +338,7 @@ export default function DashboardPage() {
           ].map(item => (
             <div key={item.label} className="flex flex-col gap-1.5">
               <div className="flex items-center gap-2">
-                <span className={`h-2 w-2 rounded-full ${item.dot}`} />
+                <span className={`size-2 rounded-full ${item.dot}`} />
                 <span className="text-xs text-muted-foreground">{item.label}</span>
               </div>
               <p>
@@ -384,10 +383,7 @@ export default function DashboardPage() {
         <ProductListCard
           title="Az Kalan Ürünler"
           subtitle={`Stok eşiği (${maxThreshold} adet) altına düşen ve tükenen ürünler`}
-          badge={lowStockProducts.length > 0 ? {
-            text: `${lowStockProducts.length} ürün`,
-            className: 'shrink-0 rounded-full bg-destructive/10 px-2.5 py-0.5 text-xs font-medium text-destructive',
-          } : undefined}
+          badge={lowStockProducts.length > 0 ? { label: `${lowStockProducts.length} ürün`, variant: 'critical' } : undefined}
           items={lowStockListItems}
           emptyState={{
             icon: CheckCircle,

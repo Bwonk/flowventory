@@ -4,6 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { EyeIcon } from '@/components/ui/icons/eye';
 import type { ConversionInsightApiResponse } from '@/app/api/insights/conversion/route';
+import { Badge } from '@/components/ui/badge';
 
 function formatPercent(rate: number): string {
   return `%${(rate * 100).toLocaleString('tr-TR', { maximumFractionDigits: 1 })}`;
@@ -49,9 +50,7 @@ export function ConversionInsightCard({ insight }: { insight: ConversionInsightA
           </p>
         </div>
         {flagged > 0 && (
-          <span className="rounded-full bg-warning px-2.5 py-0.5 text-xs font-medium text-warning-foreground">
-            {flagged} ürün ilgi görüyor ama satmıyor
-          </span>
+          <Badge variant="warning" size="md">{flagged} ürün ilgi görüyor ama satmıyor</Badge>
         )}
       </div>
 
@@ -82,12 +81,13 @@ export function ConversionInsightCard({ insight }: { insight: ConversionInsightA
                     )}
                     <span className="truncate font-medium text-foreground">{item.productName}</span>
                     {item.lowConversion && (
-                      <span
-                        className="shrink-0 rounded-full bg-warning px-1.5 py-0.5 text-[10px] font-medium text-warning-foreground"
+                      <Badge
+                        variant="warning"
+                        className="shrink-0"
                         title="Görüntülenmesi yüksek, dönüşümü mağaza ortalamasının yarısının altında — fiyat, görsel veya açıklamayı gözden geçirin"
                       >
                         düşük dönüşüm
-                      </span>
+                      </Badge>
                     )}
                   </div>
                 </td>

@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Package, type LucideIcon } from 'lucide-react';
+import { Badge, type BadgeVariant } from '@/components/ui/badge';
 import type { StockStatus } from '@/components/shared/badges/StatusBadge';
 import { StatusBadge } from '@/components/shared/badges/StatusBadge';
 import { EyeIcon } from '@/components/ui/icons/eye';
@@ -21,7 +22,7 @@ export interface ProductListItem {
 interface ProductListCardProps {
   title: string;
   subtitle: string;
-  badge?: { text: string; className: string };
+  badge?: { label: string; variant: BadgeVariant };
   items: ProductListItem[];
   emptyState: { icon: LucideIcon; title: string; description: string };
 }
@@ -99,7 +100,7 @@ export const ProductListCard: React.FC<ProductListCardProps> = ({
           <p className="mt-0.5 text-xs text-muted-foreground">{subtitle}</p>
         </div>
         {badge && (
-          <span className={badge.className}>{badge.text}</span>
+          <Badge variant={badge.variant} className="shrink-0">{badge.label}</Badge>
         )}
       </div>
 
