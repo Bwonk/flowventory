@@ -15,7 +15,6 @@ import { PageContainer } from '@/components/layout/PageContainer';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { TableSection } from '@/components/shared/data-table/TableSection';
 import { SegmentedControl } from '@/components/shared/trend-chart/SegmentedControl';
-import { formatNumber } from '@/lib/format';
 import { AbcSection, type NormalizedAbcRow } from './AbcSection';
 import { ActionPanel } from './ActionPanel';
 import { AgingSection } from './AgingSection';
@@ -192,11 +191,7 @@ export function AnalizContent({ insight, token, initialFilters, onWindowChange }
 
       <AgingSection buckets={insight.agingBuckets} selected={filters.aging} onSelect={handleAgingSelect} />
 
-      <TableSection
-        title="Ürün Detayı"
-        count={`${formatNumber(filters.totalResults)} ürün listeleniyor`}
-        sectionRef={tableRef}
-      >
+      <TableSection label="Ürün detayı" sectionRef={tableRef}>
         <AnalysisFilterBar filters={filters} />
         <AnalysisTable
           rows={filters.displayedRows}

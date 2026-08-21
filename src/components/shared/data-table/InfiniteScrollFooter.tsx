@@ -1,23 +1,25 @@
 'use client';
 
+import { formatNumber } from '@/lib/format';
 import { useInfiniteScroll } from './use-infinite-scroll';
 
 interface InfiniteScrollFooterProps {
   hasMore: boolean;
   loadingMore: boolean;
   onLoadMore: () => void;
-  /** Satır sayısı 0 ise "listelendi" mesajı gösterilmez (boş durum ayrı ele alınır). */
+  /** Ekrandaki satır sayısı; liste bittiğinde toplam sonuç sayısına eşittir. */
   itemCount: number;
-  endText?: string;
+  /** Sayının yanındaki tekil isim ("ürün", "sipariş"...). */
+  itemNoun?: string;
 }
 
-/** Tablo altı: sentinel + yükleniyor / "Tüm ürünler listelendi" şeridi. */
+/** Tablo altı: sentinel + yükleniyor / "N ürün listelendi" şeridi. */
 export function InfiniteScrollFooter({
   hasMore,
   loadingMore,
   onLoadMore,
   itemCount,
-  endText = 'Tüm ürünler listelendi',
+  itemNoun = 'ürün',
 }: InfiniteScrollFooterProps) {
   const sentinelRef = useInfiniteScroll(hasMore, loadingMore, onLoadMore);
 
@@ -28,7 +30,9 @@ export function InfiniteScrollFooter({
         <p className="border-t border-border px-5 py-3 text-center text-xs text-muted-foreground">Yükleniyor…</p>
       )}
       {!hasMore && itemCount > 0 && (
-        <p className="border-t border-border px-5 py-3 text-center text-xs text-muted-foreground">{endText}</p>
+        <p className="border-t border-border px-5 py-3 text-center text-xs text-muted-foreground">
+          {formatNumber(itemCount)} {itemNoun} listelendi
+        </p>
       )}
     </>
   );

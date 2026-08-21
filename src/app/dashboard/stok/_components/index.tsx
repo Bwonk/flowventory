@@ -10,7 +10,6 @@ import type { HomePageProps, Product } from '@/lib/products/types';
 import { useProductFilters } from './hooks/use-product-filters';
 import { MonoLabel } from '@/components/shared/filters/atoms';
 import { TableSection } from '@/components/shared/data-table/TableSection';
-import { formatNumber } from '@/lib/format';
 import { FilterBar } from './components/FilterBar';
 import { ProductTable } from './components/ProductTable';
 import { ProductDetailModal } from './product-detail/ProductDetailModal';
@@ -71,7 +70,7 @@ const HomePage: React.FC<HomePageProps> = ({ token, products = [], analytics, vi
         />
 
         {/* Tek kart: başlık + filtre şeridi + tablo (analiz ile aynı düzen) */}
-        <TableSection title="Ürünler" count={`${formatNumber(filters.totalResults)} ürün listeleniyor`}>
+        <TableSection label="Ürün listesi">
           <FilterBar
             query={filters.query}
             onQueryChange={filters.setQuery}
