@@ -54,12 +54,19 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           girmeden tüm sayfa yatay kayıyordu.
         */}
         <SidebarInset className="h-svh min-w-0 overflow-y-auto">
-          {/* Dar iframe genişliği: sidebar Sheet'e düşer, tetikleyici bu barda yaşar. */}
-          <header className="flex h-12 shrink-0 items-center gap-2 border-b border-hairline bg-card px-4 print:hidden md:hidden">
-            <SidebarTrigger />
-            <BrandLogo variant="mark" className="h-7 w-7" />
-          </header>
-          {children}
+          {/*
+            Fragment zorunlu: SidebarInset children'ı {...props} ile geçiriyor,
+            bu yüzden React çoklu çocuğu statik liste olarak işaretleyemiyor ve
+            key uyarısı veriyor. Tek fragment child bunu giderir.
+          */}
+          <>
+            {/* Dar iframe genişliği: sidebar Sheet'e düşer, tetikleyici bu barda yaşar. */}
+            <header className="flex h-12 shrink-0 items-center gap-2 border-b border-hairline bg-card px-4 print:hidden md:hidden">
+              <SidebarTrigger />
+              <BrandLogo variant="mark" className="h-7 w-7" />
+            </header>
+            {children}
+          </>
         </SidebarInset>
         {/* Drawer, sidebar'ın dışında yaşar: mobilde sidebar Sheet'i kapanınca
             unmount olmaz (bkz. NotificationsProvider). */}
