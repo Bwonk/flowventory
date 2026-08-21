@@ -32,7 +32,7 @@ export const VariantCard: React.FC<{
     >
       <div className="min-w-0 flex-1">
         <p className={cn(
-          'truncate text-sm text-foreground transition-all duration-100',
+          'truncate text-sm text-foreground transition-colors duration-100',
           selected ? 'font-semibold' : 'font-medium'
         )}>
           {label}

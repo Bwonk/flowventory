@@ -94,7 +94,7 @@ export function VelocitySection({ sellThrough, trend, windowDays, leadTimeDays, 
                       isSelected ? 'bg-muted' : 'hover:bg-muted/40'
                     }`}
                   >
-                    <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${SELL_THROUGH_BAND_DOT[band]}`} />
+                    <span className={`size-2 shrink-0 rounded-full ${SELL_THROUGH_BAND_DOT[band]}`} />
                     <span className="flex-1 text-muted-foreground">{SELL_THROUGH_BAND_LABEL[band]}</span>
                     <span className="font-medium tabular-nums text-foreground">
                       {sellThrough.bandCounts[band]}

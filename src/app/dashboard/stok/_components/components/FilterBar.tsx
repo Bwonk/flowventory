@@ -52,7 +52,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           placeholder="Ürün veya varyant ara..."
           value={query}
           onChange={e => onQueryChange(e.target.value)}
-          className="h-10 w-full border-0 bg-transparent pl-10 text-[14px] text-foreground shadow-none placeholder:text-muted-foreground focus-visible:border-0 focus-visible:ring-0"
+          className="h-10 w-full border-0 bg-transparent pl-10 text-sm text-foreground shadow-none placeholder:text-muted-foreground focus-visible:border-0 focus-visible:ring-0"
         />
       </div>
 
@@ -141,7 +141,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           <button
             type="button"
             onClick={onClearAll}
-            className="ml-auto text-[14px] text-accent-blue underline-offset-4 transition-colors hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            className="ml-auto text-sm text-accent-blue underline-offset-4 transition-colors hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           >
             Tümünü Temizle
           </button>

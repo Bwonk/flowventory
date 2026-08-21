@@ -118,7 +118,7 @@ const LocationRow: React.FC<{
           >
             <Pencil className="h-3 w-3" aria-hidden />
           </button>
-          {saved && <span className="text-xs text-emerald-700">ikas&apos;a kaydedildi ✓</span>}
+          {saved && <span className="text-xs text-status-healthy">ikas&apos;a kaydedildi ✓</span>}
         </>
       )}
       {saving && <span className="text-xs text-muted-foreground">Kaydediliyor…</span>}

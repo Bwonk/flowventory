@@ -40,7 +40,7 @@ export const SELL_THROUGH_BAND_LABEL: Record<SellThroughBand, string> = {
 
 export const SELL_THROUGH_BAND_DOT: Record<SellThroughBand, string> = {
   yüksek: 'bg-status-healthy',
-  normal: 'bg-accent-blue',
+  normal: 'bg-muted-foreground',
   düşük: 'bg-status-warning',
   satışsız: 'bg-status-critical',
 };

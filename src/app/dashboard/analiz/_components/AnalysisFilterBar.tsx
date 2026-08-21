@@ -37,7 +37,7 @@ export const AnalysisFilterBar: React.FC<AnalysisFilterBarProps> = ({ filters })
             placeholder="Ürün ara..."
             value={query}
             onChange={e => filters.setQuery(e.target.value)}
-            className="h-10 w-full border-0 bg-transparent pl-10 text-[14px] text-foreground shadow-none placeholder:text-muted-foreground focus-visible:border-0 focus-visible:ring-0"
+            className="h-10 w-full border-0 bg-transparent pl-10 text-sm text-foreground shadow-none placeholder:text-muted-foreground focus-visible:border-0 focus-visible:ring-0"
           />
         </div>
 

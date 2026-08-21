@@ -28,7 +28,7 @@ export const ThresholdControl: React.FC = () => {
       label={
         <span className="inline-flex items-center gap-1.5">
           Stok Eşiği
-          {isActive && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
+          {isActive && <span className="size-2 rounded-full bg-primary" />}
         </span>
       }
       align="end"

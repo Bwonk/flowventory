@@ -97,7 +97,7 @@ export function ActionPanel({ items, actionByProduct, targetStockDays, windowDay
               className="flex flex-col border-b border-r border-border p-5 last:border-b-0 md:border-b-0 md:last:border-r-0"
             >
               <p className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                <span className={`h-1.5 w-1.5 rounded-full ${ACTION_DOT[queue.key]}`} />
+                <span className={`size-2 rounded-full ${ACTION_DOT[queue.key]}`} />
                 {ACTION_LABELS[queue.key]}
               </p>
 
