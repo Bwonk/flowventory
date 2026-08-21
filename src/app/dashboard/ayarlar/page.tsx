@@ -10,7 +10,12 @@ export default function AyarlarPage() {
     <PageContainer>
       <PageHeader eyebrow="YAPILANDIRMA" title="Ayarlar" />
       <TrackingScriptCard />
-      <NotificationSettingsCard />
+      {/* Çapa sarmalayıcıda: kart ayarlar yüklenene dek null döndürür, id'nin
+          navigasyon anında DOM'da olması hash kaydırmasının ön koşulu.
+          Bildirim panelindeki dişli ve boş durum linki buraya derin bağlanır. */}
+      <div id="bildirim-ayarlari" className="scroll-mt-6">
+        <NotificationSettingsCard />
+      </div>
     </PageContainer>
   );
 }

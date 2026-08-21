@@ -215,7 +215,7 @@ export function NotificationDrawer() {
           Stok uyarıları ve satış sinyalleri burada görünecek.
         </p>
         <Link
-          href="/dashboard/ayarlar"
+          href="/dashboard/ayarlar#bildirim-ayarlari"
           onClick={() => setOpen(false)}
           className="mt-2 rounded-md text-xs text-accent-blue hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
@@ -262,7 +262,7 @@ export function NotificationDrawer() {
             </button>
           )}
           <Link
-            href="/dashboard/ayarlar"
+            href="/dashboard/ayarlar#bildirim-ayarlari"
             aria-label="Bildirim ayarları"
             onClick={() => setOpen(false)}
             className={ICON_BUTTON_CLASS}
