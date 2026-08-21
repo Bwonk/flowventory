@@ -8,7 +8,6 @@ import {
   Bell,
   CheckCheck,
   RotateCcw,
-  Settings,
   TrendingUp,
   X,
 } from 'lucide-react';
@@ -261,14 +260,6 @@ export function NotificationDrawer() {
               <CheckCheck className="size-4" aria-hidden />
             </button>
           )}
-          <Link
-            href="/dashboard/ayarlar#bildirim-ayarlari"
-            aria-label="Bildirim ayarları"
-            onClick={() => setOpen(false)}
-            className={ICON_BUTTON_CLASS}
-          >
-            <Settings className="size-4" aria-hidden />
-          </Link>
           <SheetClose className={ICON_BUTTON_CLASS}>
             <X className="size-4" aria-hidden />
             <span className="sr-only">Kapat</span>
