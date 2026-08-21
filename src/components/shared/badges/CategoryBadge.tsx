@@ -1,6 +1,4 @@
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
-import { BADGE_BASE, BADGE_SIZE, type BadgeSize } from './badge-tokens';
+import { Badge, type BadgeSize } from '@/components/ui/badge';
 
 interface CategoryBadgeProps {
   name: string;
@@ -14,10 +12,7 @@ interface CategoryBadgeProps {
  */
 export function CategoryBadge({ name, size = 'sm', className }: CategoryBadgeProps) {
   return (
-    <Badge
-      variant="outline"
-      className={cn(BADGE_BASE, BADGE_SIZE[size], 'bg-accent text-accent-foreground', className)}
-    >
+    <Badge variant="neutral" size={size} className={className}>
       {name}
     </Badge>
   );

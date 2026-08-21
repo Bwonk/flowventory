@@ -1,6 +1,6 @@
-import { Badge } from '@/components/ui/badge';
+import { Badge, type BadgeSize, type BadgeVariant } from '@/components/ui/badge';
+import { STATUS_META } from '@/lib/products/constants';
 import { cn } from '@/lib/utils';
-import { BADGE_BASE, BADGE_SIZE, BADGE_COLORS, type BadgeSize } from './badge-tokens';
 
 export type StockStatus = 'healthy' | 'warning' | 'critical' | 'out';
 
@@ -12,30 +12,27 @@ interface StatusBadgeProps {
   className?: string;
 }
 
-const STATUS_MAP: Record<StockStatus, { label: string; color: keyof typeof BADGE_COLORS }> = {
-  healthy:  { label: 'Sağlıklı', color: 'green' },
-  warning:  { label: 'Az Kalan', color: 'amber' },
-  critical: { label: 'Kritik',   color: 'red' },
-  out:      { label: 'Tükendi',  color: 'red' },
+/** Durum → badge varyantı. 'out' ve 'critical' aynı renkte; ayrımı etiket taşır. */
+const STATUS_VARIANT: Record<StockStatus, BadgeVariant> = {
+  healthy: 'success',
+  warning: 'warning',
+  critical: 'critical',
+  out: 'critical',
 };
 
-export function StatusBadge({
-  status,
-  size = 'md',
-  label,
-  showDot = false,
-  className,
-}: StatusBadgeProps) {
-  const { label: defaultLabel, color } = STATUS_MAP[status];
-  const c = BADGE_COLORS[color];
+/** Durum → sinyal dot rengi (DESIGN.md: dotlar --status-* üçlüsünden). */
+const STATUS_DOT: Record<StockStatus, string> = {
+  healthy: 'bg-status-healthy',
+  warning: 'bg-status-warning',
+  critical: 'bg-status-critical',
+  out: 'bg-status-critical',
+};
 
+export function StatusBadge({ status, size = 'sm', label, showDot = false, className }: StatusBadgeProps) {
   return (
-    <Badge
-      variant="outline"
-      className={cn(BADGE_BASE, BADGE_SIZE[size], c.bg, c.text, className)}
-    >
-      {showDot && <span className={cn('w-1.5 h-1.5 rounded-full', c.dot)} />}
-      {label ?? defaultLabel}
+    <Badge variant={STATUS_VARIANT[status]} size={size} className={className}>
+      {showDot && <span className={cn('size-2 rounded-full', STATUS_DOT[status])} />}
+      {label ?? STATUS_META[status].label}
     </Badge>
   );
 }

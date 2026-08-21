@@ -196,7 +196,7 @@ export const ProductDetailContent: React.FC<{
             <span>{totalStock} adet stok</span>
           </div>
         </div>
-        <StatusBadge status={overallStatus} />
+        <StatusBadge status={overallStatus} size="md" />
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto md:overflow-hidden">

@@ -33,12 +33,20 @@ export const SORT_OPTIONS: ReadonlyArray<{ value: SortBy; label: string }> = [
   { value: 'isim-az', label: 'Ürün Adı (A-Z)' },
 ];
 
+/** Durum etiketlerinin tek kaynağı (StatusBadge ve CSV buradan okur). */
+export const STATUS_META: Record<ProductStatus, { label: string }> = {
+  out: { label: 'Tükendi' },
+  critical: { label: 'Kritik' },
+  warning: { label: 'Az Kalan' },
+  healthy: { label: 'Sağlıklı' },
+};
+
 export const STATUS_LABELS: Record<StatusFilter, string> = {
   all: 'Tümü',
-  tukendi: 'Tükendi',
-  kritik: 'Kritik',
-  'az-kalan': 'Az Kalan',
-  saglikli: 'Sağlıklı',
+  tukendi: STATUS_META.out.label,
+  kritik: STATUS_META.critical.label,
+  'az-kalan': STATUS_META.warning.label,
+  saglikli: STATUS_META.healthy.label,
 };
 
 export const STOCK_RANGE_LABELS: Record<StockRange, string> = {
@@ -59,13 +67,5 @@ export const SORT_LABELS: Record<SortBy, string> = {
 };
 
 export const STATUS_SEVERITY: Record<ProductStatus, number> = { out: 0, critical: 1, warning: 2, healthy: 3 };
-
-/** Durum başına etiket + rozet stili. */
-export const STATUS_META: Record<ProductStatus, { label: string; className: string }> = {
-  out: { label: 'Tükendi', className: 'border border-destructive text-destructive bg-transparent' },
-  critical: { label: 'Kritik', className: 'border border-destructive text-destructive bg-transparent' },
-  warning: { label: 'Az Kalan', className: 'border border-status-warning text-status-warning bg-transparent' },
-  healthy: { label: 'Sağlıklı', className: 'border-transparent bg-success text-success-foreground' },
-};
 
 export const TR_MONTHS = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'] as const;
