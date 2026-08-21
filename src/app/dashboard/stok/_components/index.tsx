@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageContainer } from '@/components/layout/PageContainer';
@@ -54,10 +55,18 @@ const HomePage: React.FC<HomePageProps> = ({ token, products = [], analytics, vi
           eyebrow="STOK YÖNETİMİ"
           title="Stok Takibi"
           actions={
-            <Button onClick={() => downloadCSV(filters.displayedRows)} className="gap-2">
-              <Download className="size-4" />
-              CSV İndir
-            </Button>
+            <>
+              <Link
+                href="/dashboard/analiz"
+                className="text-sm font-medium text-accent-blue underline-offset-4 hover:underline"
+              >
+                Analize git →
+              </Link>
+              <Button onClick={() => downloadCSV(filters.displayedRows)} className="gap-2">
+                <Download className="size-4" />
+                CSV İndir
+              </Button>
+            </>
           }
         />
 
