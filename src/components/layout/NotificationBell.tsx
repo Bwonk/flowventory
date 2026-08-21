@@ -46,18 +46,18 @@ export function NotificationBell() {
         if (isMobile) setOpenMobile(false);
         setOpen(true);
       }}
-      className="relative flex h-9 w-full items-center rounded-lg px-3 text-[14px] text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
+      className="relative flex h-9 w-full items-center rounded-lg px-3 text-sm text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
       {...hoverProps}
     >
       <TriggerBell ref={bellRef} size={16} className="flex shrink-0 mr-3 group-data-[collapsible=icon]:mr-0" aria-hidden />
       <span className="truncate group-data-[collapsible=icon]:hidden">Bildirimler</span>
       {unreadCount > 0 && (
         <>
-          <span className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-destructive px-1.5 py-0.5 text-[10px] font-semibold leading-none text-destructive-foreground tabular-nums group-data-[collapsible=icon]:hidden">
+          <span className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-destructive px-1.5 py-0.5 text-[10px] font-medium leading-none text-destructive-foreground tabular-nums group-data-[collapsible=icon]:hidden">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
           {/* Icon modunda sayı sığmaz — nokta göster. */}
-          <span className="absolute right-1 top-1 hidden size-2 rounded-full bg-destructive group-data-[collapsible=icon]:block" />
+          <span className="absolute right-1 top-1 hidden size-2 rounded-full bg-status-critical group-data-[collapsible=icon]:block" />
         </>
       )}
     </button>

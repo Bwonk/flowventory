@@ -93,7 +93,7 @@ function NotificationRow({
           ve renk tek sinyal olamaz — nokta + başlık ağırlığı birlikte taşır. */}
       {!item.read && (
         <span className="mt-1.5 shrink-0">
-          <span className="block size-2 rounded-full bg-accent-blue" aria-hidden />
+          <span className="block size-2 rounded-full bg-status-critical" aria-hidden />
           <span className="sr-only">Okunmamış</span>
         </span>
       )}
