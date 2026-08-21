@@ -88,3 +88,45 @@ export const ANALYSIS_SORT_LABELS: Record<AnalysisSortBy, string> = {
 export const ANALYSIS_SORT_OPTIONS: Array<{ value: AnalysisSortBy; label: string }> = (
   ['ciro', 'kar', 'sermaye', 'satis', 'stok-omru'] as AnalysisSortBy[]
 ).map(value => ({ value, label: ANALYSIS_SORT_LABELS[value] }));
+
+// --- URL paramları ---
+// Türkçe karakterli değerler ('satışsız', 'yüksek', '180+') URL'e ASCII slug ile
+// taşınır; bilinmeyen slug sessizce yok sayılır (whitelist parse).
+
+const AGING_SLUGS: Record<string, AgingBucketKey> = {
+  '0-30': '0-30',
+  '31-60': '31-60',
+  '61-90': '61-90',
+  '91-180': '91-180',
+  '180plus': '180+',
+  satissiz: 'satışsız',
+};
+
+const BAND_SLUGS: Record<string, SellThroughBand> = {
+  yuksek: 'yüksek',
+  normal: 'normal',
+  dusuk: 'düşük',
+  satissiz: 'satışsız',
+};
+
+const ACTION_SLUGS: Record<string, ActionKey> = {
+  'siparis-ver': 'siparis-ver',
+  'eritme-adayi': 'eritme-adayi',
+  'fazla-stok': 'fazla-stok',
+};
+
+export function parseAbcParam(value: string | null): AbcClass | undefined {
+  return value === 'A' || value === 'B' || value === 'C' ? value : undefined;
+}
+
+export function parseAgingParam(value: string | null): AgingBucketKey | undefined {
+  return value ? AGING_SLUGS[value] : undefined;
+}
+
+export function parseBandParam(value: string | null): SellThroughBand | undefined {
+  return value ? BAND_SLUGS[value] : undefined;
+}
+
+export function parseActionParam(value: string | null): ActionKey | undefined {
+  return value ? ACTION_SLUGS[value] : undefined;
+}

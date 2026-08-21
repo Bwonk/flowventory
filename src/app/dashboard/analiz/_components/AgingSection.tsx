@@ -1,14 +1,21 @@
 'use client';
 
 import type { InventoryInsightApiResponse } from '@/app/api/insights/inventory/route';
+import type { AgingBucketKey } from '@/lib/reports/abc';
 import { formatPrice } from '@/lib/currency';
+import type { AgingFilter } from './constants';
 
 interface AgingSectionProps {
   buckets: InventoryInsightApiResponse['agingBuckets'];
+  selected: AgingFilter;
+  onSelect: (bucket: AgingBucketKey) => void;
 }
 
-/** Stok yaşlandırma kovaları — kova başına bağlı sermaye. */
-export function AgingSection({ buckets }: AgingSectionProps) {
+/**
+ * Stok yaşlandırma kovaları — kova başına bağlı sermaye.
+ * Kovalar tıklanınca tabloyu o kovaya filtreler (tekrar tıklama temizler).
+ */
+export function AgingSection({ buckets, selected, onSelect }: AgingSectionProps) {
   const totalValue = buckets.reduce((s, b) => s + b.stockValue, 0);
 
   return (
@@ -21,8 +28,17 @@ export function AgingSection({ buckets }: AgingSectionProps) {
         {buckets.map(bucket => {
           const pct = totalValue > 0 ? (bucket.stockValue / totalValue) * 100 : 0;
           const risky = bucket.bucket === '180+' || bucket.bucket === 'satışsız';
+          const isSelected = selected === bucket.bucket;
           return (
-            <div key={bucket.bucket} className="flex flex-col gap-1.5">
+            <button
+              key={bucket.bucket}
+              type="button"
+              aria-pressed={isSelected}
+              onClick={() => onSelect(bucket.bucket)}
+              className={`flex flex-col gap-1.5 rounded-md p-2 -m-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring ${
+                isSelected ? 'bg-muted' : 'hover:bg-muted/40'
+              }`}
+            >
               <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
                 {bucket.bucket === 'satışsız' ? 'SATIŞSIZ' : `${bucket.bucket} GÜN`}
               </p>
@@ -36,7 +52,7 @@ export function AgingSection({ buckets }: AgingSectionProps) {
                   style={{ width: `${Math.max(pct, bucket.stockValue > 0 ? 4 : 0)}%` }}
                 />
               </div>
-            </div>
+            </button>
           );
         })}
       </div>

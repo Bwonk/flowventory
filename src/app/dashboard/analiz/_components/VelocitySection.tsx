@@ -2,17 +2,20 @@
 
 import Link from 'next/link';
 import type { InventoryInsightApiResponse } from '@/app/api/insights/inventory/route';
+import type { SellThroughBand } from '@/lib/reports/sell-through';
 import { formatDateKey, formatNumber, formatPercent } from '@/lib/format';
-import { SELL_THROUGH_BAND_DOT, SELL_THROUGH_BAND_LABEL, SELL_THROUGH_BAND_ORDER } from './constants';
+import { SELL_THROUGH_BAND_DOT, SELL_THROUGH_BAND_LABEL, SELL_THROUGH_BAND_ORDER, type BandFilter } from './constants';
 
 interface VelocitySectionProps {
   sellThrough: InventoryInsightApiResponse['sellThroughSummary'];
   windowDays: number;
   leadTimeDays: number;
+  selectedBand: BandFilter;
+  onSelectBand: (band: SellThroughBand) => void;
 }
 
 /** Satış hızı — mağaza geneli sell-through, yıllık devir, bant dağılımı, tükeniş riski. */
-export function VelocitySection({ sellThrough, windowDays, leadTimeDays }: VelocitySectionProps) {
+export function VelocitySection({ sellThrough, windowDays, leadTimeDays, selectedBand, onSelectBand }: VelocitySectionProps) {
   return (
     <section className="mb-4 rounded-lg border border-hairline bg-card p-5">
       <h2 className="text-sm font-medium text-foreground">Satış Hızı</h2>
@@ -54,16 +57,28 @@ export function VelocitySection({ sellThrough, windowDays, leadTimeDays }: Veloc
 
         <div>
           <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">ÜRÜN DAĞILIMI</p>
-          <ul className="mt-2 space-y-1.5">
-            {SELL_THROUGH_BAND_ORDER.map(band => (
-              <li key={band} className="flex items-center gap-2 text-xs">
-                <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${SELL_THROUGH_BAND_DOT[band]}`} />
-                <span className="flex-1 text-muted-foreground">{SELL_THROUGH_BAND_LABEL[band]}</span>
-                <span className="font-medium tabular-nums text-foreground">
-                  {sellThrough.bandCounts[band]}
-                </span>
-              </li>
-            ))}
+          <ul className="mt-2 space-y-0.5">
+            {SELL_THROUGH_BAND_ORDER.map(band => {
+              const isSelected = selectedBand === band;
+              return (
+                <li key={band}>
+                  <button
+                    type="button"
+                    aria-pressed={isSelected}
+                    onClick={() => onSelectBand(band)}
+                    className={`flex w-full items-center gap-2 rounded-md px-1.5 py-1 text-left text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring ${
+                      isSelected ? 'bg-muted' : 'hover:bg-muted/40'
+                    }`}
+                  >
+                    <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${SELL_THROUGH_BAND_DOT[band]}`} />
+                    <span className="flex-1 text-muted-foreground">{SELL_THROUGH_BAND_LABEL[band]}</span>
+                    <span className="font-medium tabular-nums text-foreground">
+                      {sellThrough.bandCounts[band]}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         </div>
       </div>
