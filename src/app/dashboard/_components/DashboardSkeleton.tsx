@@ -13,8 +13,8 @@ export function DashboardSkeleton() {
       </div>
 
       <div className="space-y-4">
-        {/* Metrik paneli: KPI grid + Stok Sağlığı bandı (tek kart) */}
-        <Skeleton className="h-[360px] w-full rounded-lg" />
+        {/* Metrik paneli: KPI şeridi + Stok Sağlığı bandı (tek kart) */}
+        <Skeleton className="h-[300px] w-full rounded-lg" />
 
         {/* Performans Trendi */}
         <Skeleton className="h-[380px] w-full rounded-lg" />

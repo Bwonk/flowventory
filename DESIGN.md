@@ -98,12 +98,17 @@ Yüzey tarifleri:
 - **Kart:** `rounded-lg border border-hairline bg-card p-5`
 - **Yoğun stat tile (KPI grid'i):** gölgesiz, tile'lar arası `divide-x
   divide-hairline` / grid çizgileri; tile içi `p-4`
-- **Metrik paneli (dashboard):** KPI grid'i ve ilişkili özet bandı (ör. Stok
+- **Metrik paneli (dashboard):** KPI şeridi ve ilişkili özet bandı (ör. Stok
   Sağlığı metresi) **tek kartta** yaşar — grid + `border-t border-border`
-  ayrılmış tam genişlik alt band; iki komşu kart olarak bölünmez. Grid,
-  span'lı kolon tabanı (6/10) kullanır ki karo sayısı hangi kırılımda olursa
-  olsun satırlar tam dolsun — boş hücre bırakmak yasak. Band başlığı kart
-  h2'si değil, karolarla aynı mono eyebrow dilindedir.
+  ayrılmış tam genişlik alt band; iki komşu kart olarak bölünmez. Karolar
+  **eşit genişlikte tek satırda** dizilir (`grid-cols-1 @4xl:grid-cols-5`);
+  span/hero karo yok — dar konteynerde tek kolon dikey istife düşer, hiçbir
+  kırılımda boş hücre veya asimetri oluşmaz. Karo içeriği kompakttır: eyebrow
+  + değer + tek satır truncate alt bilgi. Tıklanabilir karo bütünüyle
+  `Link`'tir; dinlenme affordance'ı eyebrow satırının sağ ucundaki
+  `ArrowUpRight` köşe okudur (hover: `text-foreground` + 0.5 çapraz kayma) —
+  karo içinde uzun CTA metni kullanılmaz. Band başlığı kart h2'si değil,
+  karolarla aynı mono eyebrow dilindedir.
 - **Sayfa bölümü:** kartlar arası `gap-4` veya `gap-6`, asla gölge yığını
 
 ---

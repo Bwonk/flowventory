@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { CSSProperties, ReactNode } from 'react';
-import type { LucideIcon } from 'lucide-react';
+import { ArrowUpRight, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface KpiTileProps {
@@ -10,11 +10,10 @@ interface KpiTileProps {
   value: ReactNode;
   /** Değer satırının içinde, hemen altında küçük not ("~tahmini"). */
   valueSuffix?: ReactNode;
+  /** Tek satır kompakt alt bilgi (truncate edilir). */
   footer?: ReactNode;
-  /** Verilirse karo Link olur; cta satırı dinlenme affordance'ıdır. */
+  /** Verilirse karo Link olur; dinlenme affordance'ı sağ üstteki köşe okudur. */
   href?: string;
-  cta?: string;
-  /** Grid span sınıfları için. */
   className?: string;
   /** Verilirse tek seferlik giriş animasyonu bu sırayla gecikir (animate-enter). */
   stagger?: number;
@@ -31,29 +30,25 @@ export function KpiTile({
   valueSuffix,
   footer,
   href,
-  cta,
   className,
   stagger,
 }: KpiTileProps) {
   const content = (
     <>
       <div className="mb-1 flex items-center gap-1.5">
-        <Icon className="h-3 w-3 text-muted-foreground" />
-        <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p>
+        <Icon className="h-3 w-3 shrink-0 text-muted-foreground" />
+        <p className="truncate font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p>
+        {href && (
+          <span className="ml-auto shrink-0 text-muted-foreground transition-colors group-hover:text-foreground">
+            <ArrowUpRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+          </span>
+        )}
       </div>
       <p className="mt-2 font-mono text-xl font-medium tabular-nums text-foreground @7xl:text-2xl">
         {value}
         {valueSuffix}
       </p>
-      <div className="mt-auto pt-3">
-        {footer}
-        {href && cta && (
-          <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground transition-colors group-hover:text-foreground">
-            {cta}
-            <span className="inline-block transition-transform duration-200 group-hover:translate-x-0.5">&rarr;</span>
-          </span>
-        )}
-      </div>
+      <div className="mt-auto min-w-0 pt-3">{footer}</div>
     </>
   );
 

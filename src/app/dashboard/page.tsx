@@ -22,7 +22,6 @@ import { KpiTile } from './_components/KpiTile';
 import { StockHealthBand } from './_components/StockHealthBand';
 import { TrendChart, type TrendDataPoint } from '@/components/shared/TrendChart';
 import { StatusBadge } from '@/components/shared/badges/StatusBadge';
-import { Badge } from '@/components/ui/badge';
 import { TrendBadge } from '@/components/shared/badges/TrendBadge';
 import { ErrorState } from '@/components/shared/ErrorState';
 import { EmptyState } from '@/components/shared/data-table/EmptyState';
@@ -197,19 +196,16 @@ export default function DashboardPage() {
         kenarlık olarak veriliyor; grid'in -mr/-mb px'i son sütun ve satırın fazladan
         çizgisini overflow-hidden ile kırpıyor.
 
-        Span'lı grid (6/10 kolon tabanı) her genişlikte satırları tam doldurur —
-        5 karo hiçbir kırılımda boş hücre bırakmaz:
-        @lg (2 kolon): Ciro tam satır "hero", kalan 4 karo 2×2.
-        @3xl (6 kolon): satır 1 = 3 karo (2+2+2), satır 2 = 2 geniş karo (3+3).
-        @6xl (10 kolon): 5 karo tek satır (2×5).
+        Eşit hücre kuralı: 5 karo @4xl üzerinde tek satırda eşit kolonlarda,
+        altında tek kolon dikey istif — span/hero yok, hiçbir kırılımda boş
+        hücre veya asimetri oluşmaz.
       */}
       <section
         aria-label="Genel bakış metrikleri"
         className="@container rounded-lg border border-hairline bg-card overflow-hidden"
       >
-        <div className="-mr-px -mb-px grid grid-cols-1 @lg:grid-cols-2 @3xl:grid-cols-6 @6xl:grid-cols-10">
+        <div className="-mr-px -mb-px grid grid-cols-1 @4xl:grid-cols-5">
           <KpiTile
-            className="@lg:col-span-2 @3xl:col-span-2"
             stagger={0}
             icon={DollarSign}
             label="SON 30 GÜN CİRO"
@@ -218,47 +214,39 @@ export default function DashboardPage() {
               sectionErrors.analytics ? (
                 <p className="text-xs text-muted-foreground">Satış verisi alınamadı</p>
               ) : (
-                <>
+                <div className="flex min-w-0 items-center gap-2">
                   <TrendBadge value={revenueChange} size="sm" />
-                  <p className="mt-1.5 text-xs text-muted-foreground">
-                    {revenueChange === 0 ? 'Geçen döneme göre değişmedi' : `Geçen ay: ${formatPrice(previousRevenue)}`}
+                  <p className="truncate text-xs text-muted-foreground">
+                    {revenueChange === 0 ? 'Değişim yok' : `Geçen ay: ${formatPrice(previousRevenue)}`}
                   </p>
-                </>
+                </div>
               )
             }
           />
 
           <KpiTile
-            className="@3xl:col-span-2"
             stagger={1}
             icon={Package}
             label="AKTİF ÜRÜN"
             value={sectionErrors.products ? '—' : `${products.length} ürün`}
             footer={
-              sectionErrors.products ? (
-                <p className="text-xs text-muted-foreground">Ürün verisi alınamadı</p>
-              ) : (
-                <>
-                  <Badge variant="neutral">{skuHealth.total} SKU</Badge>
-                  <p className="mt-1.5 text-xs text-muted-foreground">Varyant bazlı takip</p>
-                </>
-              )
+              <p className="truncate text-xs text-muted-foreground">
+                {sectionErrors.products ? 'Ürün verisi alınamadı' : `${skuHealth.total} SKU · varyant bazlı takip`}
+              </p>
             }
           />
 
           <KpiTile
-            className="@3xl:col-span-2"
             stagger={2}
             icon={AlertTriangle}
             label="KRİTİK STOK"
             value={sectionErrors.products ? '—' : `${criticalCount + warningCount} ürün`}
             href="/dashboard/stok"
-            cta="Ürünleri görüntüle"
             footer={
               sectionErrors.products ? (
-                <p className="mb-2 text-xs text-muted-foreground">Ürün verisi alınamadı</p>
+                <p className="text-xs text-muted-foreground">Ürün verisi alınamadı</p>
               ) : (
-                <div className="mb-2 flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-1.5">
                   {criticalCount > 0 && (
                     <StatusBadge status="out" label={`${criticalCount} tükendi`} size="sm" />
                   )}
@@ -271,7 +259,6 @@ export default function DashboardPage() {
           />
 
           <KpiTile
-            className="@3xl:col-span-3 @6xl:col-span-2"
             stagger={3}
             icon={Archive}
             label="ÖLÜ STOK"
@@ -283,16 +270,17 @@ export default function DashboardPage() {
               )
             }
             href="/dashboard/analiz?action=eritme-adayi"
-            cta="Eritme adaylarını görüntüle"
             footer={
               deadStockUnavailable ? (
-                <p className="mb-2 text-xs text-muted-foreground">Veri alınamadı</p>
+                <p className="text-xs text-muted-foreground">Veri alınamadı</p>
               ) : (
-                <div className="mb-2">
-                  <p className="text-xs text-muted-foreground">{deadStock.length} ürün · 180+ gündür satılmıyor</p>
+                <div className="min-w-0">
+                  <p className="truncate text-xs text-muted-foreground">
+                    {deadStock.length} ürün · 180+ gündür satılmıyor
+                  </p>
                   {lockedCapital.isEstimate && (
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      ~tahmini: alış fiyatı eksik ürünlerde satış fiyatı kullanıldı
+                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                      ~tahmini · alış fiyatı eksikse satış fiyatı
                     </p>
                   )}
                 </div>
@@ -301,7 +289,6 @@ export default function DashboardPage() {
           />
 
           <KpiTile
-            className="@3xl:col-span-3 @6xl:col-span-2"
             stagger={4}
             icon={Clock}
             label="ORT. STOK ÖMRÜ"
@@ -309,16 +296,13 @@ export default function DashboardPage() {
               deadStockUnavailable || avgDaysRemaining === null ? '—' : formatStockAge(avgDaysRemaining).primary
             }
             footer={
-              deadStockUnavailable ? (
-                <p className="text-xs text-muted-foreground">Veri alınamadı</p>
-              ) : avgDaysRemaining !== null ? (
-                <>
-                  <p className="text-xs text-muted-foreground">{formatStockAge(avgDaysRemaining).secondary}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">Satış hızına göre hesaplandı</p>
-                </>
-              ) : (
-                <p className="text-xs text-muted-foreground">Yeterli satış verisi yok</p>
-              )
+              <p className="truncate text-xs text-muted-foreground">
+                {deadStockUnavailable
+                  ? 'Veri alınamadı'
+                  : avgDaysRemaining !== null
+                    ? `${formatStockAge(avgDaysRemaining).secondary} · satış hızına göre`
+                    : 'Yeterli satış verisi yok'}
+              </p>
             }
           />
         </div>
