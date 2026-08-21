@@ -27,7 +27,7 @@ export async function sendAlertEmail(to: string, alerts: AlertCandidate[]): Prom
       a =>
         `<tr>
           <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:12px;color:#616161;white-space:nowrap">${TYPE_LABELS[a.type] ?? a.type}</td>
-          <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:14px;color:#212121">${a.body}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:14px;color:#212121"><span style="font-weight:600">${a.title}.</span> ${a.body}</td>
         </tr>`,
     )
     .join('');

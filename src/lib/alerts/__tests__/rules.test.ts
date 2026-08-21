@@ -17,13 +17,13 @@ describe('evaluateCriticalStock', () => {
   it('stok tükendiğinde bildirim üretir', () => {
     const alert = evaluateCriticalStock({ ...product, minStock: 0 }, 5, '2026-08-11');
     expect(alert?.type).toBe('critical-stock');
-    expect(alert?.title).toBe('Stok tükendi');
+    expect(alert?.title).toBe('Test Ürün stoğu tükendi');
     expect(alert?.dedupeKey).toBe('critical-stock:p1:2026-08-11');
   });
 
   it('eşik altında bildirim üretir', () => {
     const alert = evaluateCriticalStock({ ...product, minStock: 3 }, 5, '2026-08-11');
-    expect(alert?.title).toBe('Kritik stok seviyesi');
+    expect(alert?.title).toBe('Test Ürün kritik stok seviyesinde');
   });
 
   it('eşik üstünde bildirim üretmez', () => {

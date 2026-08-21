@@ -38,13 +38,17 @@ export function evaluateCriticalStock(
 ): AlertCandidate | null {
   if (product.minStock > criticalThreshold) return null;
   const outOfStock = product.minStock === 0;
+  // Başlık ürün adıyla başlar: panelde art arda gelen bildirimler aynı jenerik
+  // başlığı tekrarlamasın, ayırt edici bilgi ilk bakışta okunsun.
   return {
     type: 'critical-stock',
     productId: product.productId,
-    title: outOfStock ? 'Stok tükendi' : 'Kritik stok seviyesi',
+    title: outOfStock
+      ? `${product.productName} stoğu tükendi`
+      : `${product.productName} kritik stok seviyesinde`,
     body: outOfStock
-      ? `${product.productName} ürününün en az bir varyantı tükendi.`
-      : `${product.productName} ürününde stok kritik eşiğin (${criticalThreshold}) altına düştü.`,
+      ? 'En az bir varyantı tükendi.'
+      : `Stok, kritik eşiğin (${criticalThreshold}) altına düştü.`,
     dedupeKey: `critical-stock:${product.productId}:${dayKey}`,
   };
 }
@@ -57,8 +61,8 @@ export function evaluateDeadStock(
   return {
     type: 'dead-stock',
     productId: product.productId,
-    title: 'Ölü stok',
-    body: `${product.productName} son 30 gündür hiç satılmadı (${product.totalStock} adet stokta).`,
+    title: `${product.productName} 30 gündür satılmadı`,
+    body: `${product.totalStock} adet stokta bekliyor.`,
     dedupeKey: `dead-stock:${product.productId}:${weekKey}`,
   };
 }
@@ -79,11 +83,11 @@ export function evaluateSalesSpike(
   return {
     type: 'sales-spike',
     productId: product.productId,
-    title: 'Satış artışı',
+    title: `${product.productName} satışında artış`,
     body:
       avg > 0
-        ? `${product.productName} bugün ${todayQty} adet satıldı — son 7 gün ortalamasının (${avg.toFixed(1)}) ${SPIKE_MULTIPLIER} katından fazla.`
-        : `${product.productName} bugün ${todayQty} adet satıldı.`,
+        ? `Bugün ${todayQty} adet satıldı — son 7 gün ortalamasının (${avg.toFixed(1)}) ${SPIKE_MULTIPLIER} katından fazla.`
+        : `Bugün ${todayQty} adet satıldı.`,
     dedupeKey: `sales-spike:${product.productId}:${dayKey}`,
   };
 }
