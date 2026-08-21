@@ -45,12 +45,6 @@ export const SELL_THROUGH_BAND_DOT: Record<SellThroughBand, string> = {
   satışsız: 'bg-status-critical',
 };
 
-export const ABC_BADGE_CLASS: Record<AbcClass, string> = {
-  A: 'bg-success text-success-foreground',
-  B: 'bg-warning text-warning-foreground',
-  C: 'bg-muted text-muted-foreground',
-};
-
 // --- Tablo filtreleri ---
 
 export type AbcFilter = AbcClass | 'all';

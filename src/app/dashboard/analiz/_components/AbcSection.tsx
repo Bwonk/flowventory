@@ -4,8 +4,8 @@ import type { AbcClass } from '@/lib/reports/abc';
 import { SegmentedControl } from '@/components/shared/trend-chart/SegmentedControl';
 import { formatPrice } from '@/lib/currency';
 import { AbcParetoBar } from './AbcParetoBar';
+import { AbcBadge } from '@/components/shared/badges/AbcBadge';
 import {
-  ABC_BADGE_CLASS,
   ABC_LABELS,
   ABC_LABELS_PROFIT,
   ANALYSIS_METRIC_OPTIONS,
@@ -72,9 +72,7 @@ export function AbcSection({ rows, metric, onMetricChange, hasProfitEstimate, se
               }`}
             >
               <div className="flex items-center gap-2">
-                <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${ABC_BADGE_CLASS[row.class]}`}>
-                  {row.class}
-                </span>
+                <AbcBadge cls={row.class} />
                 <p className="text-sm font-medium text-foreground">{labels[row.class].title}</p>
               </div>
               <p className="mt-3 font-mono text-xl font-medium tabular-nums xl:text-2xl text-foreground">{row.productCount} ürün</p>

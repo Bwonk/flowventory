@@ -16,7 +16,8 @@ import { InfiniteScrollFooter } from '@/components/shared/data-table/InfiniteScr
 import { ProductThumb } from '@/components/shared/filters/atoms';
 import { formatPrice } from '@/lib/currency';
 import { formatDateKey } from '@/lib/format';
-import { ABC_BADGE_CLASS, type AnalysisMetric } from './constants';
+import { AbcBadge } from '@/components/shared/badges/AbcBadge';
+import { type AnalysisMetric } from './constants';
 
 interface AnalysisTableProps {
   rows: InventoryInsightItem[];
@@ -106,13 +107,7 @@ export function AnalysisTable({
                 </div>
               </DataTableCell>
               <DataTableCell align="center">
-                <span
-                  className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-semibold ${
-                    ABC_BADGE_CLASS[metric === 'kar' ? item.profitAbcClass : item.abcClass]
-                  }`}
-                >
-                  {metric === 'kar' ? item.profitAbcClass : item.abcClass}
-                </span>
+                <AbcBadge cls={metric === 'kar' ? item.profitAbcClass : item.abcClass} />
               </DataTableCell>
               <DataTableCell numeric>
                 {formatPrice(metric === 'kar' ? item.profit : item.revenue)}
