@@ -3,11 +3,13 @@
 import { useCallback, useRef } from 'react';
 import type { InventoryInsightApiResponse } from '@/app/api/insights/inventory/route';
 import type { AbcClass, AgingBucketKey } from '@/lib/reports/abc';
+import type { ActionKey } from '@/lib/reports/actions';
 import type { SellThroughBand } from '@/lib/reports/sell-through';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { formatNumber } from '@/lib/format';
 import { AbcSection } from './AbcSection';
+import { ActionPanel } from './ActionPanel';
 import { AgingSection } from './AgingSection';
 import { AnalysisFilterBar } from './AnalysisFilterBar';
 import { AnalysisTable } from './AnalysisTable';
@@ -50,6 +52,11 @@ export function AnalizContent({ insight, initialFilters }: AnalizContentProps) {
     filters.setBand(clearing ? 'all' : band);
     if (!clearing) scrollToTable();
   };
+  const handleActionSelect = (action: ActionKey) => {
+    const clearing = filters.action === action;
+    filters.setAction(clearing ? 'all' : action);
+    if (!clearing) scrollToTable();
+  };
 
   return (
     <PageContainer>
@@ -57,6 +64,15 @@ export function AnalizContent({ insight, initialFilters }: AnalizContentProps) {
         eyebrow="ANALİZ"
         title="Envanter Analizi"
         description={`Son ${insight.windowDays} günün satışına göre ABC sınıflandırması, satış hızı ve stok yaşlandırma${hasEstimate ? ' · ~ işaretli değerler alış fiyatı yerine satış fiyatıyla hesaplandı' : ''}`}
+      />
+
+      <ActionPanel
+        items={insight.items}
+        actionByProduct={filters.actionByProduct}
+        targetStockDays={insight.targetStockDays}
+        windowDays={insight.windowDays}
+        selected={filters.action}
+        onSelect={handleActionSelect}
       />
 
       <AbcSection summary={insight.abcSummary} selected={filters.abc} onSelect={handleAbcSelect} />
