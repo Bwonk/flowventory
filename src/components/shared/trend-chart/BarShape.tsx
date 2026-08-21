@@ -14,12 +14,10 @@ interface BarProps {
   isActive?: boolean;
 }
 
-// Ölçek: kapalı = ince çizgi, aktif = tam genişlik.
-const COLLAPSED_SCALE = 0.1;
-
 /**
- * Trend grafiği bar şekli (evilcharts monospace-bar-chart'tan uyarlandı):
- * hover'da bar tam genişliğe açılır ve değeri mono etiketle üstünde gösterir.
+ * Trend grafiği bar şekli: barlar dinlenmede tam genişlikte çizilir
+ * (grafik ilk bakışta okunur kalır); hover yalnızca vurgu + mono değer
+ * etiketi ekler.
  */
 export const BarShape = (props: BarProps) => {
   const { fill, x, y, width, height, index, value, isActive } = props;
@@ -30,30 +28,20 @@ export const BarShape = (props: BarProps) => {
   const realHeight = Number(height || 0);
 
   const centerX = xPos + realWidth / 2;
-  const centerY = yPos + realHeight / 2;
 
   return (
     <>
+      {/* Hover hitbox — barın tüm kolon alanı. */}
       <Rectangle {...props} fill="transparent" />
 
-      <AnimatePresence>
-        <motion.rect
-          key={`bar-${index}`}
-          x={xPos}
-          y={yPos}
-          width={realWidth}
-          height={realHeight}
-          fill={fill}
-          initial={{ scaleX: isActive ? COLLAPSED_SCALE : 1 }}
-          animate={{ scaleX: isActive ? 1 : COLLAPSED_SCALE }}
-          exit={{ scaleX: COLLAPSED_SCALE }}
-          transition={{ type: 'spring', stiffness: 200, damping: 25 }}
-          style={{
-            transformOrigin: `${centerX}px ${centerY}px`,
-            transformBox: 'fill-box',
-          }}
-        />
-      </AnimatePresence>
+      <rect
+        x={xPos}
+        y={yPos}
+        width={realWidth}
+        height={realHeight}
+        fill={fill}
+        opacity={isActive ? 1 : 0.85}
+      />
       {isActive && (
         <AnimatePresence>
           <motion.text

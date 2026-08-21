@@ -11,6 +11,7 @@ import { BarShape } from '@/components/shared/trend-chart/BarShape';
 import { SegmentedControl } from '@/components/shared/trend-chart/SegmentedControl';
 import { DateRangePicker } from '@/components/shared/trend-chart/DateRangePicker';
 import { cn } from '@/lib/utils';
+import { logger } from '@/lib/logger';
 import { formatPrice } from '@/lib/currency';
 import { formatNumber } from '@/lib/format';
 import { TR_MONTHS } from '@/lib/products/constants';
@@ -51,6 +52,8 @@ interface TrendChartProps {
   height?: number;
   layout?: 'default' | 'modal';
   portalContainer?: HTMLElement | null;
+  /** Boş durumdaki ikincil ipucu satırı (bağlama göre değişir: varyantlı sayfa vs dashboard). */
+  emptyHint?: string;
 }
 
 const METRIC_LABELS: Record<ChartMetric, string> = {
@@ -143,12 +146,14 @@ export const TrendChart: React.FC<TrendChartProps> = ({
   height,
   layout = 'default',
   portalContainer,
+  emptyHint = 'Farklı bir tarih aralığı veya varyant seçebilirsiniz.',
 }) => {
   const [metric, setMetric] = useState<ChartMetric>(defaultMetric ?? metrics[0] ?? 'revenue');
   const [period, setPeriod] = useState<ChartPeriod>(defaultPeriod ?? 'last30d');
   const [hourlyData, setHourlyData] = useState<HourlyPoint[] | null>(null);
   const [hourlyViews, setHourlyViews] = useState<Array<{ hour: number; label: string; viewCount: number }> | null>(null);
   const [hourlyLoading, setHourlyLoading] = useState(false);
+  const [hourlyError, setHourlyError] = useState(false);
   // Uygulanmış özel aralık (yalnızca period === 'custom' iken anlamlı).
   const [appliedRange, setAppliedRange] = useState<DateRange | undefined>();
 
@@ -175,16 +180,32 @@ export const TrendChart: React.FC<TrendChartProps> = ({
   useEffect(() => {
     if (period === 'last24h' && metric !== 'views' && hourlyFetch) {
       setHourlyLoading(true);
+      setHourlyError(false);
       const today = new Date().toISOString().split('T')[0];
-      hourlyFetch(today).then(setHourlyData).finally(() => setHourlyLoading(false));
+      hourlyFetch(today)
+        .then(setHourlyData)
+        .catch(error => {
+          logger.error('Saatlik satış verisi alınamadı', { error });
+          setHourlyData([]);
+          setHourlyError(true);
+        })
+        .finally(() => setHourlyLoading(false));
     }
   }, [period, metric, hourlyFetch]);
 
   useEffect(() => {
     if (period === 'last24h' && metric === 'views' && hourlyViewFetch) {
       setHourlyLoading(true);
+      setHourlyError(false);
       const today = new Date().toISOString().split('T')[0];
-      hourlyViewFetch(today).then(setHourlyViews).finally(() => setHourlyLoading(false));
+      hourlyViewFetch(today)
+        .then(setHourlyViews)
+        .catch(error => {
+          logger.error('Saatlik görüntülenme verisi alınamadı', { error });
+          setHourlyViews([]);
+          setHourlyError(true);
+        })
+        .finally(() => setHourlyLoading(false));
     }
   }, [period, metric, hourlyViewFetch]);
 
@@ -343,12 +364,18 @@ export const TrendChart: React.FC<TrendChartProps> = ({
         </div>
       ) : hasNoDataAtAll || isAllZero ? (
         <div className={cn('flex flex-col items-center justify-center py-10 text-center', layout === 'modal' ? 'min-h-0 overflow-hidden' : 'min-h-[160px]')}>
-          <p className="text-sm font-medium text-foreground">
-            {effectiveMetric === 'revenue' && 'Bu dönemde ciro verisi bulunmuyor.'}
-            {effectiveMetric === 'quantity' && 'Bu dönemde satış verisi bulunmuyor.'}
-            {effectiveMetric === 'views' && 'Bu dönemde görüntülenme verisi bulunmuyor.'}
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">Farklı bir tarih aralığı veya varyant seçebilirsiniz.</p>
+          {hourlyError && period === 'last24h' ? (
+            <p className="text-sm font-medium text-foreground">Saatlik veri alınamadı.</p>
+          ) : (
+            <>
+              <p className="text-sm font-medium text-foreground">
+                {effectiveMetric === 'revenue' && 'Bu dönemde ciro verisi bulunmuyor.'}
+                {effectiveMetric === 'quantity' && 'Bu dönemde satış verisi bulunmuyor.'}
+                {effectiveMetric === 'views' && 'Bu dönemde görüntülenme verisi bulunmuyor.'}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">{emptyHint}</p>
+            </>
+          )}
         </div>
       ) : (
         <div className={cn('w-full', layout === 'modal' && 'min-h-0 overflow-hidden')} style={layout === 'default' ? { height: chartHeight } : undefined}>

@@ -402,6 +402,7 @@ export default function DashboardPage() {
           height={280}
           hourlyFetch={fetchHourly}
           hourlyViewFetch={fetchHourlyViews}
+          emptyHint="Farklı bir tarih aralığı seçebilirsiniz."
         />
       )}
 
