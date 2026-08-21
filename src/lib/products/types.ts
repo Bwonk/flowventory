@@ -20,8 +20,6 @@ export interface ProductRow {
   daysRemaining?: number | null;
 }
 
-export type ViewMode = 'normal' | 'dead';
-
 export interface HomePageProps {
   token: string | null;
   storeName?: string;
@@ -30,7 +28,6 @@ export interface HomePageProps {
   viewStats?: Record<string, number> | null;
   loading: boolean;
   initialStatusFilter?: StatusFilter;
-  initialViewMode?: ViewMode;
   initialSelectedProductId?: string;
 }
 

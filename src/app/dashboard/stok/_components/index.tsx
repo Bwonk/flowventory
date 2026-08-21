@@ -15,10 +15,10 @@ import { ProductTable } from './components/ProductTable';
 import { ProductDetailModal } from './product-detail/ProductDetailModal';
 import { downloadCSV } from '@/lib/products/csv';
 
-const HomePage: React.FC<HomePageProps> = ({ token, products = [], analytics, viewStats, loading, initialStatusFilter, initialViewMode, initialSelectedProductId }) => {
+const HomePage: React.FC<HomePageProps> = ({ token, products = [], analytics, viewStats, loading, initialStatusFilter, initialSelectedProductId }) => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const salesByVariant = analytics?.salesByVariant ?? [];
-  const filters = useProductFilters(products, viewStats, salesByVariant, initialStatusFilter, initialViewMode);
+  const filters = useProductFilters(products, viewStats, salesByVariant, initialStatusFilter);
 
   useEffect(() => {
     if (initialSelectedProductId && products.length > 0) {

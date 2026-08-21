@@ -19,15 +19,12 @@ function StokPageContent() {
   useMerchantCurrency();
   const searchParams = useSearchParams();
   const filterParam = searchParams.get('filter');
-  const viewParam = searchParams.get('view');
   const productParam = searchParams.get('product');
 
   const initialStatusFilter = filterParam === 'tukendi' ? 'tukendi' as const
     : filterParam === 'kritik' ? 'kritik' as const
     : filterParam === 'az-kalan' ? 'az-kalan' as const
     : undefined;
-
-  const initialViewMode = viewParam === 'dead' ? 'dead' as const : undefined;
 
   const [token, setToken] = useState<string | null>(null);
   const [storeName, setStoreName] = useState('');
@@ -136,7 +133,6 @@ function StokPageContent() {
       viewStats={viewStats}
       loading={loading}
       initialStatusFilter={initialStatusFilter}
-      initialViewMode={initialViewMode}
       initialSelectedProductId={productParam || undefined}
     />
   );

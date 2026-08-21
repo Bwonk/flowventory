@@ -244,7 +244,7 @@ export default function DashboardPage() {
 
           {/* 4 — Ölü Stok (tıklanabilir) */}
           <Link
-            href="/dashboard/stok?view=dead"
+            href="/dashboard/analiz?action=eritme-adayi"
             className="group flex flex-col border-b border-r border-border p-5 cursor-pointer transition-all duration-200 hover:-translate-y-[1px] hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <div className="flex items-center gap-1.5 mb-1">
@@ -262,7 +262,7 @@ export default function DashboardPage() {
             <div className="mt-auto pt-3">
               <p className="text-xs text-muted-foreground mb-2">{deadStock.length} ürün · 180+ gündür satılmıyor</p>
               <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors">
-                Ölü stokları görüntüle
+                Eritme adaylarını görüntüle
                 <span className="inline-block transition-transform duration-200 group-hover:translate-x-0.5">&rarr;</span>
               </span>
             </div>
