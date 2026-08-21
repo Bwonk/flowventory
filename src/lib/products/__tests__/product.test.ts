@@ -5,6 +5,7 @@ import {
   getTotalStock,
   getVariantStock,
   getVariantStockLocations,
+  stockToStatus,
 } from '@/lib/products/product';
 
 /**
@@ -71,6 +72,25 @@ describe('getProductStatus', () => {
       variant([{ stockCount: 1, stockLocationId: 'a' }, { stockCount: 2, stockLocationId: 'b' }]),
     ]);
     expect(getProductStatus(p, 5, 10)).toBe('critical');
+  });
+
+  it('bir varyantı tamamen tükenmiş ürün out döner', () => {
+    const p = product([
+      variant([{ stockCount: 0, stockLocationId: 'a' }], 'v1'),
+      variant([{ stockCount: 50, stockLocationId: 'a' }], 'v2'),
+    ]);
+    expect(getProductStatus(p, 5, 10)).toBe('out');
+  });
+});
+
+describe('stockToStatus', () => {
+  it('Tükendi yalnızca stok 0 iken; eşik altı Kritik', () => {
+    expect(stockToStatus(0, 5, 10)).toBe('out');
+    expect(stockToStatus(1, 5, 10)).toBe('critical');
+    expect(stockToStatus(5, 5, 10)).toBe('critical');
+    expect(stockToStatus(6, 5, 10)).toBe('warning');
+    expect(stockToStatus(10, 5, 10)).toBe('warning');
+    expect(stockToStatus(11, 5, 10)).toBe('healthy');
   });
 });
 

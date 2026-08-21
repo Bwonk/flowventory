@@ -143,7 +143,7 @@ export default function DashboardPage() {
           image: getProductThumbnail(p),
           name: p.name,
           meta: `${p.variants.length} varyant • ${getTotalStock(p)} adet`,
-          status: stock === 0 ? 'critical' : 'warning',
+          status: stock === 0 ? 'out' : 'warning',
         };
       }),
     [lowStockProducts],
@@ -218,7 +218,7 @@ export default function DashboardPage() {
 
           {/* 3 — Kritik Stok (tıklanabilir) */}
           <Link
-            href="/dashboard/stok?filter=tukendi"
+            href="/dashboard/stok"
             className="group flex flex-col border-b border-r border-border p-5 cursor-pointer transition-all duration-200 hover:-translate-y-[1px] hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <div className="flex items-center gap-1.5 mb-1">
@@ -229,7 +229,7 @@ export default function DashboardPage() {
             <div className="mt-auto pt-3">
               <div className="flex flex-wrap gap-1.5 mb-2">
                 {criticalCount > 0 && (
-                  <StatusBadge status="critical" label={`${criticalCount} tükendi`} size="sm" />
+                  <StatusBadge status="out" label={`${criticalCount} tükendi`} size="sm" />
                 )}
                 {warningCount > 0 && (
                   <StatusBadge status="warning" label={`${warningCount} eşik altında`} size="sm" />

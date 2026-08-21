@@ -75,7 +75,8 @@ export function filterRows(
   let filtered = rows;
 
   // Birincil filtre: en kötü varyant durumuna göre.
-  if (statusFilter === 'tukendi') filtered = filtered.filter(r => r.status === 'critical');
+  if (statusFilter === 'tukendi') filtered = filtered.filter(r => r.status === 'out');
+  else if (statusFilter === 'kritik') filtered = filtered.filter(r => r.status === 'critical');
   else if (statusFilter === 'az-kalan') filtered = filtered.filter(r => r.status === 'warning');
   else if (statusFilter === 'saglikli') filtered = filtered.filter(r => r.status === 'healthy');
 

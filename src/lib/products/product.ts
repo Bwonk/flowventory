@@ -1,17 +1,19 @@
 import type { Product, Variant, ProductStatus, VariantSales } from './types';
+import { STATUS_SEVERITY } from './constants';
 
+/** Ürün durumu = en kötü varyantın durumu (STATUS_SEVERITY sırasıyla). */
 export function getProductStatus(
   product: Product,
   criticalThreshold = 5,
   warningThreshold = 10,
-): 'critical' | 'warning' | 'healthy' {
-  let hasWarning = false;
+): ProductStatus {
+  let worst: ProductStatus = 'healthy';
   for (const variant of product.variants) {
-    const stock = getVariantStock(variant);
-    if (stock <= criticalThreshold) return 'critical';
-    if (stock <= warningThreshold) hasWarning = true;
+    const status = stockToStatus(getVariantStock(variant), criticalThreshold, warningThreshold);
+    if (STATUS_SEVERITY[status] < STATUS_SEVERITY[worst]) worst = status;
+    if (worst === 'out') break;
   }
-  return hasWarning ? 'warning' : 'healthy';
+  return worst;
 }
 
 /** Ürünün ilk kategori adını döndürür; kategori yoksa undefined. */
@@ -61,12 +63,17 @@ export function getTotalStock(product: Product): number {
   return product.variants.reduce((sum, v) => sum + getVariantStock(v), 0);
 }
 
-/** Tek bir stok değerinden durum türetir. */
+/**
+ * Tek bir stok değerinden durum türetir.
+ * Tükendi yalnızca stok 0 demektir; 1..kritik eşik arası "Kritik"tir —
+ * ikisini aynı kefeye koymak eldeki son adetleri görünmez kılıyordu.
+ */
 export function stockToStatus(
   stock: number,
   criticalThreshold: number,
   warningThreshold: number,
 ): ProductStatus {
+  if (stock === 0) return 'out';
   if (stock <= criticalThreshold) return 'critical';
   if (stock <= warningThreshold) return 'warning';
   return 'healthy';

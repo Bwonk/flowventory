@@ -2,7 +2,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { BADGE_BASE, BADGE_SIZE, BADGE_COLORS, type BadgeSize } from './badge-tokens';
 
-export type StockStatus = 'healthy' | 'warning' | 'critical';
+export type StockStatus = 'healthy' | 'warning' | 'critical' | 'out';
 
 interface StatusBadgeProps {
   status: StockStatus;
@@ -15,7 +15,8 @@ interface StatusBadgeProps {
 const STATUS_MAP: Record<StockStatus, { label: string; color: keyof typeof BADGE_COLORS }> = {
   healthy:  { label: 'Sağlıklı', color: 'green' },
   warning:  { label: 'Az Kalan', color: 'amber' },
-  critical: { label: 'Tükendi',  color: 'red' },
+  critical: { label: 'Kritik',   color: 'red' },
+  out:      { label: 'Tükendi',  color: 'red' },
 };
 
 export function StatusBadge({

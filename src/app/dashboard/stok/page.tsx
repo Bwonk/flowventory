@@ -23,6 +23,7 @@ function StokPageContent() {
   const productParam = searchParams.get('product');
 
   const initialStatusFilter = filterParam === 'tukendi' ? 'tukendi' as const
+    : filterParam === 'kritik' ? 'kritik' as const
     : filterParam === 'az-kalan' ? 'az-kalan' as const
     : undefined;
 

@@ -11,6 +11,7 @@ export const ITEMS_PER_PAGE = 20;
 export const STATUS_OPTIONS: ReadonlyArray<{ value: StatusFilter; label: string }> = [
   { value: 'all', label: 'Tümü' },
   { value: 'tukendi', label: 'Tükendi' },
+  { value: 'kritik', label: 'Kritik' },
   { value: 'az-kalan', label: 'Az Kalan' },
   { value: 'saglikli', label: 'Sağlıklı' },
 ];
@@ -35,6 +36,7 @@ export const SORT_OPTIONS: ReadonlyArray<{ value: SortBy; label: string }> = [
 export const STATUS_LABELS: Record<StatusFilter, string> = {
   all: 'Tümü',
   tukendi: 'Tükendi',
+  kritik: 'Kritik',
   'az-kalan': 'Az Kalan',
   saglikli: 'Sağlıklı',
 };
@@ -56,11 +58,12 @@ export const SORT_LABELS: Record<SortBy, string> = {
   'isim-az': 'Ürün Adı (A-Z)',
 };
 
-export const STATUS_SEVERITY: Record<ProductStatus, number> = { critical: 0, warning: 1, healthy: 2 };
+export const STATUS_SEVERITY: Record<ProductStatus, number> = { out: 0, critical: 1, warning: 2, healthy: 3 };
 
-/** Cohere-token status treatment per durum. */
+/** Durum başına etiket + rozet stili. */
 export const STATUS_META: Record<ProductStatus, { label: string; className: string }> = {
-  critical: { label: 'Tükendi', className: 'border border-destructive text-destructive bg-transparent' },
+  out: { label: 'Tükendi', className: 'border border-destructive text-destructive bg-transparent' },
+  critical: { label: 'Kritik', className: 'border border-destructive text-destructive bg-transparent' },
   warning: { label: 'Az Kalan', className: 'border border-status-warning text-status-warning bg-transparent' },
   healthy: { label: 'Sağlıklı', className: 'border-transparent bg-success text-success-foreground' },
 };
