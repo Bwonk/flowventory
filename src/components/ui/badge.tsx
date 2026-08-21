@@ -32,11 +32,12 @@ export type BadgeVariant = NonNullable<VariantProps<typeof badgeVariants>['varia
 export type BadgeSize = NonNullable<VariantProps<typeof badgeVariants>['size']>;
 
 export interface BadgeProps
-  extends React.HTMLAttributes<HTMLDivElement>,
+  extends React.HTMLAttributes<HTMLSpanElement>,
     VariantProps<typeof badgeVariants> {}
 
+/** span render eder: rozet inline bir öğedir, <p>/<td> içine güvenle girer. */
 function Badge({ className, variant, size, ...props }: BadgeProps) {
-  return <div className={cn(badgeVariants({ variant, size }), className)} {...props} />;
+  return <span className={cn(badgeVariants({ variant, size }), className)} {...props} />;
 }
 
 export { Badge, badgeVariants };
