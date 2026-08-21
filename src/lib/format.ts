@@ -24,26 +24,30 @@ export function isValidCurrencyCode(code: unknown): code is string {
 /** Aynı (locale, currency) çifti için formatter'ı yeniden kurmayalım — tablolarda satır başına çağrılıyor. */
 const moneyFormatters = new Map<string, { formatter: Intl.NumberFormat; isFallback: boolean }>();
 
-function getMoneyFormatter(locale: string, currency: string) {
-  const key = `${locale}|${currency}`;
+function getMoneyFormatter(locale: string, currency: string, wholeNumber = false) {
+  const key = `${locale}|${currency}|${wholeNumber ? 0 : 2}`;
   const cached = moneyFormatters.get(key);
   if (cached) return cached;
 
+  const fractionDigits = wholeNumber ? 0 : 2;
   let entry: { formatter: Intl.NumberFormat; isFallback: boolean };
   try {
     entry = {
       formatter: new Intl.NumberFormat(locale, {
         style: 'currency',
         currency,
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
+        minimumFractionDigits: fractionDigits,
+        maximumFractionDigits: fractionDigits,
       }),
       isFallback: false,
     };
   } catch {
     // Kod ISO listesinde yoksa para birimi stilinden vazgeçip kodu önek olarak yazarız.
     entry = {
-      formatter: new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      formatter: new Intl.NumberFormat(locale, {
+        minimumFractionDigits: fractionDigits,
+        maximumFractionDigits: fractionDigits,
+      }),
       isFallback: true,
     };
   }
@@ -62,6 +66,18 @@ export function formatMoney(value: number, currencyCode?: string | null, locale:
   const safeValue = Number.isFinite(value) ? value : 0;
   const currency = isValidCurrencyCode(currencyCode) ? currencyCode.toUpperCase() : DEFAULT_CURRENCY;
   const { formatter, isFallback } = getMoneyFormatter(locale, currency);
+  const formatted = formatter.format(safeValue);
+  return isFallback ? `${currency} ${formatted}` : formatted;
+}
+
+/**
+ * Ondalıksız para biçimi — dar KPI karolarında kuruş göstermeye yer yok.
+ * @example formatMoneyRounded(1234.5) → "₺1.235"
+ */
+export function formatMoneyRounded(value: number, currencyCode?: string | null, locale: string = DEFAULT_LOCALE): string {
+  const safeValue = Number.isFinite(value) ? value : 0;
+  const currency = isValidCurrencyCode(currencyCode) ? currencyCode.toUpperCase() : DEFAULT_CURRENCY;
+  const { formatter, isFallback } = getMoneyFormatter(locale, currency, true);
   const formatted = formatter.format(safeValue);
   return isFallback ? `${currency} ${formatted}` : formatted;
 }

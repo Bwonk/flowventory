@@ -14,7 +14,7 @@ import { ApiRequests } from '@/lib/api-requests';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { useStockThreshold } from '@/lib/stock-threshold';
-import { formatPrice, useMerchantCurrency } from '@/lib/currency';
+import { formatPrice, formatPriceRounded, useMerchantCurrency } from '@/lib/currency';
 import { getTotalStock } from '@/lib/products/product';
 import { ProductListCard, type ProductListItem } from './_components/ProductListCard';
 import { ConversionInsightCard } from './_components/ConversionInsightCard';
@@ -196,20 +196,22 @@ export default function DashboardPage() {
         kenarlık olarak veriliyor; grid'in -mr/-mb px'i son sütun ve satırın fazladan
         çizgisini overflow-hidden ile kırpıyor.
 
-        Eşit hücre kuralı: 5 karo @4xl üzerinde tek satırda eşit kolonlarda,
-        altında tek kolon dikey istif — span/hero yok, hiçbir kırılımda boş
-        hücre veya asimetri oluşmaz.
+        Eşit hücre kuralı: 5 karo @2xl (672px) üzerinde tek satırda eşit
+        kolonlarda — sidebar açıkken daralan panelde de satır bozulmaz;
+        yalnız gerçekten dar konteynerde tek kolon istife düşer. Span/hero
+        yok, hiçbir kırılımda boş hücre veya asimetri oluşmaz. KPI para
+        değerleri dar hücreye sığması için ondalıksız (formatPriceRounded).
       */}
       <section
         aria-label="Genel bakış metrikleri"
         className="@container rounded-lg border border-hairline bg-card overflow-hidden"
       >
-        <div className="-mr-px -mb-px grid grid-cols-1 @4xl:grid-cols-5">
+        <div className="-mr-px -mb-px grid grid-cols-1 @2xl:grid-cols-5">
           <KpiTile
             stagger={0}
             icon={DollarSign}
             label="SON 30 GÜN CİRO"
-            value={sectionErrors.analytics ? '—' : formatPrice(totalRevenue)}
+            value={sectionErrors.analytics ? '—' : formatPriceRounded(totalRevenue)}
             footer={
               sectionErrors.analytics ? (
                 <p className="text-xs text-muted-foreground">Satış verisi alınamadı</p>
@@ -262,7 +264,7 @@ export default function DashboardPage() {
             stagger={3}
             icon={Archive}
             label="ÖLÜ STOK"
-            value={deadStockUnavailable ? '—' : formatPrice(lockedCapital.total)}
+            value={deadStockUnavailable ? '—' : formatPriceRounded(lockedCapital.total)}
             valueSuffix={
               !deadStockUnavailable &&
               lockedCapital.isEstimate && (

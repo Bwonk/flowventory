@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { TokenHelpers } from '@/helpers/token-helpers';
 import { ApiRequests } from '@/lib/api-requests';
-import { DEFAULT_CURRENCY, formatMoney, isValidCurrencyCode } from '@/lib/format';
+import { DEFAULT_CURRENCY, formatMoney, formatMoneyRounded, isValidCurrencyCode } from '@/lib/format';
 
 /**
  * Mağazanın aktif para birimi (client tarafı).
@@ -57,6 +57,11 @@ function setActiveCurrency(code: string) {
  */
 export function formatPrice(value: number): string {
   return formatMoney(value, getActiveCurrency());
+}
+
+/** Ondalıksız fiyat — dar KPI karoları için ("₺1.813.373"). */
+export function formatPriceRounded(value: number): string {
+  return formatMoneyRounded(value, getActiveCurrency());
 }
 
 /**

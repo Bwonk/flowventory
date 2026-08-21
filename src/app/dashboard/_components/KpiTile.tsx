@@ -44,16 +44,18 @@ export function KpiTile({
           </span>
         )}
       </div>
-      <p className="mt-2 font-mono text-xl font-medium tabular-nums text-foreground @7xl:text-2xl">
-        {value}
+      <div className="mt-2 min-w-0">
+        <p className="truncate font-mono text-lg font-medium tabular-nums text-foreground @5xl:text-xl @7xl:text-2xl">
+          {value}
+        </p>
         {valueSuffix}
-      </p>
+      </div>
       <div className="mt-auto min-w-0 pt-3">{footer}</div>
     </>
   );
 
   const baseClass = cn(
-    'flex flex-col border-b border-r border-border p-5',
+    'flex min-w-0 flex-col border-b border-r border-border p-5',
     stagger != null && 'animate-enter',
     className,
   );

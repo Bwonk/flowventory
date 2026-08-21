@@ -101,10 +101,13 @@ Yüzey tarifleri:
 - **Metrik paneli (dashboard):** KPI şeridi ve ilişkili özet bandı (ör. Stok
   Sağlığı metresi) **tek kartta** yaşar — grid + `border-t border-border`
   ayrılmış tam genişlik alt band; iki komşu kart olarak bölünmez. Karolar
-  **eşit genişlikte tek satırda** dizilir (`grid-cols-1 @4xl:grid-cols-5`);
-  span/hero karo yok — dar konteynerde tek kolon dikey istife düşer, hiçbir
-  kırılımda boş hücre veya asimetri oluşmaz. Karo içeriği kompakttır: eyebrow
-  + değer + tek satır truncate alt bilgi. Tıklanabilir karo bütünüyle
+  **eşit genişlikte tek satırda** dizilir (`grid-cols-1 @2xl:grid-cols-5` —
+  eşik düşüktür ki sidebar açıkken daralan panelde de satır bozulmasın);
+  span/hero karo yok — yalnız gerçekten dar konteynerde tek kolon istife
+  düşer, hiçbir kırılımda boş hücre veya asimetri oluşmaz. Karo içeriği
+  kompakttır: eyebrow + değer + tek satır truncate alt bilgi; KPI para
+  değerleri ondalıksızdır (`formatPriceRounded` — kuruş tablo/detay işidir)
+  ve değer satırı kademeli küçülür (`text-lg @5xl:text-xl @7xl:text-2xl`). Tıklanabilir karo bütünüyle
   `Link`'tir; dinlenme affordance'ı eyebrow satırının sağ ucundaki
   `ArrowUpRight` köşe okudur (hover: `text-foreground` + 0.5 çapraz kayma) —
   karo içinde uzun CTA metni kullanılmaz. Band başlığı kart h2'si değil,
