@@ -3,6 +3,7 @@
 import type { InventoryInsightApiResponse } from '@/app/api/insights/inventory/route';
 import type { AbcClass } from '@/lib/reports/abc';
 import { formatPrice } from '@/lib/currency';
+import { AbcParetoBar } from './AbcParetoBar';
 import { ABC_BADGE_CLASS, ABC_LABELS, type AbcFilter } from './constants';
 
 interface AbcSectionProps {
@@ -47,6 +48,7 @@ export function AbcSection({ summary, selected, onSelect }: AbcSectionProps) {
           );
         })}
       </div>
+      <AbcParetoBar summary={summary} />
     </section>
   );
 }
