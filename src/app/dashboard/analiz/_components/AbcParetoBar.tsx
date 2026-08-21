@@ -66,15 +66,15 @@ export function AbcParetoBar({ rows, metric }: AbcParetoBarProps) {
     return result;
   };
 
-  const metricWord = metric === 'kar' ? 'kârın' : 'cironun';
   const metricShares = share(r => r.share);
   const stockShares = share(r => (totalStockValue > 0 ? r.stockValue / totalStockValue : 0));
   const countShares = share(r => r.productCount / totalCount);
 
   const cRow = byClass.get('C');
+  // Sayı sonuna iyelik eki gerektirmeyen kalıp — ünlü uyumu sayıya göre değişirdi.
   const insight =
     cRow && totalStockValue > 0 && cRow.stockValue > 0
-      ? `C sınıfı ${metricWord} ${formatPercent(metricShares.C, 0)}'ini üretip sermayenin ${formatPercent(stockShares.C, 0)}'ini bağlıyor.`
+      ? `C sınıfının ${metric === 'kar' ? 'kâr' : 'ciro'} payı ${formatPercent(metricShares.C, 0)}, bağlı sermaye payı ${formatPercent(stockShares.C, 0)}.`
       : null;
 
   return (
