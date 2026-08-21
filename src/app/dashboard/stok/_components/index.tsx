@@ -8,6 +8,8 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import type { HomePageProps, Product } from '@/lib/products/types';
 import { useProductFilters } from './hooks/use-product-filters';
 import { MonoLabel } from '@/components/shared/filters/atoms';
+import { TableSection } from '@/components/shared/data-table/TableSection';
+import { formatNumber } from '@/lib/format';
 import { FilterBar } from './components/FilterBar';
 import { ProductTable } from './components/ProductTable';
 import { ProductDetailModal } from './product-detail/ProductDetailModal';
@@ -59,33 +61,33 @@ const HomePage: React.FC<HomePageProps> = ({ token, products = [], analytics, vi
           }
         />
 
-        {/* Birleşik filtre konteyneri */}
-        <FilterBar
-          query={filters.query}
-          onQueryChange={filters.setQuery}
-          statusFilter={filters.statusFilter}
-          onStatusFilterChange={filters.setStatusFilter}
-          stockRange={filters.stockRange}
-          onStockRangeChange={filters.setStockRange}
-          sortBy={filters.sortBy}
-          onSortByChange={filters.setSortBy}
-          hasActiveFilters={filters.hasActiveFilters}
-          onClearAll={filters.clearAllFilters}
-        />
-
-        {/* Ürün tablosu */}
-        <ProductTable
-          rows={filters.displayedRows}
-          hasActiveFilters={filters.hasActiveFilters}
-          onClearFilters={filters.clearAllFilters}
-          onSelectProduct={productId => {
-            const product = products.find(p => p.id === productId);
-            if (product) setSelectedProduct(product);
-          }}
-          hasMore={filters.hasMore}
-          onLoadMore={filters.loadMore}
-          loadingMore={filters.loadingMore}
-        />
+        {/* Tek kart: başlık + filtre şeridi + tablo (analiz ile aynı düzen) */}
+        <TableSection title="Ürünler" count={`${formatNumber(filters.totalResults)} ürün listeleniyor`}>
+          <FilterBar
+            query={filters.query}
+            onQueryChange={filters.setQuery}
+            statusFilter={filters.statusFilter}
+            onStatusFilterChange={filters.setStatusFilter}
+            stockRange={filters.stockRange}
+            onStockRangeChange={filters.setStockRange}
+            sortBy={filters.sortBy}
+            onSortByChange={filters.setSortBy}
+            hasActiveFilters={filters.hasActiveFilters}
+            onClearAll={filters.clearAllFilters}
+          />
+          <ProductTable
+            rows={filters.displayedRows}
+            hasActiveFilters={filters.hasActiveFilters}
+            onClearFilters={filters.clearAllFilters}
+            onSelectProduct={productId => {
+              const product = products.find(p => p.id === productId);
+              if (product) setSelectedProduct(product);
+            }}
+            hasMore={filters.hasMore}
+            onLoadMore={filters.loadMore}
+            loadingMore={filters.loadingMore}
+          />
+        </TableSection>
       </PageContainer>
 
       {/* Ürün detay modalı */}

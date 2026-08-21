@@ -43,7 +43,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   hasActiveFilters,
   onClearAll,
 }) => (
-  <div className="mb-8 rounded-lg border border-hairline bg-card">
+  <div className="border-b border-border">
     {/* Satır 1: arama solda, filtre dropdown'ları sağda */}
     <div className="flex flex-col gap-2 p-2 sm:flex-row sm:items-center">
       <div className="relative flex-1">
