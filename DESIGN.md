@@ -178,8 +178,10 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   hairline, eksen etiketleri mono.
 - **İkonlar:** varsayılan kütüphane lucide-react, `size-4` (nav'da `size-4`,
   buton içinde `size-3`), stroke varsayılan; ikon+metin çiftlerinde optik
-  hizalama. Etkileşimli dört nokta — sidebar navigasyonu, bildirim zili,
-  liste satırı "detaya git" affordance'ı ve yenile aksiyonu — animasyonlu
+  hizalama. Etkileşimli sanksiyonlu noktalar — sidebar navigasyonu, bildirim
+  zili, liste satırı "detaya git" affordance'ı, yenile aksiyonu, rapor
+  aksiyon rafındaki yazdır/gönder/parametre/sepet tetikleri ve sepet satırı
+  silme (çöp) — animasyonlu
   heroicons kullanır: [src/components/ui/icons/](src/components/ui/icons).
   Karma kütüphane **bilinçli**: heroicons stroke-1.5, lucide stroke-2; ikisi
   aynı satırda yan yana getirilmez. Animasyonlu ikonlar bir `<div>` sarmaladığı
