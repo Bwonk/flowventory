@@ -1,0 +1,45 @@
+<!doctype html>
+<!-- Dev test harness: ikas panelinin AppBridge postMessage protokolünü taklit
+     ederek uygulamayı iframe içinde gerçek veriyle açar. Token'ı yalnız
+     development'ta yanıt veren /api/dev/token sağlar. Production'da işlevsiz. -->
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <title>Flowventory Dev Harness</title>
+  <style>
+    html, body { margin: 0; height: 100%; }
+    iframe { border: 0; width: 100%; height: 100%; display: block; }
+  </style>
+</head>
+<body>
+  <iframe id="app" src="about:blank"></iframe>
+  <script>
+    const page = new URLSearchParams(location.search).get('page') || '/dashboard/rapor';
+    const frame = document.getElementById('app');
+
+    async function getDevToken() {
+      const res = await fetch('/api/dev/token');
+      if (!res.ok) throw new Error('dev token alınamadı: ' + res.status);
+      return (await res.json()).data;
+    }
+
+    getDevToken().then(({ token, authorizedAppId }) => {
+      window.addEventListener('message', event => {
+        const type = event.data && event.data.type;
+        if (!type) return;
+        if (type === 'AUTHORIZED_APP_ID') {
+          frame.contentWindow.postMessage(
+            { type: 'AUTHORIZED_APP_ID_RESPONSE', data: { authorizedAppId } }, '*');
+        } else if (type === 'REQUEST_TOKEN') {
+          frame.contentWindow.postMessage(
+            { type: 'REQUEST_TOKEN_RESPONSE', data: { token } }, '*');
+        }
+        // CLOSE_LOADER vb. sessizce yok sayılır.
+      });
+      frame.src = page;
+    }).catch(err => {
+      document.body.innerHTML = '<pre style="padding:16px">' + err.message + '</pre>';
+    });
+  </script>
+</body>
+</html>

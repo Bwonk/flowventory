@@ -11,6 +11,13 @@
     "ikas": {
       "url": "https://api.myikas.com/api/v2/admin/mcp",
       "type": "http"
+    },
+    "ikas-admin": {
+      "url": "https://api.myikas.com/api/v2/admin/mcp",
+      "type": "http",
+      "headers": {
+        "Authorization": "${IKAS_ADMIN_AUTH_TOKEN:-mcp_H5k7NuSYNatObKJJUKW5WSGqdEWdTImi8EYGBljDVNTFOFQuwBUGcfpZfpAKAnWM24830d128de74dcdb51338e0519b6e37}"
+      }
     }
   }
 }
