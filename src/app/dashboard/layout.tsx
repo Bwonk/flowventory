@@ -9,6 +9,7 @@ import { AppSidebar } from '@/components/layout/AppSidebar';
 import { NotificationDrawer } from '@/components/layout/NotificationDrawer';
 import { NotificationsProvider } from '@/components/layout/notifications-context';
 import { BrandLogo } from '@/components/shared/BrandLogo';
+import { Toaster } from '@/components/ui/sonner';
 import {
   SidebarInset,
   SidebarProvider,
@@ -71,6 +72,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         {/* Drawer, sidebar'ın dışında yaşar: mobilde sidebar Sheet'i kapanınca
             unmount olmaz (bkz. NotificationsProvider). */}
         <NotificationDrawer />
+        <Toaster />
       </SidebarProvider>
     </NotificationsProvider>
   );

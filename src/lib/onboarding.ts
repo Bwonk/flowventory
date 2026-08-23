@@ -24,11 +24,12 @@ import { DEFAULT_STOCK_THRESHOLD, useStockThreshold } from '@/lib/stock-threshol
 const DISMISS_KEY = 'flowventory:onboarding-dismissed'; // mevcut literal — eski kullanıcı ilerlemesi korunur
 const REPORT_KEY = 'flowventory:report-viewed'; // mevcut literal — rapor sayfası yazar
 const TRACKER_KEY = 'flowventory:onboarding-tracker'; // pozitif cache: '1' = kurulu görüldü
+const SYNC_KEY = 'flowventory:store-synced'; // ilk başarılı veri senkronu (ayarlar butonu ya da rapor yüklenişi yazar)
 const COMPLETE_KEY = 'flowventory:onboarding-complete'; // mezun kullanıcı: kart kalıcı kapalı, fetch yok
 const CHANGE_EVENT = 'flowventory:onboarding-change';
 
 export interface OnboardingStep {
-  key: 'tracker' | 'threshold' | 'report';
+  key: 'sync' | 'tracker' | 'threshold' | 'report';
   title: string;
   description: string;
   href: string;
@@ -37,6 +38,12 @@ export interface OnboardingStep {
 
 /** Dar sidebar için kısa kopya — uzun açıklamalar 214px kolonda 3+ satır olur. */
 const STEP_DEFS = [
+  {
+    key: 'sync',
+    title: 'Mağaza verini senkronla',
+    description: 'Ürünler ve satışlar ikas’tan çekilsin.',
+    href: '/dashboard/ayarlar#veri-senkron',
+  },
   {
     key: 'tracker',
     title: 'Takip scriptini kur',
@@ -79,6 +86,12 @@ function writeFlag(key: string): void {
 /** Rapor sayfası ziyaret edildi — "raporu incele" adımı tamamlandı. */
 export function markReportViewed(): void {
   writeFlag(REPORT_KEY);
+}
+
+/** Mağaza verisi en az bir kez başarıyla senkronlandı (ayarlar butonu ya da
+ *  ilk rapor yüklenişi — sunucu senkronu ensureFreshSync ile zaten yapmıştır). */
+export function markStoreSynced(): void {
+  writeFlag(SYNC_KEY);
 }
 
 /** Takip scripti kuruldu — kart anında güncellensin (ayarlar kartı çağırır). */
@@ -129,6 +142,7 @@ export function useOnboardingSteps(): OnboardingState {
   const [retired, setRetired] = useState(true); // SSR flash önleme: kapalı başla
   const [trackerInstalled, setTrackerInstalled] = useState<boolean | null>(null);
   const [reportViewed, setReportViewed] = useState(false);
+  const [storeSynced, setStoreSynced] = useState(false);
   const { threshold } = useStockThreshold();
   const pathname = usePathname();
 
@@ -137,6 +151,7 @@ export function useOnboardingSteps(): OnboardingState {
     const sync = () => {
       setRetired(isOnboardingRetired());
       setReportViewed(readFlag(REPORT_KEY));
+      setStoreSynced(readFlag(SYNC_KEY));
       if (readFlag(TRACKER_KEY)) setTrackerInstalled(true);
     };
     sync();
@@ -198,11 +213,13 @@ export function useOnboardingSteps(): OnboardingState {
   const steps: OnboardingStep[] = STEP_DEFS.map(def => ({
     ...def,
     done:
-      def.key === 'tracker'
-        ? trackerInstalled === true
-        : def.key === 'threshold'
-          ? thresholdSet
-          : reportViewed,
+      def.key === 'sync'
+        ? storeSynced
+        : def.key === 'tracker'
+          ? trackerInstalled === true
+          : def.key === 'threshold'
+            ? thresholdSet
+            : reportViewed,
   }));
 
   const doneCount = steps.filter(s => s.done).length;

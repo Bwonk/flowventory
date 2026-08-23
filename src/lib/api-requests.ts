@@ -12,6 +12,11 @@ import { PurchaseReportApiResponse } from '../app/api/reports/purchase/route';
 import { ConversionInsightApiResponse } from '../app/api/insights/conversion/route';
 import { InventoryInsightApiResponse } from '../app/api/insights/inventory/route';
 import { NotificationsApiResponse } from '../app/api/notifications/route';
+import { QuickStockApiResponse } from '../app/api/ikas/quick-stock/route';
+import { AssignVendorApiResponse } from '../app/api/ikas/assign-vendor/route';
+import { VendorsApiResponse, VendorListItem, DeleteVendorApiResponse } from '../app/api/vendors/route';
+import { SendVendorReportApiResponse } from '../app/api/vendors/send-report/route';
+import { SyncApiResponse } from '../app/api/sync/route';
 
 export async function makePostRequest<T>({ url, data, token }: { url: string; data?: Record<string, unknown>; token?: string }) {
   return axios.post<ApiResponseType<T>>(url, data, {
@@ -25,6 +30,17 @@ export async function makePostRequest<T>({ url, data, token }: { url: string; da
 
 export async function makePutRequest<T>({ url, data, token }: { url: string; data?: Record<string, unknown>; token?: string }) {
   return axios.put<ApiResponseType<T>>(url, data, {
+    headers: token
+      ? {
+          Authorization: `JWT ${token}`,
+        }
+      : undefined,
+  });
+}
+
+export async function makeDeleteRequest<T>({ url, data, token }: { url: string; data?: Record<string, unknown>; token?: string }) {
+  return axios.delete<ApiResponseType<T>>(url, {
+    data,
     headers: token
       ? {
           Authorization: `JWT ${token}`,
@@ -54,6 +70,12 @@ export const ApiRequests = {
       token: string,
       input: { productId: string; variantId: string; stockLocationId: string; stockCount: number },
     ) => makePostRequest<{ ok: boolean }>({ url: '/api/ikas/update-stock', token, data: input }),
+    quickStock: (token: string, input: { productId: string; variantId: string; addQty: number }) =>
+      makePostRequest<QuickStockApiResponse>({ url: '/api/ikas/quick-stock', token, data: input }),
+    assignVendor: (
+      token: string,
+      input: { vendorName: string } & ({ productId: string } | { productIds: string[] }),
+    ) => makePostRequest<AssignVendorApiResponse>({ url: '/api/ikas/assign-vendor', token, data: input }),
     getHourlyAnalytics: (token: string, date?: string) =>
       makeGetRequest<HourlyAnalyticsApiResponse>({
         url: '/api/ikas/analytics/hourly',
@@ -104,6 +126,22 @@ export const ApiRequests = {
       makeGetRequest<NotificationsApiResponse>({ url: '/api/notifications', token }),
     markRead: (token: string, ids?: string[]) =>
       makePostRequest<{ ok: boolean }>({ url: '/api/notifications', token, data: ids ? { ids } : {} }),
+  },
+  vendors: {
+    list: (token: string) => makeGetRequest<VendorsApiResponse>({ url: '/api/vendors', token }),
+    create: (token: string, input: { vendorName: string; email: string | null; phone: string | null }) =>
+      makePostRequest<VendorListItem>({ url: '/api/vendors', token, data: input }),
+    updateContact: (
+      token: string,
+      input: { vendorId: string; vendorName: string; email: string | null; phone: string | null },
+    ) => makePutRequest<VendorListItem>({ url: '/api/vendors', token, data: input }),
+    sendReport: (token: string, input: { vendorId: string; lines?: { variantId: string; qty: number }[] }) =>
+      makePostRequest<SendVendorReportApiResponse>({ url: '/api/vendors/send-report', token, data: input }),
+    delete: (token: string, input: { vendorId: string }) =>
+      makeDeleteRequest<DeleteVendorApiResponse>({ url: '/api/vendors', token, data: input }),
+  },
+  sync: {
+    run: (token: string) => makePostRequest<SyncApiResponse>({ url: '/api/sync', token }),
   },
   merchantSettings: {
     get: (token: string) =>

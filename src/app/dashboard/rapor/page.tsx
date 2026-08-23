@@ -2,29 +2,33 @@
 
 import { logger } from '@/lib/logger';
 import { useCallback, useEffect, useState } from 'react';
-import Image from 'next/image';
-import { AlertTriangle, Printer } from 'lucide-react';
 import { TokenHelpers } from '@/helpers/token-helpers';
 import { ApiRequests } from '@/lib/api-requests';
 import type { PurchaseReportApiResponse } from '@/app/api/reports/purchase/route';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { ErrorState } from '@/components/shared/ErrorState';
-import { formatPrice, useMerchantCurrency } from '@/lib/currency';
-import { markReportViewed } from '@/lib/onboarding';
+import { useMerchantCurrency } from '@/lib/currency';
+import { markReportViewed, markStoreSynced } from '@/lib/onboarding';
 import { ArrowPathIcon } from '@/components/ui/icons/arrow-path';
+import { PrinterIcon } from '@/components/ui/icons/printer';
 import { useIconHover } from '@/components/ui/icons/use-icon-hover';
 import { RaporSkeleton } from './_components/RaporSkeleton';
+import { AddVendorDialog } from './_components/AddVendorDialog';
+import { BasketSheet } from './_components/BasketSheet';
+import { clampQty, seedBasket, type BasketState } from './_components/basket';
+import { ReportKpiStrip } from './_components/ReportKpiStrip';
+import { ReportParamsPopover } from './_components/ReportParamsPopover';
+import { VendorTabsPanel } from './_components/VendorTabsPanel';
+import type { VendorListItem } from '@/app/api/vendors/route';
 
-/** Yenile aksiyonu — ikon animasyonu butonun hover'ından sürülür. */
+/** Yenile aksiyonu — aksiyon rafının ghost segmenti; ikon animasyonu butondan sürülür. */
 function RefreshButton({ onClick }: { onClick: () => void }) {
   const { ref, hoverProps } = useIconHover();
 
   return (
-    <Button variant="outline" size="sm" onClick={onClick} className="gap-1.5" {...hoverProps}>
+    <Button variant="ghost" size="sm" onClick={onClick} className="gap-1.5" {...hoverProps}>
       {/* size-3! gerekli: Button'ın [&_svg:not([class*='size-'])]:size-4 kuralı
           :not() attribute seçicisi yüzünden daha yüksek specificity'ye sahip. */}
       <ArrowPathIcon ref={ref} size={12} className="flex shrink-0 [&>svg]:size-3!" aria-hidden />
@@ -33,12 +37,25 @@ function RefreshButton({ onClick }: { onClick: () => void }) {
   );
 }
 
+/** Global yazdırma — rafın sağ ucunu demirleyen tek ink segment. */
+function PrintPdfButton({ onClick, disabled }: { onClick: () => void; disabled: boolean }) {
+  const { ref, hoverProps } = useIconHover();
+
+  return (
+    <Button size="sm" onClick={onClick} disabled={disabled} className="gap-1.5" {...hoverProps}>
+      <PrinterIcon ref={ref} size={12} className="flex shrink-0 [&>svg]:size-3!" aria-hidden />
+      Yazdır / PDF
+    </Button>
+  );
+}
+
 /**
  * Satın Alma Raporu sayfası.
  *
- * Tedarikçi bazlı gruplanmış sipariş önerileri; leadTime/hedef gün ayarları
- * buradan güncellenebilir. "Yazdır" tarayıcının print → PDF akışını kullanır
- * (Türkçe karakter sorunları olmadığı için jspdf yerine print CSS tercih edildi).
+ * Üstte KPI şeridi, altında tedarikçi tab'lı tek panel; leadTime/hedef gün
+ * ayarları buradan güncellenebilir. "Yazdır" tarayıcının print → PDF akışını
+ * kullanır (Türkçe karakter sorunları olmadığı için jspdf yerine print CSS
+ * tercih edildi).
  */
 export default function RaporPage() {
   // Mağaza para birimini tazeler; formatPrice aktif kodu okur.
@@ -48,16 +65,94 @@ export default function RaporPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Ayar taslakları (kaydedilince rapor yeniden hesaplanır)
-  const [leadTimeDraft, setLeadTimeDraft] = useState<number | null>(null);
-  const [targetDaysDraft, setTargetDaysDraft] = useState<number | null>(null);
-  const [savingSettings, setSavingSettings] = useState(false);
+  // Tek tık stok girişi sonrası Stok hücresi override'ları (variantId → yeni toplam).
+  // Öneri/toplamlar yeniden hesaplanmaz; "Yenile" sunucuda tazeler.
+  const [stockOverrides, setStockOverrides] = useState<Record<string, number>>({});
+
+  const handleStockChange = useCallback((variantId: string, newTotalStock: number) => {
+    setStockOverrides(prev => ({ ...prev, [variantId]: newTotalStock }));
+  }, []);
+
+  // Sepet (variantId → adet): tablo tikleri ekler/çıkarır, çekmece düzenler.
+  // Geçicidir — "Yenile"/refetch güncel önerilerin varsayılanıyla yeniden kurar.
+  const [basket, setBasket] = useState<BasketState>({});
+
+  const handleLineQtyChange = useCallback((variantId: string, qty: number | null) => {
+    setBasket(prev => {
+      if (qty === null) {
+        if (!(variantId in prev)) return prev;
+        const next = { ...prev };
+        delete next[variantId];
+        return next;
+      }
+      return { ...prev, [variantId]: clampQty(qty) };
+    });
+  }, []);
+
+  const handleResetBasket = useCallback(() => {
+    setBasket(report ? seedBasket(report) : {});
+  }, [report]);
+
+  // Gönderim başarısında o tedarikçinin satırları sepetten düşer — gönderilen
+  // sipariş "tamamlandı" sayılır; Yenile öneriyi güncel stokla tazeler.
+  const handleVendorSent = useCallback(
+    (vendorId: string) => {
+      const vendor = report?.vendors.find(v => v.vendorId === vendorId);
+      if (!vendor) return;
+      setBasket(prev => {
+        const next = { ...prev };
+        for (const line of vendor.lines) delete next[line.variantId];
+        return next;
+      });
+    },
+    [report],
+  );
+
+  // Atama popover'ındaki mevcut tedarikçi listesi; hatası ölümcül değil
+  // (boş liste de serbest metinle eklemeye izin verir).
+  const [vendorList, setVendorList] = useState<VendorListItem[]>([]);
+
+  // Aktif tedarikçi tab'ı (vendorId ?? 'none'). Geçerliliği panel içinde
+  // türetilerek denetlenir: seçili tedarikçi kaybolursa ilk tab'a düşülür.
+  const [activeVendorKey, setActiveVendorKey] = useState<string | null>(null);
+
+  // Ürün Ekle sonrası aktif tab'ı adıyla yeniden hedefle: local- id ilk
+  // atamada gerçek ikas id'sine dönüştüğü için key değişir, tab zıplamasın.
+  const [pendingVendorName, setPendingVendorName] = useState<string | null>(null);
+
+  // Tek tedarikçi yazdırma: doluyken diğer tablar ve özet print'te gizlenir.
+  // afterprint (iptalde de tetiklenir) durumu sıfırlar; rAF class'ların
+  // print'ten önce flush olmasını garantiler.
+  const [printVendorId, setPrintVendorId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const reset = () => setPrintVendorId(null);
+    window.addEventListener('afterprint', reset);
+    return () => window.removeEventListener('afterprint', reset);
+  }, []);
+
+  useEffect(() => {
+    if (printVendorId === null) return;
+    const frame = requestAnimationFrame(() => window.print());
+    return () => cancelAnimationFrame(frame);
+  }, [printVendorId]);
 
   const fetchReport = useCallback(async (currentToken: string): Promise<boolean> => {
     try {
-      const res = await ApiRequests.reports.purchase(currentToken);
+      const [res, vendorsRes] = await Promise.all([
+        ApiRequests.reports.purchase(currentToken),
+        ApiRequests.vendors.list(currentToken).catch(() => null),
+      ]);
+      if (vendorsRes?.status === 200 && vendorsRes.data?.data) {
+        setVendorList(vendorsRes.data.data.vendors);
+      }
       if (res.status === 200 && res.data?.data) {
         setReport(res.data.data);
+        setStockOverrides({});
+        setBasket(seedBasket(res.data.data));
+        // Rapor üretildiyse sunucu ensureFreshSync'i çalıştırmıştır —
+        // Başlarken'deki "Mağaza verini senkronla" adımı kendiliğinden biter.
+        markStoreSynced();
         return true;
       }
       return false;
@@ -96,32 +191,79 @@ export default function RaporPage() {
     markReportViewed();
   }, []);
 
-  const saveSettings = useCallback(async () => {
-    if (!token || !report) return;
-    setSavingSettings(true);
-    try {
-      await ApiRequests.merchantSettings.update(token, {
-        ...(leadTimeDraft !== null ? { leadTimeDays: leadTimeDraft } : {}),
-        ...(targetDaysDraft !== null ? { targetStockDays: targetDaysDraft } : {}),
-      });
-      setLeadTimeDraft(null);
-      setTargetDaysDraft(null);
+  // Parametre popover'ından: kaydet + raporu yeniden hesapla. Hata yönetimi
+  // (log + popover'ı açık bırakma) çağıran bileşende.
+  const applySettings = useCallback(
+    async (leadTimeDays: number, targetStockDays: number) => {
+      if (!token) return;
+      await ApiRequests.merchantSettings.update(token, { leadTimeDays, targetStockDays });
       await fetchReport(token);
-    } catch (error) {
-      logger.error('Error saving report settings', { error });
-    } finally {
-      setSavingSettings(false);
-    }
-  }, [token, report, leadTimeDraft, targetDaysDraft, fetchReport]);
+    },
+    [token, fetchReport],
+  );
+
+  const handleVendorContactSaved = useCallback(
+    (vendorId: string, next: { email: string | null; phone: string | null }) => {
+      setVendorList(prev => prev.map(v => (v.vendorId === vendorId ? { ...v, ...next } : v)));
+    },
+    [],
+  );
+
+  const handleVendorDeleted = useCallback((vendorId: string) => {
+    setVendorList(prev => prev.filter(v => v.vendorId !== vendorId));
+    // Silinen tab aktifse panel ilk tab'a düşer (effectiveActiveKey fallback'i).
+  }, []);
+
+  const handleAssigned = useCallback(async () => {
+    if (!token) return;
+    await fetchReport(token);
+  }, [token, fetchReport]);
+
+  const handleProductsAssigned = useCallback(
+    async (vendorName: string) => {
+      if (!token) return;
+      await fetchReport(token);
+      setPendingVendorName(vendorName);
+    },
+    [token, fetchReport],
+  );
+
+  useEffect(() => {
+    if (pendingVendorName === null) return;
+    const lowered = pendingVendorName.toLocaleLowerCase('tr');
+    const inReport = report?.vendors.find(v => v.vendorName.toLocaleLowerCase('tr') === lowered);
+    const inList = vendorList.find(v => v.vendorName.toLocaleLowerCase('tr') === lowered);
+    const key = inReport ? (inReport.vendorId ?? 'none') : inList?.vendorId;
+    if (key) setActiveVendorKey(key);
+    setPendingVendorName(null);
+  }, [pendingVendorName, report, vendorList]);
 
   if (loading) return <RaporSkeleton />;
   if (error) return <ErrorState description={error} onRetry={initialize} />;
   if (!report) return null;
 
-  const leadTime = leadTimeDraft ?? report.leadTimeDays;
-  const targetDays = targetDaysDraft ?? report.targetStockDays;
-  const settingsDirty = leadTimeDraft !== null || targetDaysDraft !== null;
   const generatedAt = new Date(report.generatedAt);
+
+  // Tab kaynağı: rapor tedarikçileri (ürünü olan herkes) ∪ henüz ürünsüz
+  // kayıtlar (yeni eklenen local- tedarikçiler dahil) — tab anında oluşur.
+  const reportVendorIds = new Set(report.vendors.map(v => v.vendorId));
+  const reportVendorNames = new Set(report.vendors.map(v => v.vendorName.toLocaleLowerCase('tr')));
+  const displayVendors = [
+    ...report.vendors,
+    ...vendorList
+      .filter(
+        v =>
+          !reportVendorIds.has(v.vendorId) &&
+          !reportVendorNames.has(v.vendorName.toLocaleLowerCase('tr')),
+      )
+      .map(v => ({
+        vendorId: v.vendorId,
+        vendorName: v.vendorName,
+        lines: [],
+        totalCost: 0,
+        hasEstimate: false,
+      })),
+  ];
 
   return (
     <PageContainer className="print:max-w-none print:p-0">
@@ -129,80 +271,50 @@ export default function RaporPage() {
         eyebrow="RAPOR"
         title="Satın Alma Raporu"
         description={`Son ${report.salesWindowDays} günün satış hızına göre · ${generatedAt.toLocaleString('tr-TR')}`}
+      />
+
+      {/* Özet + aksiyon rafı (panelle tek silüet) — tek tedarikçi yazdırmada çıktıya girmez */}
+      <ReportKpiStrip
+        report={report}
+        vendorCount={displayVendors.filter(v => v.vendorId !== null).length}
+        printVendorId={printVendorId}
         actions={
-          <div className="flex gap-2 print:hidden">
+          <>
+            <ReportParamsPopover
+              leadTimeDays={report.leadTimeDays}
+              targetStockDays={report.targetStockDays}
+              onApply={applySettings}
+            />
+            {token && (
+              <AddVendorDialog
+                token={token}
+                onCreated={vendor => {
+                  setVendorList(prev =>
+                    [...prev, vendor].sort((a, b) => a.vendorName.localeCompare(b.vendorName, 'tr')),
+                  );
+                  // Yeni tedarikçinin tab'ı anında oluşur ve aktif olur.
+                  setActiveVendorKey(vendor.vendorId);
+                }}
+              />
+            )}
             <RefreshButton onClick={initialize} />
-            <Button
-              size="sm"
-              onClick={() => window.print()}
-              disabled={report.lineCount === 0}
-              className="gap-1.5"
-            >
-              <Printer className="size-3" aria-hidden />
-              Yazdır / PDF
-            </Button>
-          </div>
+            <BasketSheet
+              token={token}
+              vendors={displayVendors}
+              vendorList={vendorList}
+              basket={basket}
+              onLineQtyChange={handleLineQtyChange}
+              onResetBasket={handleResetBasket}
+              onVendorSent={handleVendorSent}
+            />
+            {/* Ghost segmentlerle ink birincil arasında ince ayraç */}
+            <span aria-hidden className="mx-1 h-4 w-px bg-hairline" />
+            <PrintPdfButton onClick={() => window.print()} disabled={Object.keys(basket).length === 0} />
+          </>
         }
       />
 
-      {/* Parametreler */}
-      <section className="mb-4 flex flex-wrap items-end gap-4 rounded-lg border border-hairline bg-card p-4 print:hidden">
-        <div>
-          <label htmlFor="leadTime" className="mb-1 block text-xs text-muted-foreground">
-            Tedarik süresi (gün)
-          </label>
-          <Input
-            id="leadTime"
-            type="number"
-            min={0}
-            max={365}
-            value={leadTime}
-            onChange={e => setLeadTimeDraft(Math.max(0, Number(e.target.value) || 0))}
-            className="w-24"
-          />
-        </div>
-        <div>
-          <label htmlFor="targetDays" className="mb-1 block text-xs text-muted-foreground">
-            Hedef stok (gün)
-          </label>
-          <Input
-            id="targetDays"
-            type="number"
-            min={1}
-            max={365}
-            value={targetDays}
-            onChange={e => setTargetDaysDraft(Math.max(1, Number(e.target.value) || 1))}
-            className="w-24"
-          />
-        </div>
-        <Button onClick={saveSettings} disabled={!settingsDirty || savingSettings}>
-          {savingSettings ? 'Hesaplanıyor…' : 'Uygula'}
-        </Button>
-        <p className="text-xs text-muted-foreground">
-          Öneri = günlük satış × (hedef + tedarik süresi) + emniyet stoğu − mevcut stok, 5&apos;in katına yuvarlanır.
-        </p>
-      </section>
-
-      {/* Özet */}
-      <section className="@container mb-4 rounded-lg border border-hairline bg-card overflow-hidden">
-        <div className="-mr-px -mb-px grid grid-cols-1 @lg:grid-cols-2 @5xl:grid-cols-4">
-          {[
-            { label: 'TOPLAM MALİYET', value: formatPrice(report.totalCost) },
-            { label: 'SİPARİŞ SATIRI', value: `${report.lineCount}` },
-            { label: 'ACİL', value: `${report.urgentCount}`, highlight: report.urgentCount > 0 },
-            { label: 'TEDARİKÇİ', value: `${report.vendors.length}` },
-          ].map(item => (
-            <div key={item.label} className="border-b border-r border-border p-4">
-              <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{item.label}</p>
-              <p className={`mt-1 font-mono text-xl font-medium tabular-nums @7xl:text-2xl ${item.highlight ? 'text-destructive' : 'text-foreground'}`}>
-                {item.value}
-              </p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {report.lineCount === 0 ? (
+      {displayVendors.length === 0 ? (
         <div className="flex flex-col items-center gap-2 rounded-lg border border-hairline bg-card px-6 py-16 text-center">
           <p className="text-sm font-medium text-foreground">Sipariş önerisi yok</p>
           <p className="text-xs text-muted-foreground">
@@ -210,93 +322,30 @@ export default function RaporPage() {
           </p>
         </div>
       ) : (
-        report.vendors.map(vendor => (
-          <section
-            key={vendor.vendorId ?? 'none'}
-            className="mb-4 overflow-hidden rounded-lg border border-hairline bg-card print:break-inside-avoid"
-          >
-            <div className="flex items-center justify-between border-b border-border px-5 py-3">
-              <div>
-                <h2 className="text-sm font-medium text-foreground">{vendor.vendorName}</h2>
-                <p className="text-xs text-muted-foreground">{vendor.lines.length} ürün</p>
-              </div>
-              <p className="text-sm font-semibold text-foreground">
-                {formatPrice(vendor.totalCost)}
-                {vendor.hasEstimate && (
-                  <span className="ml-1 text-xs font-normal text-muted-foreground" title="Bazı satırlarda alış fiyatı yok; satış fiyatı kullanıldı">
-                    ~tahmini
-                  </span>
-                )}
-              </p>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border text-left font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                    <th className="px-5 py-2 font-normal">Ürün</th>
-                    <th className="px-3 py-2 font-normal">SKU</th>
-                    <th className="px-3 py-2 text-right font-normal">Stok</th>
-                    <th className="px-3 py-2 text-right font-normal">Günlük Satış</th>
-                    <th className="px-3 py-2 text-right font-normal">Sipariş Noktası</th>
-                    <th className="px-3 py-2 text-right font-normal">Öneri</th>
-                    <th className="px-3 py-2 text-right font-normal">Birim</th>
-                    <th className="px-5 py-2 text-right font-normal">Tutar</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {vendor.lines.map(line => (
-                    <tr key={line.variantId} className="border-b border-border last:border-b-0">
-                      <td className="px-5 py-2.5">
-                        <div className="flex items-center gap-2.5">
-                          {line.imageUrl && (
-                            <Image
-                              src={line.imageUrl}
-                              alt=""
-                              width={28}
-                              height={28}
-                              className="h-7 w-7 shrink-0 rounded object-cover print:hidden"
-                              unoptimized
-                            />
-                          )}
-                          <div className="min-w-0">
-                            <p className="truncate font-medium text-foreground">
-                              {line.productName}
-                              {line.urgent && (
-                                <Badge variant="critical" className="ml-1.5 align-middle">
-                                  <AlertTriangle className="h-2.5 w-2.5" aria-hidden />
-                                  acil
-                                </Badge>
-                              )}
-                            </p>
-                            {line.variantName && (
-                              <p className="truncate text-xs text-muted-foreground">{line.variantName}</p>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-3 py-2.5 text-xs text-muted-foreground">{line.sku ?? '—'}</td>
-                      <td className="px-3 py-2.5 text-right tabular-nums">{line.currentStock}</td>
-                      <td className="px-3 py-2.5 text-right tabular-nums">{line.dailyAvg.toLocaleString('tr-TR')}</td>
-                      <td className="px-3 py-2.5 text-right tabular-nums text-muted-foreground">{line.reorderPoint}</td>
-                      <td className="px-3 py-2.5 text-right font-semibold tabular-nums">{line.suggestedQty}</td>
-                      <td className="px-3 py-2.5 text-right tabular-nums">
-                        {formatPrice(line.unitCost)}
-                        {line.isEstimate && <span className="text-xs text-muted-foreground" title="Alış fiyatı tanımlı değil">~</span>}
-                      </td>
-                      <td className="px-5 py-2.5 text-right font-medium tabular-nums">{formatPrice(line.lineTotal)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        ))
+        <VendorTabsPanel
+          vendors={displayVendors}
+          token={token}
+          vendorList={vendorList}
+          stockOverrides={stockOverrides}
+          onStockChange={handleStockChange}
+          basket={basket}
+          onLineQtyChange={handleLineQtyChange}
+          onVendorSent={handleVendorSent}
+          onAssigned={handleAssigned}
+          onProductsAssigned={handleProductsAssigned}
+          onVendorContactSaved={handleVendorContactSaved}
+          onVendorDeleted={handleVendorDeleted}
+          activeKey={activeVendorKey}
+          onActiveKeyChange={setActiveVendorKey}
+          printVendorId={printVendorId}
+          onPrintVendor={setPrintVendorId}
+        />
       )}
 
       {/* Print altbilgisi */}
       <p className="hidden text-xs text-muted-foreground print:block">
         Flowventory satın alma raporu · {generatedAt.toLocaleString('tr-TR')} · Tedarik süresi {report.leadTimeDays} gün,
-        hedef stok {report.targetStockDays} gün. ~ işaretli tutarlar alış fiyatı yerine satış fiyatıyla hesaplanmıştır.
+        hedef stok {report.targetStockDays} gün. Alış fiyatı tanımlı olmayan ürünlerde satış fiyatı kullanılmıştır.
       </p>
     </PageContainer>
   );

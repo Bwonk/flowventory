@@ -5,6 +5,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/button';
 import { AyarlarSkeleton } from './_components/AyarlarSkeleton';
 import { NotificationSection } from './_components/NotificationSection';
+import { SyncSection } from './_components/SyncSection';
 import { TrackingScriptSection } from './_components/TrackingScriptSection';
 import { useAyarlarData } from './hooks/use-ayarlar-data';
 
@@ -16,7 +17,7 @@ export default function AyarlarPage() {
       <PageHeader
         eyebrow="YAPILANDIRMA"
         title="Ayarlar"
-        description="Storefront entegrasyonu ve bildirim tercihleri."
+        description="Veri senkronizasyonu, storefront entegrasyonu ve bildirim tercihleri."
       />
 
       {loading ? (
@@ -30,6 +31,9 @@ export default function AyarlarPage() {
         </div>
       ) : (
         <section className="divide-y divide-hairline rounded-lg border border-hairline bg-card">
+          {/* Bölüm id="veri-senkron" taşır: Başlarken kartındaki senkron adımı
+              buraya derin bağlanır. */}
+          <SyncSection token={token} />
           <TrackingScriptSection token={token} initialStatus={trackingStatus} />
           {/* Bölüm id="bildirim-ayarlari" taşır: bildirim panelinin boş durumu
               buraya derin bağlanır (NotificationDrawer). */}
