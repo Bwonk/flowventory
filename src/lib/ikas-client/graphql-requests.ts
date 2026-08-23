@@ -95,6 +95,18 @@ export const SAVE_VARIANT_STOCKS = gql`
   }
 `;
 
+export const UPDATE_PRODUCT = gql`
+  mutation updateProduct($input: UpdateProductInput!) {
+    updateProduct(input: $input) {
+      id
+      vendor {
+        id
+        name
+      }
+    }
+  }
+`;
+
 export const LIST_STOREFRONT = gql`
   query listStorefront($salesChannelId: StringFilterInput) {
     listStorefront(salesChannelId: $salesChannelId) {

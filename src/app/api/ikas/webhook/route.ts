@@ -121,6 +121,7 @@ export async function POST(request: NextRequest) {
           prisma.productViewHourly.deleteMany({ where: { merchantId } }),
           prisma.trackingScriptInstall.deleteMany({ where: { merchantId } }),
           prisma.merchantSettings.deleteMany({ where: { merchantId } }),
+          prisma.vendorContact.deleteMany({ where: { merchantId } }),
           prisma.webhookEvent.deleteMany({ where: { merchantId } }),
           prisma.authToken.deleteMany({ where: { merchantId } }),
         ]);

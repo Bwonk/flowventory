@@ -10,7 +10,8 @@ import { AuthToken } from '@/models/auth-token';
 import { AuthTokenManager } from '@/models/auth-token/manager';
 import { resolvePublicApiUrl } from '@/lib/tracking-script';
 import { registerWebhooks } from '@/lib/sync/register-webhooks';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
+import { runFullSync } from '@/lib/sync/ikas-sync';
 import z from 'zod';
 
 const callbackSchema = z.object({
@@ -130,6 +131,15 @@ export async function GET(request: NextRequest) {
     await registerWebhooks(token, resolvePublicApiUrl(request)).catch(error => {
       logger.error('Webhook registration error (non-fatal)', { error });
     });
+
+    // İlk senkron: yanıt gönderildikten sonra arka planda mağazanın tüm
+    // ürün/sipariş verisi çekilir — kullanıcı dashboard'a girdiğinde veri
+    // hazırdır (gecikirse ensureFreshSync yine emniyet ağı).
+    after(() =>
+      runFullSync(merchantId, token).catch(error => {
+        logger.error('Initial sync after install failed (non-fatal)', { merchantId, error });
+      }),
+    );
 
     // Update session with new merchant and app IDs, clear state, and set expiration
     session.expiresAt = new Date(Date.now() + 3600 * 1000);

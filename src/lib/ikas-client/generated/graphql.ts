@@ -1,5 +1,34 @@
 import { BaseGraphQLAPIClient, BaseGraphQLAPIClientOptions, APIResult } from '@ikas/admin-api-client';
 
+export enum ProductTypeEnum {
+  BUNDLE = "BUNDLE",
+  DIGITAL = "DIGITAL",
+  MEMBERSHIP = "MEMBERSHIP",
+  PHYSICAL = "PHYSICAL",
+  SUBSCRIPTION = "SUBSCRIPTION"
+}
+
+export enum ProductUnitTypeEnum {
+  CENTILITER = "CENTILITER",
+  CENTIMETER = "CENTIMETER",
+  CUBIC_METERS = "CUBIC_METERS",
+  CUSTOM = "CUSTOM",
+  GRAM = "GRAM",
+  KILOGRAM = "KILOGRAM",
+  LITER = "LITER",
+  METER = "METER",
+  MILLIGRAM = "MILLIGRAM",
+  MILLILITER = "MILLILITER",
+  MILLIMETER = "MILLIMETER",
+  SQUARE_METERS = "SQUARE_METERS"
+}
+
+export enum SalesChannelStatusEnum {
+  HIDDEN = "HIDDEN",
+  PASSIVE = "PASSIVE",
+  VISIBLE = "VISIBLE"
+}
+
 export enum SalesChannelTypeEnum {
   ADMIN = "ADMIN",
   APP = "APP",
@@ -37,9 +66,69 @@ export type DateFilterInput = {
   nin?: Array<number>;
 }
 
+export type HTMLMetaDataTranslationInput = {
+  description?: string;
+  locale: string;
+  pageTitle?: string;
+  slug?: string;
+}
+
 export type PaginationInput = {
   limit?: number;
   page?: number;
+}
+
+export type ProductBaseUnitInput = {
+  baseAmount: number;
+  type: ProductUnitTypeEnum;
+  unitName?: string;
+}
+
+export type ProductCategoryInput = {
+  name: string;
+  path?: Array<string>;
+}
+
+export type ProductProductBrandInput = {
+  description?: string;
+  name: string;
+}
+
+export type ProductProductTagsInput = {
+  name: string;
+}
+
+export type ProductSalesChannelInput = {
+  id: string;
+  maxQuantityPerCart?: number;
+  minQuantityPerCart?: number;
+  productVolumeDiscountId?: string;
+  quantitySettings?: Array<number>;
+  status: SalesChannelStatusEnum;
+}
+
+export type ProductTranslationInput = {
+  description?: string;
+  locale: string;
+  name?: string;
+}
+
+export type ProductVariantPriceInput = {
+  buyPrice?: number;
+  currency?: string;
+  discountPrice?: number;
+  priceListId?: string;
+  sellPrice: number;
+}
+
+export type ProductVariantUnitModelInput = {
+  amount: number;
+  type: ProductUnitTypeEnum;
+}
+
+export type ProductVendorInput = {
+  description?: string;
+  name: string;
 }
 
 export type SaveVariantStockInput = {
@@ -59,6 +148,57 @@ export type StringFilterInput = {
   in?: Array<string>;
   ne?: string;
   nin?: Array<string>;
+}
+
+export type UpdateHTMLMetaDataInput = {
+  canonicals?: Array<string>;
+  description?: string;
+  disableIndex?: boolean;
+  pageTitle?: string;
+  slug?: string;
+  translations?: Array<HTMLMetaDataTranslationInput>;
+}
+
+export type UpdateProductInput = {
+  baseUnit?: ProductBaseUnitInput;
+  brand?: ProductProductBrandInput;
+  categories?: Array<ProductCategoryInput>;
+  description?: string;
+  dynamicPriceListIds?: Array<string>;
+  googleTaxonomyId?: string;
+  groupVariantsByVariantTypeName?: string;
+  id: string;
+  metaData?: UpdateHTMLMetaDataInput;
+  name?: string;
+  productOptionSetId?: string;
+  salesChannels?: Array<ProductSalesChannelInput>;
+  tags?: Array<ProductProductTagsInput>;
+  translations?: Array<ProductTranslationInput>;
+  type?: ProductTypeEnum;
+  variants?: Array<UpdateProductVariantInput>;
+  vendor?: ProductVendorInput;
+  weight?: number;
+}
+
+export type UpdateProductVariantImageInput = {
+  fileName?: string;
+  imageId: string;
+  isMain: boolean;
+  isVideo?: boolean;
+  order: number;
+}
+
+export type UpdateProductVariantInput = {
+  barcodeList?: Array<string>;
+  hsCode?: string;
+  id: string;
+  images?: Array<UpdateProductVariantImageInput>;
+  isActive?: boolean;
+  prices?: Array<ProductVariantPriceInput>;
+  sellIfOutOfStock?: boolean;
+  sku?: string;
+  unit?: ProductVariantUnitModelInput;
+  weight?: number;
 }
 
 export type UpdateStorefrontJSScriptInput = {
@@ -185,6 +325,22 @@ export type SaveVariantStocksMutationData = {
 
 export interface SaveVariantStocksMutation {
   saveVariantStocks: SaveVariantStocksMutationData;
+}
+
+export type UpdateProductMutationVariables = {
+  input: UpdateProductInput;
+}
+
+export type UpdateProductMutationData = {
+  id: string;
+  vendor?: {
+  id: string;
+  name: string;
+};
+}
+
+export interface UpdateProductMutation {
+  updateProduct: UpdateProductMutationData;
 }
 
 export type ListStorefrontQueryVariables = {
@@ -445,6 +601,21 @@ export class GeneratedMutations {
   }
 `;
     return this.client.mutate<Partial<SaveVariantStocksMutation>>({ mutation, variables });
+  }
+
+  async updateProduct(variables: UpdateProductMutationVariables): Promise<APIResult<Partial<UpdateProductMutation>>> {
+    const mutation = `
+  mutation updateProduct($input: UpdateProductInput!) {
+    updateProduct(input: $input) {
+      id
+      vendor {
+        id
+        name
+      }
+    }
+  }
+`;
+    return this.client.mutate<Partial<UpdateProductMutation>>({ mutation, variables });
   }
 
   async createStorefrontJSScript(variables: CreateStorefrontJSScriptMutationVariables): Promise<APIResult<Partial<CreateStorefrontJSScriptMutation>>> {

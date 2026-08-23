@@ -180,3 +180,18 @@ model TrackingScriptInstall {
   installedAt  DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
+
+// Tedarikçi iletişim bilgileri — ikas vendor nesnesi yalnız id+name taşır,
+// e-posta/telefon ikas'a yazılamaz; sipariş e-postaları için yerelde tutulur.
+model VendorContact {
+  id         String   @id @default(cuid())
+  merchantId String
+  vendorId   String // ikas vendor id (ProductSnapshot'tan)
+  vendorName String // görüntüleme cache'i
+  email      String?
+  phone      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([merchantId, vendorId])
+}
