@@ -260,28 +260,25 @@ export function ExpandableActionBar({
   // Overlay: kapalı genişlik yol kapalıyken ölçülür ve kök o genişlikte kalır;
   // açık yol mutlak konumlu, sağa demirli.
   const [collapsedWidth, setCollapsedWidth] = useState<number | null>(null);
-  const collapsedMin = useRef<number | null>(null);
   useEffect(() => {
     const el = trackRef.current;
     if (!overlay || !el) return;
-    // Yol kapalıyken yalnız küçülür; kapanış animasyonunun ara genişlikleri
-    // gelse de kapalı genişlik gözlenen MİNİMUM'dur — donmuş bir kare (arka
-    // plandaki sekme) yanıltsa bile sonraki ölçüm düzeltir. Öğe sayısı
-    // değişince sıfırlanır.
-    collapsedMin.current = null;
+    // Kapalı genişlik = yolun düzen genişliği − etiketlerin o anki genişliği
+    // (+ sol boşlukları). Etiketler açık, kapalı ya da animasyonun ortasında
+    // olsa da sonuç aynıdır; offsetWidth transform'dan etkilenmez.
     const record = () => {
-      if (isExpanded) return;
-      const width = el.offsetWidth;
-      if (collapsedMin.current === null || width < collapsedMin.current) {
-        collapsedMin.current = width;
-        setCollapsedWidth(width);
+      let width = el.offsetWidth;
+      for (const label of Array.from(el.querySelectorAll<HTMLElement>('[data-label]'))) {
+        width -= label.offsetWidth + (parseFloat(getComputedStyle(label).marginLeft) || 0);
       }
+      const next = Math.round(width);
+      setCollapsedWidth(prev => (prev === next ? prev : next));
     };
     const observer = new ResizeObserver(record);
     observer.observe(el);
+    for (const child of Array.from(el.children)) observer.observe(child);
     record();
     return () => observer.disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [overlay, items.length]);
 
   const activeItemId = activeId ?? items.find(item => item.active)?.id;
@@ -321,7 +318,9 @@ export function ExpandableActionBar({
           aria-label={ariaLabel}
           style={
             overlay && collapsedWidth !== null
-              ? { ...maskStyle, maxWidth: anchor?.maxWidth }
+              ? // width: max-content — mutlak konumlu yol kökün (kapalı) kutusuna göre
+                // daralmasın; yalnız o taraftaki boşluk (maxWidth) sınırlar.
+                { ...maskStyle, width: 'max-content', maxWidth: anchor?.maxWidth }
               : maskStyle
           }
           className={cn(
@@ -440,6 +439,7 @@ export function ExpandableActionBar({
                         }
                   }
                   transition={reduce ? { duration: 0 } : SPRING}
+                  data-label
                   className={cn('inline-block overflow-hidden whitespace-nowrap', classNames?.label)}
                 >
                   {item.label}
