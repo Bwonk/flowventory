@@ -25,7 +25,8 @@ export function PageHeader({ eyebrow, title, description, actions, className }: 
         <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">{title}</h1>
         {description ? <p className="mt-1 text-sm text-muted-foreground">{description}</p> : null}
       </div>
-      {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
+      {/* grow + justify-end: aksiyonlar alt satıra kırıldığında da sağa yaslı kalır. */}
+      {actions ? <div className="flex shrink-0 grow items-center justify-end gap-2">{actions}</div> : null}
     </div>
   );
 }
