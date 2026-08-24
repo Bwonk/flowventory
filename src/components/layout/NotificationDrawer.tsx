@@ -25,6 +25,7 @@ import {
   SIDEBAR_WIDTH_ICON,
   useSidebar,
 } from '@/components/animate-ui/components/radix/sidebar';
+import { SkeletonRows } from '@/components/shared/data-table/SkeletonRows';
 import { useNotifications } from '@/components/layout/notifications-context';
 
 const TYPE_ICONS: Record<string, typeof Bell> = {
@@ -115,23 +116,6 @@ function NotificationRow({
   );
 }
 
-function SkeletonRows() {
-  return (
-    <div aria-hidden>
-      {[0, 1, 2].map(i => (
-        <div key={i} className="flex gap-2.5 border-b border-border px-4 py-3">
-          <div className="mt-0.5 size-4 shrink-0 animate-pulse rounded bg-muted motion-reduce:animate-none" />
-          <div className="flex-1 space-y-2">
-            <div className="h-3.5 w-2/5 animate-pulse rounded bg-muted motion-reduce:animate-none" />
-            <div className="h-3 w-4/5 animate-pulse rounded bg-muted motion-reduce:animate-none" />
-            <div className="h-2.5 w-1/4 animate-pulse rounded bg-muted motion-reduce:animate-none" />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 /**
  * Bildirim drawer'ı — layout seviyesinde mount edilir ki mobilde sidebar
  * Sheet'i kapatılınca birlikte unmount olmasın. Modal: dıştaki tıklama
@@ -189,7 +173,7 @@ export function NotificationDrawer() {
 
   let body: ReactNode;
   if (status === 'loading') {
-    body = <SkeletonRows />;
+    body = <SkeletonRows variant="compact" rows={3} />;
   } else if (status === 'error') {
     body = (
       <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-10 text-center">

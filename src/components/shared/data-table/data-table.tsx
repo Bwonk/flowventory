@@ -71,8 +71,9 @@ interface DataTableSortHeadCellProps<K extends string> extends DataTableHeadCell
 
 /**
  * Sıralanabilir başlık: ok pasifte gizli, hover'da yarı, aktifte tam; yön
- * değişince 150ms döner. Sıralanan kolonun hücreleri vurgulanmaz — sinyal
- * başlıkta kalır (data-ink).
+ * değişince 150ms döner. Ok hücre padding'inin içine mutlak konumlanır —
+ * kolon genişliği düz başlıkla aynıdır, hover'da hiçbir şey kaymaz.
+ * Sıralanan kolonun hücreleri vurgulanmaz — sinyal başlıkta kalır (data-ink).
  */
 export function DataTableSortHeadCell<K extends string>({
   children,
@@ -97,15 +98,15 @@ export function DataTableSortHeadCell<K extends string>({
         onClick={() => onSort(sortKey)}
         data-active={active}
         data-direction={active ? direction : undefined}
-        className={cn(
-          'group/sort inline-flex items-center gap-1 rounded-sm font-mono text-[10px] uppercase tracking-wider whitespace-nowrap transition-colors duration-150 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[active=true]:text-foreground',
-          align === 'right' && 'flex-row-reverse',
-        )}
+        className="group/sort relative inline-flex items-center rounded-sm font-mono text-[10px] uppercase tracking-wider whitespace-nowrap transition-colors duration-150 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[active=true]:text-foreground"
       >
         <span>{children}</span>
         <ChevronUp
           aria-hidden
-          className="size-3 opacity-0 transition-[opacity,transform] duration-150 group-hover/sort:opacity-50 group-data-[active=true]/sort:opacity-100 group-data-[direction=desc]/sort:rotate-180"
+          className={cn(
+            'absolute top-1/2 size-3 -translate-y-1/2 opacity-0 transition-[opacity,transform] duration-150 group-hover/sort:opacity-50 group-data-[active=true]/sort:opacity-100 group-data-[direction=desc]/sort:-translate-y-1/2 group-data-[direction=desc]/sort:rotate-180',
+            align === 'right' ? '-left-3.5' : '-right-3.5',
+          )}
         />
       </button>
     </th>

@@ -308,6 +308,11 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
       tüm değişken sayılar `tabular-nums`
 - [ ] Kartlar `border-hairline`, `shadow-*` yok (popover katmanları hariç)
 - [ ] Sayısal tablo kolonları sağa hizalı `font-mono`
+- [ ] Listeler `data-table/` primitifleriyle: sıralanabilir başlık
+      `DataTableSortHeadCell`, satır aksiyonları `RowActions`, alt bölge 48px
+      (`TableFooterNote` / `ListFooter`), yükleniyor `SkeletonRows`
+- [ ] Bağlı aksiyonlar tek `ToolTrack`/`SegmentedTrack` parçasında; çentik,
+      kavis, kaynaşık yüzey yok; yol başına en fazla bir ink segment
 - [ ] `transition-all` yok; animasyonlar mevcut utility/bileşenlerden
 - [ ] Animasyonlu ikon varsa hover'ı `useIconHover()` ile parent'tan
       sürülüyor; boyut `size` prop'uyla açıkça veriliyor
