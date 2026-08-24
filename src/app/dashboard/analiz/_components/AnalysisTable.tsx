@@ -10,6 +10,8 @@ import {
   DataTableHeadCell,
   DataTableHeaderRow,
   DataTableRow,
+  DataTableSortHeadCell,
+  type SortDirection,
 } from '@/components/shared/data-table/data-table';
 import { EmptyState } from '@/components/shared/data-table/EmptyState';
 import { InfiniteScrollFooter } from '@/components/shared/data-table/InfiniteScrollFooter';
@@ -17,7 +19,7 @@ import { ProductThumb } from '@/components/shared/filters/atoms';
 import { formatPrice } from '@/lib/currency';
 import { formatDateKey } from '@/lib/format';
 import { AbcBadge } from '@/components/shared/badges/AbcBadge';
-import { type AnalysisMetric } from './constants';
+import { type AnalysisMetric, type AnalysisSortBy } from './constants';
 
 interface AnalysisTableProps {
   rows: InventoryInsightItem[];
@@ -33,7 +35,13 @@ interface AnalysisTableProps {
   onSelectProduct: (productId: string) => void;
   /** Detay verisi çekilirken tıklanan satır (hafif bekleme durumu). */
   pendingProductId: string | null;
+  sortBy: AnalysisSortBy;
+  sortReversed: boolean;
+  onSortBy: (value: AnalysisSortBy) => void;
+  onToggleSortDirection: () => void;
 }
+
+type SortColumn = 'value' | 'sold' | 'stockLife' | 'capital';
 
 /**
  * "Tükeniş" sütunu metni. Üç ayrı "tarih yok" hâli var ve karıştırılmamalı:
@@ -59,7 +67,28 @@ export function AnalysisTable({
   onClearFilters,
   onSelectProduct,
   pendingProductId,
+  sortBy,
+  sortReversed,
+  onSortBy,
+  onToggleSortDirection,
 }: AnalysisTableProps) {
+  // Kolon → filtre şeridindeki sıralama seçeneği (hepsi doğal olarak azalan);
+  // değer kolonu metrikle birlikte ciro/kâr arasında değişir.
+  const columnSort: Record<SortColumn, AnalysisSortBy> = {
+    value: metric === 'kar' ? 'kar' : 'ciro',
+    sold: 'satis',
+    stockLife: 'stok-omru',
+    capital: 'sermaye',
+  };
+  const activeColumn =
+    (Object.keys(columnSort) as SortColumn[]).find(col => columnSort[col] === sortBy) ?? null;
+  const direction: SortDirection = sortReversed ? 'asc' : 'desc';
+  const sortProps = {
+    activeKey: activeColumn,
+    direction,
+    onSort: (col: SortColumn) => (col === activeColumn ? onToggleSortDirection() : onSortBy(columnSort[col])),
+  };
+
   if (rows.length === 0) {
     return (
       <EmptyState
@@ -76,22 +105,22 @@ export function AnalysisTable({
         <DataTableHeaderRow>
           <DataTableHeadCell edge>Ürün</DataTableHeadCell>
           <DataTableHeadCell align="center">Sınıf</DataTableHeadCell>
-          <DataTableHeadCell align="right">
+          <DataTableSortHeadCell sortKey="value" align="right" {...sortProps}>
             {metric === 'kar' ? 'Kâr' : 'Ciro'} ({windowDays}g)
-          </DataTableHeadCell>
+          </DataTableSortHeadCell>
           {showTrend && (
             <DataTableHeadCell align="right" title={`Ciro, önceki ${windowDays} güne göre`}>
               Trend
             </DataTableHeadCell>
           )}
-          <DataTableHeadCell align="right">Satış</DataTableHeadCell>
+          <DataTableSortHeadCell sortKey="sold" align="right" {...sortProps}>Satış</DataTableSortHeadCell>
           <DataTableHeadCell align="right">Stok</DataTableHeadCell>
           <DataTableHeadCell align="right" title="Satılan ÷ (satılan + kalan)">
             Sell-through
           </DataTableHeadCell>
-          <DataTableHeadCell align="right">Stok Ömrü</DataTableHeadCell>
+          <DataTableSortHeadCell sortKey="stockLife" align="right" {...sortProps}>Stok Ömrü</DataTableSortHeadCell>
           <DataTableHeadCell align="right">Tükeniş</DataTableHeadCell>
-          <DataTableHeadCell align="right" edge>Bağlı Sermaye</DataTableHeadCell>
+          <DataTableSortHeadCell sortKey="capital" align="right" edge {...sortProps}>Bağlı Sermaye</DataTableSortHeadCell>
         </DataTableHeaderRow>
         <tbody>
           {rows.map(item => (

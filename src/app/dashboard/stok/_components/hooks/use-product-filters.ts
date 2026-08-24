@@ -15,6 +15,9 @@ export interface UseProductFilters {
   setStockRange: (value: StockRange) => void;
   sortBy: SortBy;
   setSortBy: (value: SortBy) => void;
+  /** Seçili sıralamanın tersi (başlık okuyla ikinci tık). */
+  sortReversed: boolean;
+  toggleSortDirection: () => void;
   activeFilterCount: number;
   hasActiveFilters: boolean;
   clearAllFilters: () => void;
@@ -36,7 +39,14 @@ export function useProductFilters(
   const [statusFilter, setStatusFilter] = useState<StatusFilter>(initialStatusFilter ?? 'all');
   const [query, setQuery] = useState('');
   const [stockRange, setStockRange] = useState<StockRange>('all');
-  const [sortBy, setSortBy] = useState<SortBy>(DEFAULT_SORT);
+  const [sortBy, setSortByState] = useState<SortBy>(DEFAULT_SORT);
+  const [sortReversed, setSortReversed] = useState(false);
+  // Sıralama seçeneği değişince yön sıfırlanır — seçeneğin doğal yönü esastır.
+  const setSortBy = useCallback((value: SortBy) => {
+    setSortByState(value);
+    setSortReversed(false);
+  }, []);
+  const toggleSortDirection = useCallback(() => setSortReversed(prev => !prev), []);
   const [displayCount, setDisplayCount] = useState(ITEMS_PER_PAGE);
   const [loadingMore, setLoadingMore] = useState(false);
 
@@ -45,16 +55,16 @@ export function useProductFilters(
     [products, threshold.min, threshold.max, viewStats, salesByVariant],
   );
 
-  const filteredRows = useMemo(
-    () => filterRows(productRows, statusFilter, query, stockRange, sortBy),
-    [productRows, statusFilter, query, stockRange, sortBy],
-  );
+  const filteredRows = useMemo(() => {
+    const rows = filterRows(productRows, statusFilter, query, stockRange, sortBy);
+    return sortReversed ? [...rows].reverse() : rows;
+  }, [productRows, statusFilter, query, stockRange, sortBy, sortReversed]);
 
   // Reset display count when filters or sorting change.
   useEffect(() => {
     setDisplayCount(ITEMS_PER_PAGE);
     setLoadingMore(false);
-  }, [statusFilter, query, stockRange, sortBy, threshold.min, threshold.max]);
+  }, [statusFilter, query, stockRange, sortBy, sortReversed, threshold.min, threshold.max]);
 
   const totalResults = filteredRows.length;
   const displayedRows = filteredRows.slice(0, displayCount);
@@ -72,7 +82,7 @@ export function useProductFilters(
   const activeFilterCount =
     (statusFilter !== 'all' ? 1 : 0) +
     (stockRange !== 'all' ? 1 : 0) +
-    (sortBy !== DEFAULT_SORT ? 1 : 0) +
+    (sortBy !== DEFAULT_SORT || sortReversed ? 1 : 0) +
     (query.trim() !== '' ? 1 : 0);
   const hasActiveFilters = activeFilterCount > 0;
 
@@ -92,6 +102,8 @@ export function useProductFilters(
     setStockRange,
     sortBy,
     setSortBy,
+    sortReversed,
+    toggleSortDirection,
     activeFilterCount,
     hasActiveFilters,
     clearAllFilters,

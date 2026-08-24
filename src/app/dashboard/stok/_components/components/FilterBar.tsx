@@ -25,6 +25,8 @@ interface FilterBarProps {
   stockRange: StockRange;
   onStockRangeChange: (value: StockRange) => void;
   sortBy: SortBy;
+  /** Başlık okuyla ters çevrilmiş sıralama — çip etiketinde belirtilir. */
+  sortReversed?: boolean;
   onSortByChange: (value: SortBy) => void;
   hasActiveFilters: boolean;
   onClearAll: () => void;
@@ -39,6 +41,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   stockRange,
   onStockRangeChange,
   sortBy,
+  sortReversed = false,
   onSortByChange,
   hasActiveFilters,
   onClearAll,
@@ -135,8 +138,11 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               onRemove={() => onStockRangeChange('all')}
             />
           )}
-          {sortBy !== DEFAULT_SORT && (
-            <FilterChip label={`Sıralama: ${SORT_LABELS[sortBy]}`} onRemove={() => onSortByChange(DEFAULT_SORT)} />
+          {(sortBy !== DEFAULT_SORT || sortReversed) && (
+            <FilterChip
+              label={`Sıralama: ${SORT_LABELS[sortBy]}${sortReversed ? ' (ters)' : ''}`}
+              onRemove={() => onSortByChange(DEFAULT_SORT)}
+            />
           )}
           <button
             type="button"

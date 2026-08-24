@@ -205,6 +205,10 @@ export function AnalizContent({ insight, token, initialFilters, onWindowChange }
           onClearFilters={filters.clearAllFilters}
           onSelectProduct={handleSelectProduct}
           pendingProductId={pendingProductId}
+          sortBy={filters.sortBy}
+          sortReversed={filters.sortReversed}
+          onSortBy={filters.setSortBy}
+          onToggleSortDirection={filters.toggleSortDirection}
         />
       </TableSection>
 

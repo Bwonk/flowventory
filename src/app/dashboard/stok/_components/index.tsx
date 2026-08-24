@@ -79,6 +79,7 @@ const HomePage: React.FC<HomePageProps> = ({ token, products = [], analytics, vi
             stockRange={filters.stockRange}
             onStockRangeChange={filters.setStockRange}
             sortBy={filters.sortBy}
+            sortReversed={filters.sortReversed}
             onSortByChange={filters.setSortBy}
             hasActiveFilters={filters.hasActiveFilters}
             onClearAll={filters.clearAllFilters}
@@ -94,6 +95,10 @@ const HomePage: React.FC<HomePageProps> = ({ token, products = [], analytics, vi
             hasMore={filters.hasMore}
             onLoadMore={filters.loadMore}
             loadingMore={filters.loadingMore}
+            sortBy={filters.sortBy}
+            sortReversed={filters.sortReversed}
+            onSortBy={filters.setSortBy}
+            onToggleSortDirection={filters.toggleSortDirection}
           />
         </TableSection>
       </PageContainer>

@@ -150,9 +150,9 @@ export const AnalysisFilterBar: React.FC<AnalysisFilterBarProps> = ({ filters })
             <FilterChip label={`Aksiyon: ${ACTION_LABELS[action]}`} onRemove={() => filters.setAction('all')} />
           )}
           {query.trim() !== '' && <FilterChip label={`Arama: ${query}`} onRemove={() => filters.setQuery('')} />}
-          {sortBy !== DEFAULT_ANALYSIS_SORT && (
+          {(sortBy !== DEFAULT_ANALYSIS_SORT || filters.sortReversed) && (
             <FilterChip
-              label={`Sıralama: ${ANALYSIS_SORT_LABELS[sortBy]}`}
+              label={`Sıralama: ${ANALYSIS_SORT_LABELS[sortBy]}${filters.sortReversed ? ' (ters)' : ''}`}
               onRemove={() => filters.setSortBy(DEFAULT_ANALYSIS_SORT)}
             />
           )}

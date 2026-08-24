@@ -1,5 +1,6 @@
 import { Skeleton } from '@/components/ui/skeleton';
 import { PageContainer } from '@/components/layout/PageContainer';
+import { SkeletonRows } from '@/components/shared/data-table/SkeletonRows';
 
 export function StokSkeleton() {
   return (
@@ -18,18 +19,7 @@ export function StokSkeleton() {
         <div className="border-b border-border p-2">
           <Skeleton className="h-10 w-full" />
         </div>
-        {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-4 border-b border-border px-5 py-2.5 last:border-b-0">
-            <Skeleton className="h-7 w-7 shrink-0 rounded" />
-            <div className="flex-1 space-y-1.5">
-              <Skeleton className="h-4 w-48" />
-              <Skeleton className="h-3 w-24" />
-            </div>
-            <Skeleton className="h-5 w-16 shrink-0 rounded-full" />
-            <Skeleton className="h-4 w-12 shrink-0" />
-            <Skeleton className="h-4 w-16 shrink-0" />
-          </div>
-        ))}
+        <SkeletonRows rows={8} columns={['w-16', 'w-12', 'w-16', 'w-10']} />
       </div>
     </PageContainer>
   );

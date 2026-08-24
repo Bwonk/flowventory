@@ -35,6 +35,9 @@ export interface UseAnalysisFilters {
   setQuery: (value: string) => void;
   sortBy: AnalysisSortBy;
   setSortBy: (value: AnalysisSortBy) => void;
+  /** Seçili sıralamanın tersi (başlık okuyla ikinci tık). */
+  sortReversed: boolean;
+  toggleSortDirection: () => void;
   /** productId → aksiyon (panel ve tablo aynı haritayı kullanır). */
   actionByProduct: Map<string, ActionKey | null>;
   activeFilterCount: number;
@@ -63,7 +66,14 @@ export function useAnalysisFilters(
   const [band, setBand] = useState<BandFilter>(initial?.band ?? 'all');
   const [action, setAction] = useState<ActionFilter>(initial?.action ?? 'all');
   const [query, setQuery] = useState('');
-  const [sortBy, setSortBy] = useState<AnalysisSortBy>(DEFAULT_ANALYSIS_SORT);
+  const [sortBy, setSortByState] = useState<AnalysisSortBy>(DEFAULT_ANALYSIS_SORT);
+  const [sortReversed, setSortReversed] = useState(false);
+  // Sıralama seçeneği değişince yön sıfırlanır — seçeneğin doğal yönü (azalan) esastır.
+  const setSortBy = useCallback((value: AnalysisSortBy) => {
+    setSortByState(value);
+    setSortReversed(false);
+  }, []);
+  const toggleSortDirection = useCallback(() => setSortReversed(prev => !prev), []);
   const [displayCount, setDisplayCount] = useState(ITEMS_PER_PAGE);
   const [loadingMore, setLoadingMore] = useState(false);
 
@@ -108,14 +118,14 @@ export function useAnalysisFilters(
         sorted.sort((a, b) => b.revenue - a.revenue);
         break;
     }
-    return sorted;
-  }, [items, abc, aging, band, action, query, sortBy, metric, actionByProduct]);
+    return sortReversed ? sorted.reverse() : sorted;
+  }, [items, abc, aging, band, action, query, sortBy, sortReversed, metric, actionByProduct]);
 
   // Filtre/sıralama/metrik değişince sayfalamayı başa sar.
   useEffect(() => {
     setDisplayCount(ITEMS_PER_PAGE);
     setLoadingMore(false);
-  }, [abc, aging, band, action, query, sortBy, metric]);
+  }, [abc, aging, band, action, query, sortBy, sortReversed, metric]);
 
   const totalResults = filteredRows.length;
   const displayedRows = filteredRows.slice(0, displayCount);
@@ -135,7 +145,7 @@ export function useAnalysisFilters(
     (aging !== 'all' ? 1 : 0) +
     (band !== 'all' ? 1 : 0) +
     (action !== 'all' ? 1 : 0) +
-    (sortBy !== DEFAULT_ANALYSIS_SORT ? 1 : 0) +
+    (sortBy !== DEFAULT_ANALYSIS_SORT || sortReversed ? 1 : 0) +
     (query.trim() !== '' ? 1 : 0);
   const hasActiveFilters = activeFilterCount > 0;
 
@@ -161,6 +171,8 @@ export function useAnalysisFilters(
     setQuery,
     sortBy,
     setSortBy,
+    sortReversed,
+    toggleSortDirection,
     actionByProduct,
     activeFilterCount,
     hasActiveFilters,

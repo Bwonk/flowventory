@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { Minus, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { RowActions } from '@/components/shared/data-table/data-table';
 import { ShoppingCartIcon } from '@/components/ui/icons/shopping-cart';
 import { TrashIcon } from '@/components/ui/icons/trash';
 import { useIconHover } from '@/components/ui/icons/use-icon-hover';
@@ -221,7 +222,10 @@ export function BasketSheet({
                   </div>
                   <ul className="mx-2 mb-2 divide-y divide-border rounded-md bg-card">
                     {lines.map(({ line, qty }) => (
-                      <li key={line.variantId} className="flex items-center gap-2.5 px-3 py-2">
+                      <li
+                        key={line.variantId}
+                        className="group flex items-center gap-2.5 px-3 py-2 transition-colors duration-150 first:rounded-t-md last:rounded-b-md hover:bg-muted/40"
+                      >
                         {line.imageUrl ? (
                           <Image
                             src={line.imageUrl}
@@ -259,10 +263,12 @@ export function BasketSheet({
                         >
                           {formatPrice(qty * line.unitCost)}
                         </p>
-                        <RemoveLineButton
-                          onRemove={() => onLineQtyChange(line.variantId, null)}
-                          label={line.productName}
-                        />
+                        <RowActions className="shrink-0">
+                          <RemoveLineButton
+                            onRemove={() => onLineQtyChange(line.variantId, null)}
+                            label={line.productName}
+                          />
+                        </RowActions>
                       </li>
                     ))}
                   </ul>
