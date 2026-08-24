@@ -25,6 +25,7 @@ import { useDismiss } from '@/lib/hooks/use-dismiss';
 import { useHoverGesture } from '@/lib/hooks/use-hover-gesture';
 import { useTapGesture } from '@/lib/hooks/use-tap-gesture';
 import { TrackSlider, useTrackOverflow } from '@/components/shared/tool-track/track-overflow';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
 export type ExpandableActionBarVariant = 'ghost' | 'card' | 'ink';
@@ -84,6 +85,11 @@ export interface ExpandableActionBarProps {
   /** 'toolbar' aksiyon kümesi; 'tablist' sekmeler (öğeler role="tab", aktif aria-selected). */
   role?: 'toolbar' | 'tablist';
   /**
+   * Mobilde (768px altı ya da dokunmatik/kaba işaretçi) yol hiç açılmaz:
+   * ikon-only kalır, her dokunuş doğrudan çalışır. Varsayılan true.
+   */
+  staticOnMobile?: boolean;
+  /**
    * Açılan yol akışta yer kaplamaz: kök kapalı genişliğini korur, yol sağa
    * demirli olarak komşu içeriğin ÜSTÜNE açılır. Başlık gibi `flex-wrap`
    * satırlarında açılma yüzünden satır kırılıp sayfanın zıplamasını
@@ -103,6 +109,19 @@ const VARIANT_CLASS: Record<ExpandableActionBarVariant, string> = {
   card: 'border border-hairline bg-card text-foreground',
   ink: 'bg-primary text-primary-foreground hover:bg-primary/90',
 };
+
+/** Dokunmatik/kaba işaretçi (telefon, tablet) — hover yok. */
+function useCoarsePointer() {
+  const [coarse, setCoarse] = useState(false);
+  useEffect(() => {
+    const mql = window.matchMedia('(hover: none) and (pointer: coarse)');
+    const update = () => setCoarse(mql.matches);
+    update();
+    mql.addEventListener('change', update);
+    return () => mql.removeEventListener('change', update);
+  }, []);
+  return coarse;
+}
 
 function useControllableExpanded({
   expanded,
@@ -139,6 +158,7 @@ export function ExpandableActionBar({
   expandOnFocus = true,
   collapseDelay = 90,
   role = 'toolbar',
+  staticOnMobile = true,
   overlay = false,
   'aria-label': ariaLabel,
   className,
@@ -146,6 +166,12 @@ export function ExpandableActionBar({
 }: ExpandableActionBarProps) {
   const reduce = useReducedMotion();
   const layoutId = useId();
+  const isMobile = useIsMobile();
+  const coarsePointer = useCoarsePointer();
+  // Mobil: etiketleri gösterecek hover yok, yer de dar — yol ikon-only kalır.
+  const canExpand = !(staticOnMobile && (isMobile || coarsePointer));
+  const hoverExpands = expandOnHover && canExpand;
+  const focusExpands = expandOnFocus && canExpand;
   const [isExpanded, setIsExpanded] = useControllableExpanded({
     expanded,
     defaultExpanded,
@@ -196,6 +222,11 @@ export function ExpandableActionBar({
 
   useEffect(() => clearCollapseTimer, [clearCollapseTimer]);
 
+  // Açıkken mobil eşiğine düşülürse (döndürme, pencere daralması) kapanır.
+  useEffect(() => {
+    if (!canExpand && isExpanded) setIsExpanded(false);
+  }, [canExpand, isExpanded, setIsExpanded]);
+
   // Dışarıdan kapanış etiketleri götürür; açan dokunuşun bıraktığı "kurulu"
   // hal de gitmeli — yoksa sonraki dokunuş okunamayan bir aksiyonu çalıştırır.
   const wasExpanded = useRef(isExpanded);
@@ -209,21 +240,21 @@ export function ExpandableActionBar({
   useDismiss(tapExpanded && isExpanded, close, trackRef, { behavior: 'consume' });
 
   const onRootPointerEnter = (event: PointerEvent<HTMLDivElement>) => {
-    if (hover.enter(event) && expandOnHover) open();
+    if (hover.enter(event) && hoverExpands) open();
   };
 
   const onRootPointerLeave = (event: PointerEvent<HTMLDivElement>) => {
     if (!hover.leave(event)) return;
     setHoveredId(null);
-    if (expandOnHover) close();
+    if (hoverExpands) close();
   };
 
   const onRootFocus = () => {
-    if (expandOnFocus) open();
+    if (focusExpands) open();
   };
 
   const onRootBlur = (event: FocusEvent<HTMLDivElement>) => {
-    if (!event.currentTarget.contains(event.relatedTarget as Node) && expandOnFocus) close();
+    if (!event.currentTarget.contains(event.relatedTarget as Node) && focusExpands) close();
   };
 
   // Overlay: kapalı genişlik yol kapalıyken ölçülür ve kök o genişlikte kalır;
@@ -344,7 +375,7 @@ export function ExpandableActionBar({
                   // aksiyonu çalıştırırdı.
                   const firstTap =
                     gesture !== null && gesture.pointerType !== 'mouse' && !gesture.state && !tapExpanded;
-                  if (firstTap && expandOnHover) {
+                  if (firstTap && hoverExpands) {
                     // Radix tetikleyicisi (wrap) bu click'i görmesin.
                     event.preventDefault();
                     setTapExpanded(true);
@@ -387,6 +418,8 @@ export function ExpandableActionBar({
                   {item.icon}
                 </span>
 
+                {/* Mobilde etiket hiç yok: ikon-only hal animasyon karesine bağlı kalmaz. */}
+                {canExpand && (
                 <motion.span
                   aria-hidden={!isExpanded}
                   animate={
@@ -411,6 +444,7 @@ export function ExpandableActionBar({
                 >
                   {item.label}
                 </motion.span>
+                )}
 
                 {item.badge ? (
                   <span

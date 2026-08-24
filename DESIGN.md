@@ -207,7 +207,9 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   ile kullanılır: kök kapalı genişliğini korur, açılan yol boşluğu olan
   tarafa demirlenip komşu içeriğin üstüne açılır — satır kırılıp sayfa
   zıplamaz, yol imlecin altından kaçmaz; dar ekranda o tarafın boşluğuyla
-  sınırlanır, gerisi kendi içinde kayar. Statik gruplar için `ToolTrack` (`Button variant="segment"`,
+  sınırlanır, gerisi kendi içinde kayar. **Mobilde** (768px altı ya da
+  dokunmatik/kaba işaretçi) yol hiç açılmaz — ikon-only kalır, etiket render
+  edilmez, her dokunuş doğrudan çalışır (`staticOnMobile`, varsayılan). Statik gruplar için `ToolTrack` (`Button variant="segment"`,
   `segment-card`, `default`; ayraç `ToolTrackDivider`) —
   [src/components/shared/tool-track/](src/components/shared/tool-track/).
   Sekmeler etiketli kalır (`SegmentedTrack`) — ikonu olmayan öğe kapalı
