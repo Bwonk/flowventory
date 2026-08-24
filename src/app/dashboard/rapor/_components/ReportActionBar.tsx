@@ -133,5 +133,6 @@ export function ReportActionBar({
     },
   ];
 
-  return <ExpandableActionBar items={items} aria-label="Rapor işlemleri" className="print:hidden" />;
+  // overlay: başlık satırı flex-wrap — açılan yol satırı kırıp sayfayı zıplatmasın.
+  return <ExpandableActionBar items={items} overlay aria-label="Rapor işlemleri" className="print:hidden" />;
 }

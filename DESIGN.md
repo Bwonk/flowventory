@@ -203,7 +203,11 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   (birincil; yol başına en fazla bir), `separatorBefore` ayraç; ikon
   animasyonu `hoverProps` ile parent'tan sürülür; Dialog/Popover/Sheet
   tetikleyicileri `wrap` ile butona `asChild` biner (bileşenlerin `trigger`
-  prop'u). Statik gruplar için `ToolTrack` (`Button variant="segment"`,
+  prop'u). Akışta yaşayan bir satırda (başlık, sekme satırı) yol **`overlay`**
+  ile kullanılır: kök kapalı genişliğini korur, açılan yol boşluğu olan
+  tarafa demirlenip komşu içeriğin üstüne açılır — satır kırılıp sayfa
+  zıplamaz, yol imlecin altından kaçmaz; dar ekranda o tarafın boşluğuyla
+  sınırlanır, gerisi kendi içinde kayar. Statik gruplar için `ToolTrack` (`Button variant="segment"`,
   `segment-card`, `default`; ayraç `ToolTrackDivider`) —
   [src/components/shared/tool-track/](src/components/shared/tool-track/).
   Sekmeler etiketli kalır (`SegmentedTrack`) — ikonu olmayan öğe kapalı

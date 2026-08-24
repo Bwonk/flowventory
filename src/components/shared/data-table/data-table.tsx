@@ -18,8 +18,11 @@ const ALIGN_CLASS: Record<Align, string> = {
 };
 
 export function DataTable({ children, className }: { children: ReactNode; className?: string }) {
+  // relative: içerideki mutlak konumlu parçalar (sr-only başlık, sıralama oku,
+  // hover aksiyonları) bu kaydırıcıya göre konumlanır — aksi halde en yakın
+  // konumlu ata olan sayfa gövdesine göre ölçülüp onu yatayda taşırıyordu.
   return (
-    <div className={cn('overflow-x-auto', className)}>
+    <div className={cn('relative overflow-x-auto', className)}>
       <table className="w-full text-sm">{children}</table>
     </div>
   );

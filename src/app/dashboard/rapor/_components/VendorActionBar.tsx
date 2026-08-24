@@ -124,5 +124,6 @@ export function VendorActionBar({
       : []),
   ];
 
-  return <ExpandableActionBar items={items} aria-label={`${vendor.vendorName} işlemleri`} />;
+  // overlay: açılan yol sekmeleri sıkıştırmaz, üstlerine açılır (dar ekranda özellikle).
+  return <ExpandableActionBar items={items} overlay aria-label={`${vendor.vendorName} işlemleri`} />;
 }

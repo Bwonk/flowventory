@@ -54,7 +54,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           onu içeriği kadar şişiriyordu — tablonun kendi overflow-x-auto'su devreye
           girmeden tüm sayfa yatay kayıyordu.
         */}
-        <SidebarInset className="h-svh min-w-0 overflow-y-auto">
+        <SidebarInset className="h-svh min-w-0 overflow-x-hidden overflow-y-auto">
           {/* Dar iframe genişliği: sidebar Sheet'e düşer, tetikleyici bu barda yaşar. */}
           <header className="flex h-12 shrink-0 items-center gap-2 border-b border-hairline bg-card px-4 print:hidden md:hidden">
             <SidebarTrigger />

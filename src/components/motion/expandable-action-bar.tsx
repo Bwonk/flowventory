@@ -83,6 +83,13 @@ export interface ExpandableActionBarProps {
   collapseDelay?: number;
   /** 'toolbar' aksiyon kümesi; 'tablist' sekmeler (öğeler role="tab", aktif aria-selected). */
   role?: 'toolbar' | 'tablist';
+  /**
+   * Açılan yol akışta yer kaplamaz: kök kapalı genişliğini korur, yol sağa
+   * demirli olarak komşu içeriğin ÜSTÜNE açılır. Başlık gibi `flex-wrap`
+   * satırlarında açılma yüzünden satır kırılıp sayfanın zıplamasını
+   * (ve imleç altından kaçan yolun açıl-kapan titremesini) önler.
+   */
+  overlay?: boolean;
   'aria-label'?: string;
   className?: string;
   classNames?: ExpandableActionBarClassNames;
@@ -132,6 +139,7 @@ export function ExpandableActionBar({
   expandOnFocus = true,
   collapseDelay = 90,
   role = 'toolbar',
+  overlay = false,
   'aria-label': ariaLabel,
   className,
   classNames,
@@ -148,7 +156,21 @@ export function ExpandableActionBar({
   // hover eden imlecin kendi çıkış yolu var.
   const [tapExpanded, setTapExpanded] = useState(false);
   const collapseTimer = useRef<number | null>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
   const trackRef = useRef<HTMLDivElement | null>(null);
+  // Overlay yönü: yol hangi tarafta daha çok boşluk varsa o yöne açılır ve
+  // genişliği o boşlukla sınırlanır — dar ekranda sola yaslı bir yol sağa
+  // demirlenip ekran dışına taşmaz.
+  const [anchor, setAnchor] = useState<{ side: 'left' | 'right'; maxWidth: number } | null>(null);
+  const placeOverlay = useCallback(() => {
+    const root = rootRef.current;
+    if (!overlay || !root) return;
+    const rect = root.getBoundingClientRect();
+    const spaceLeft = rect.right - 12;
+    const spaceRight = window.innerWidth - rect.left - 12;
+    const side = spaceLeft >= spaceRight ? 'right' : 'left';
+    setAnchor({ side, maxWidth: Math.max(rect.width, side === 'right' ? spaceLeft : spaceRight) });
+  }, [overlay]);
   const tap = useTapGesture<boolean>();
   const hover = useHoverGesture();
 
@@ -159,8 +181,9 @@ export function ExpandableActionBar({
 
   const open = useCallback(() => {
     clearCollapseTimer();
+    placeOverlay();
     setIsExpanded(true);
-  }, [clearCollapseTimer, setIsExpanded]);
+  }, [clearCollapseTimer, placeOverlay, setIsExpanded]);
 
   const close = useCallback(() => {
     clearCollapseTimer();
@@ -203,6 +226,33 @@ export function ExpandableActionBar({
     if (!event.currentTarget.contains(event.relatedTarget as Node) && expandOnFocus) close();
   };
 
+  // Overlay: kapalı genişlik yol kapalıyken ölçülür ve kök o genişlikte kalır;
+  // açık yol mutlak konumlu, sağa demirli.
+  const [collapsedWidth, setCollapsedWidth] = useState<number | null>(null);
+  const collapsedMin = useRef<number | null>(null);
+  useEffect(() => {
+    const el = trackRef.current;
+    if (!overlay || !el) return;
+    // Yol kapalıyken yalnız küçülür; kapanış animasyonunun ara genişlikleri
+    // gelse de kapalı genişlik gözlenen MİNİMUM'dur — donmuş bir kare (arka
+    // plandaki sekme) yanıltsa bile sonraki ölçüm düzeltir. Öğe sayısı
+    // değişince sıfırlanır.
+    collapsedMin.current = null;
+    const record = () => {
+      if (isExpanded) return;
+      const width = el.offsetWidth;
+      if (collapsedMin.current === null || width < collapsedMin.current) {
+        collapsedMin.current = width;
+        setCollapsedWidth(width);
+      }
+    };
+    const observer = new ResizeObserver(record);
+    observer.observe(el);
+    record();
+    return () => observer.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [overlay, items.length]);
+
   const activeItemId = activeId ?? items.find(item => item.active)?.id;
   const highlightId = hoveredId ?? activeItemId;
   // Taşma: kaydırıcı, tekerlek, kenar solması, aktif öğenin görünüre kayması.
@@ -214,7 +264,8 @@ export function ExpandableActionBar({
   return (
     <LayoutGroup id={layoutId}>
       <motion.div
-        layout="size"
+        ref={rootRef}
+        layout={overlay ? false : 'size'}
         // Pointer olayları, mouse çifti değil: dokunuş pointerType taşımayan
         // uyumluluk mouseenter/leave'i üretir ve büyüyen yol parmağın altından
         // "leave" fırlatırdı — tek dokunuş açıp kapatıp hiçbir şey çalıştırmazdı.
@@ -223,18 +274,33 @@ export function ExpandableActionBar({
         onFocus={onRootFocus}
         onBlur={onRootBlur}
         transition={SPRING}
-        className={cn('group/track relative inline-flex max-w-full', classNames?.root, className)}
+        style={overlay && collapsedWidth !== null ? { width: collapsedWidth, height: 36 } : undefined}
+        className={cn(
+          'group/track relative inline-flex max-w-full',
+          overlay && 'shrink-0',
+          overlay && isExpanded && 'z-20',
+          classNames?.root,
+          className,
+        )}
       >
         <motion.div
           ref={trackRef}
           layout="size"
           role={role}
           aria-label={ariaLabel}
-          style={maskStyle}
+          style={
+            overlay && collapsedWidth !== null
+              ? { ...maskStyle, maxWidth: anchor?.maxWidth }
+              : maskStyle
+          }
           className={cn(
             // Etiketli aksiyonlar sığdığı alanı aşabilir — yol kendi içinde kayar,
             // son aksiyon kenardan taşıp erişilmez olmaz.
             'relative inline-flex h-9 max-w-full items-center gap-0.5 overflow-x-auto overflow-y-hidden rounded-lg bg-muted p-[3px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+            // Overlay: mutlak konumlu, boşluğu olan tarafa demirli; kökün dışına
+            // o yöne doğru büyür, sığmazsa kendi içinde kayar.
+            overlay && collapsedWidth !== null && 'absolute top-0',
+            overlay && collapsedWidth !== null && (anchor?.side === 'left' ? 'left-0' : 'right-0'),
             classNames?.track,
           )}
           transition={SPRING}
