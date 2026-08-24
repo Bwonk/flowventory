@@ -344,7 +344,9 @@ function SidebarRail({ className, ...props }: SidebarRailProps) {
 
 type SidebarInsetProps = React.ComponentProps<'main'>;
 
-function SidebarInset({ className, ...props }: SidebarInsetProps) {
+// children spread ile değil JSX çocuğu olarak geçer: spread'te React çoklu
+// çocuğu dinamik liste sayıp "unique key" uyarısı veriyordu.
+function SidebarInset({ className, children, ...props }: SidebarInsetProps) {
   return (
     <main
       data-slot="sidebar-inset"
@@ -354,7 +356,9 @@ function SidebarInset({ className, ...props }: SidebarInsetProps) {
         className,
       )}
       {...props}
-    />
+    >
+      {children}
+    </main>
   );
 }
 
