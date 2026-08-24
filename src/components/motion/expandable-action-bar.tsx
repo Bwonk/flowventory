@@ -263,14 +263,29 @@ export function ExpandableActionBar({
   useEffect(() => {
     const el = trackRef.current;
     if (!overlay || !el) return;
-    // Kapalı genişlik = yolun düzen genişliği − etiketlerin o anki genişliği
-    // (+ sol boşlukları). Etiketler açık, kapalı ya da animasyonun ortasında
-    // olsa da sonuç aynıdır; offsetWidth transform'dan etkilenmez.
+    // Kapalı genişlik yolun kendisinden değil ÇOCUKLARINDAN toplanır: çocuklar
+    // shrink-0 olduğu için yol sıkışsa da doğal genişliklerini korur (döngüsel
+    // ölçüm yok). Her çocuk için etiketin o anki genişliği ve sol boşluğu
+    // düşülür — etiket açık, kapalı ya da animasyonun ortasında olsa da sonuç
+    // kapalı genişliktir. offsetWidth transform'dan etkilenmez.
     const record = () => {
-      let width = el.offsetWidth;
-      for (const label of Array.from(el.querySelectorAll<HTMLElement>('[data-label]'))) {
-        width -= label.offsetWidth + (parseFloat(getComputedStyle(label).marginLeft) || 0);
-      }
+      const cs = getComputedStyle(el);
+      const gap = parseFloat(cs.columnGap) || 0;
+      const children = Array.from(el.children) as HTMLElement[];
+      let width = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
+      children.forEach((child, index) => {
+        const childStyle = getComputedStyle(child);
+        width += child.offsetWidth + (parseFloat(childStyle.marginLeft) || 0) + (parseFloat(childStyle.marginRight) || 0);
+        if (index > 0) width += gap;
+        for (const label of Array.from(child.querySelectorAll<HTMLElement>('[data-label]'))) {
+          width -= label.offsetWidth + (parseFloat(getComputedStyle(label).marginLeft) || 0);
+        }
+        // Rozet açıkken akışa girer (ml-1.5); kapalıyken köşede mutlak, yer kaplamaz.
+        for (const badge of Array.from(child.querySelectorAll<HTMLElement>('[data-badge]'))) {
+          const badgeStyle = getComputedStyle(badge);
+          if (badgeStyle.position !== 'absolute') width -= badge.offsetWidth + (parseFloat(badgeStyle.marginLeft) || 0);
+        }
+      });
       const next = Math.round(width);
       setCollapsedWidth(prev => (prev === next ? prev : next));
     };
@@ -326,10 +341,11 @@ export function ExpandableActionBar({
           className={cn(
             // Etiketli aksiyonlar sığdığı alanı aşabilir — yol kendi içinde kayar,
             // son aksiyon kenardan taşıp erişilmez olmaz.
-            'relative inline-flex h-9 max-w-full items-center gap-0.5 overflow-x-auto overflow-y-hidden rounded-lg bg-muted p-[3px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
-            // Overlay: mutlak konumlu, boşluğu olan tarafa demirli; kökün dışına
-            // o yöne doğru büyür, sığmazsa kendi içinde kayar.
-            overlay && collapsedWidth !== null && 'absolute top-0',
+            'relative inline-flex h-9 items-center gap-0.5 overflow-x-auto overflow-y-hidden rounded-lg bg-muted p-[3px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+            // Akış modunda yol sığdığı alanı aşmaz; overlay'de kök (kapalı
+            // genişlik) sınır DEĞİLDİR — boşluğu olan tarafa demirli, kökün
+            // dışına o yöne doğru büyür, yalnız o taraftaki boşluk (maxWidth) sınırlar.
+            overlay && collapsedWidth !== null ? 'absolute top-0' : 'max-w-full',
             overlay && collapsedWidth !== null && (anchor?.side === 'left' ? 'left-0' : 'right-0'),
             classNames?.track,
           )}
@@ -448,6 +464,7 @@ export function ExpandableActionBar({
 
                 {item.badge ? (
                   <span
+                    data-badge
                     className={cn(
                       'inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-medium tabular-nums',
                       item.badgeVariant === 'critical'
