@@ -133,14 +133,6 @@ export function ReportActionBar({
     },
   ];
 
-  // Yolun AÇIK genişliği kadar alan rezerve edilir (5 etiketli öğe ≈ 535px):
-  // kapalı yol bu alanın sağında durur, açılınca (overlay) yalnız boş alanı
-  // doldurur — başlık/açıklama metninin üstüne gelmez; başlığın satır kırma
-  // kararı da açılıp kapanmakla değişmediği için sayfa zıplamaz. Daha dar
-  // içerikte PageHeader'ın flex-wrap'i bu alanı kendi satırına indirir.
-  return (
-    <div className="flex w-[34rem] max-w-full justify-end print:hidden">
-      <ExpandableActionBar items={items} overlay aria-label="Rapor işlemleri" />
-    </div>
-  );
+  // overlay: başlık satırı flex-wrap — açılan yol satırı kırıp sayfayı zıplatmasın.
+  return <ExpandableActionBar items={items} overlay aria-label="Rapor işlemleri" className="print:hidden" />;
 }

@@ -238,7 +238,7 @@ export default function RaporPage() {
       <PageHeader
         eyebrow="RAPOR"
         title="Satın Alma Raporu"
-        description={`Son ${report.salesWindowDays} günün satış hızına göre · ${generatedAt.toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' })}`}
+        description={`Son ${report.salesWindowDays} günün satış hızına göre · ${generatedAt.toLocaleString('tr-TR')}`}
         // Sayfa araçları kompakt ikon yolunda (DESIGN.md §5 "Araç yolu"); print'te gizli.
         actions={
           <ReportActionBar
