@@ -1,6 +1,6 @@
 'use client';
 
-import { cn } from '@/lib/utils';
+import { SegmentedTrack } from '@/components/shared/tool-track';
 
 export interface SegmentedOption<T extends string> {
   value: T;
@@ -16,8 +16,8 @@ interface SegmentedControlProps<T extends string> {
 }
 
 /**
- * Data-ink segmented switcher (DESIGN.md §5): muted zemin üzerinde aktif
- * segment beyaz karta çıkar. Metric/period seçicilerde kullanılır.
+ * Metrik/pencere seçici — `SegmentedTrack`'in kompakt (32px) hali; hap
+ * segmentler arasında kayar (DESIGN.md §5 "Araç yolu").
  */
 export function SegmentedControl<T extends string>({
   options,
@@ -27,26 +27,13 @@ export function SegmentedControl<T extends string>({
   'aria-label': ariaLabel,
 }: SegmentedControlProps<T>) {
   return (
-    <div className={cn('inline-flex gap-0.5 rounded-lg bg-muted p-1', className)} role="group" aria-label={ariaLabel}>
-      {options.map(option => {
-        const active = value === option.value;
-        return (
-          <button
-            key={option.value}
-            type="button"
-            onClick={() => onChange(option.value)}
-            aria-pressed={active}
-            className={cn(
-              'h-8 rounded-md px-3 text-xs transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
-              active
-                ? 'bg-card font-medium text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground',
-            )}
-          >
-            {option.label}
-          </button>
-        );
-      })}
-    </div>
+    <SegmentedTrack
+      options={options}
+      value={value}
+      onChange={onChange}
+      size="sm"
+      aria-label={ariaLabel}
+      className={className}
+    />
   );
 }

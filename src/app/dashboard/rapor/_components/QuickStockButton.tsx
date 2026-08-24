@@ -94,12 +94,8 @@ export function QuickStockButton({ token, productId, variantId, addQty, onStockC
           size="sm"
           disabled={state !== 'idle'}
           aria-label={`${addQty} adet stok gir`}
-          // Sipariş akışı asıl yol — bu kısayol satır hover'ında belirginleşir;
-          // saving/done geri bildirimleri soluklaşmadan muaf.
-          className={cn(
-            'h-6 gap-1 px-2 text-xs text-muted-foreground transition-opacity duration-150 hover:text-foreground',
-            state === 'idle' && !confirmOpen && 'opacity-60 group-hover:opacity-100 focus-visible:opacity-100',
-          )}
+          // Görünürlük RowActions'ta (satır hover/focus); burada yalnız renk.
+          className="h-6 gap-1 px-2 text-xs text-muted-foreground hover:text-foreground"
         >
           {state === 'saving' ? (
             <Loader2 className="size-3 animate-spin" aria-hidden />

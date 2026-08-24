@@ -170,9 +170,45 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   (nötr: `bg-muted-foreground`) + yanında metin; renk tek başına sinyal
   olamaz (erişilebilirlik). Okunmamış bildirim sinyali kırmızıdır
   (`bg-status-critical`); accent-blue dot kullanılmaz.
-- **Tablolar:** [src/components/ui/table.tsx](src/components/ui/table.tsx);
-  hairline satır ayrımı, mono tablo başlıkları, sayısal kolonlar sağa dayalı
-  `tabular-nums`.
+- **Liste kalıbı:** tüm listeler (stok, analiz, satın alma, dashboard
+  listeleri, sepet, bildirimler) tek iskeleti paylaşır —
+  [src/components/shared/data-table/](src/components/shared/data-table/).
+  Kart `TableSection` (hairline, gölgesiz); içinde sırayla *başlık şeridi*
+  (opsiyonel, `h-12 border-b`: başlık + sağda aksiyonlar), *filtre satırı*
+  (opsiyonel, stok/analiz `FilterBar`), *tablo başlığı* (`DataTableHeaderRow`,
+  mono `text-[10px] uppercase tracking-wider`, `py-2`, kenar `px-5`),
+  *satırlar* (`DataTableRow`: `py-2.5`, hairline, hover `bg-muted/40`, seçili
+  `bg-muted`, pending `opacity-60`), *alt bölge* (`ListFooter`, 48px).
+  Sıralama `DataTableSortHeadCell`: ok pasifte gizli, hover'da yarı, aktifte
+  tam, yön değişince 150ms döner; sıralanan kolonun hücreleri vurgulanmaz.
+  Satır aksiyonları `RowActions` içinde: yeri hep ayrılı (layout kaymaz),
+  satır hover/focus-within'de ve içindeki popover açıkken görünür,
+  dokunmatikte kalıcı. Alt bölge tek yerdir: dinlenmede not ("N satır
+  listelendi"), seçim varken toplu çubuk ("N satır seçildi" + toplam/aksiyon
+  + ✕) — not 100ms söner, çubuk 8px yukarı kayarak 300ms belirir, 200ms
+  çıkar. Durumlar aynı ritimde: yükleniyor `SkeletonRows` (41px satır, grup
+  halinde 200ms solar — satır başı stagger yok), boş `EmptyState`, hata
+  `ErrorState`. Sayısal kolonlar sağa dayalı `tabular-nums`; mono yalnız
+  başlık/kod. [src/components/ui/table.tsx](src/components/ui/table.tsx)
+  kullanılmaz.
+- **Araç yolu (ToolTrack / SegmentedTrack):**
+  [src/components/shared/tool-track/](src/components/shared/tool-track/).
+  Birbirine bağlı aksiyonlar tek `bg-muted` parçada yaşar: 36px yol, 3px iç
+  boşluk, `rounded-lg`; segmentler 30px `rounded-md` (`Button
+  variant="segment" size="segment"`, ikon-only `icon-segment`). Segment dili:
+  ghost `segment` (yalnız metin rengi değişir), öne çıkan ikincil
+  `segment-card` (bg-card + hairline hap), birincil `default` (ink hap) — yol
+  başına en fazla bir ink; ayraç `ToolTrackDivider`. Çentik, kavis, kaynaşık
+  yüzey yok — yol kartın üstünde serbest durur. Tab niteliğindeki seçimler
+  `SegmentedTrack`: aktif segment `bg-card` + hairline haptır ve **tek
+  elemandır**, seçim değişince `layoutId` + spring 350/35 ile eski segmentten
+  yenisine kayar; kompakt hali `SegmentedControl` (32px, grafik/kart
+  başlığı). Taşma: yol yatay kayar (scrollbar gizli), altında 2px kaydırıcı
+  belirir (thumb `bg-muted-foreground`, yola hover'da ink; sürüklenir, raya
+  tıklayınca atlar), fare yolun üstündeyken tekerlek yatay kaydırır, taşan
+  kenar 28px mask ile solar, seçilen segment görünür alana kayar. Emsal:
+  satın alma raporu (`rapor/page.tsx` sayfa araçları, `VendorTabsPanel` tab
+  ve tedarikçi işlem yolları).
 - **Grafikler:** [src/components/ui/chart.tsx](src/components/ui/chart.tsx);
   palet yalnızca `--chart-1..5` (chart-1 = accent mavi); grid çizgileri
   hairline, eksen etiketleri mono.
@@ -180,8 +216,8 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   buton içinde `size-3`), stroke varsayılan; ikon+metin çiftlerinde optik
   hizalama. Etkileşimli sanksiyonlu noktalar — sidebar navigasyonu, bildirim
   zili, liste satırı "detaya git" affordance'ı, yenile aksiyonu, rapor
-  aksiyon rafındaki yazdır/gönder/parametre/sepet tetikleri ve sepet satırı
-  silme (çöp) — animasyonlu
+  araç yollarındaki yazdır/gönder/parametre/sepet/iletişim tetikleri ve sepet
+  satırı silme (çöp) — animasyonlu
   heroicons kullanır: [src/components/ui/icons/](src/components/ui/icons).
   Karma kütüphane **bilinçli**: heroicons stroke-1.5, lucide stroke-2; ikisi
   aynı satırda yan yana getirilmez. Animasyonlu ikonlar bir `<div>` sarmaladığı
@@ -244,6 +280,13 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   (`transition-opacity duration-150`). Her üçü `prefers-reduced-motion`'da
   kapalıdır (`animate-enter` CSS'te, metre `useReducedMotion` ile). Bu desen
   sayfa açılışına özeldir — state değişimlerinde yeniden tetiklenmez.
+- **Liste ve araç yolu ritmi** (§5 "Liste kalıbı" / "Araç yolu"): hover
+  150ms renk; hap/paylaşımlı-layout kayması spring 350/35; tab içeriği
+  değişirken eski içerik 100ms söner, yenisi 150ms belirir (yatay kayma yok —
+  tablo ağır); toplu çubuk 300ms ease-out girer (8px yukarı + opacity),
+  200ms çıkar; satır aksiyonu ve sıralama oku 150ms; skeleton → içerik 200ms
+  grup opacity, satır başı stagger yok (`animate-enter` KPI karolarına
+  mahsustur). Hepsi `prefers-reduced-motion`'da anlık.
 - Hover/press geçişleri: `transition-colors duration-150`; asla
   `transition-all`. Basma geri bildirimi `active:scale-[0.99]`'u geçmez.
 - `prefers-reduced-motion` her girişte ve press efektinde saygı görür; ikon

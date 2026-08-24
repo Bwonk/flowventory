@@ -79,14 +79,14 @@ export function VendorContactPopover({ token, vendorId, vendorName, contact, onS
     >
       <PopoverTrigger asChild>
         <Button
-          variant="ghost"
-          size="sm"
-          className="h-6 gap-1 px-2 text-xs print:hidden"
+          variant="segment"
+          size="icon-segment"
+          className="print:hidden"
+          title="İletişim"
           aria-label={`${vendorName} iletişim bilgileri`}
           {...hoverProps}
         >
           <EnvelopeIcon ref={envelopeRef} size={12} className="flex shrink-0 [&>svg]:size-3!" aria-hidden />
-          İletişim
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" sideOffset={6} className="z-[100] w-64 rounded-lg p-3">

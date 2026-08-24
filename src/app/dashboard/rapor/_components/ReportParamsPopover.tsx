@@ -62,7 +62,7 @@ export function ReportParamsPopover({ leadTimeDays, targetStockDays, onApply }: 
       }}
     >
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="sm" className="gap-1.5" aria-label="Hesap parametreleri" {...paramsHoverProps}>
+        <Button variant="segment" size="segment" aria-label="Hesap parametreleri" {...paramsHoverProps}>
           <AdjustmentsHorizontalIcon
             ref={paramsRef}
             size={12}

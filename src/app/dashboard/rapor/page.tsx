@@ -6,6 +6,7 @@ import { TokenHelpers } from '@/helpers/token-helpers';
 import { ApiRequests } from '@/lib/api-requests';
 import type { PurchaseReportApiResponse } from '@/app/api/reports/purchase/route';
 import { Button } from '@/components/ui/button';
+import { ToolTrack, ToolTrackDivider } from '@/components/shared/tool-track';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { ErrorState } from '@/components/shared/ErrorState';
@@ -23,12 +24,12 @@ import { ReportParamsPopover } from './_components/ReportParamsPopover';
 import { VendorTabsPanel } from './_components/VendorTabsPanel';
 import type { VendorListItem } from '@/app/api/vendors/route';
 
-/** Yenile aksiyonu — aksiyon rafının ghost segmenti; ikon animasyonu butondan sürülür. */
+/** Yenile aksiyonu — sayfa araç yolunun segmenti; ikon animasyonu butondan sürülür. */
 function RefreshButton({ onClick }: { onClick: () => void }) {
   const { ref, hoverProps } = useIconHover();
 
   return (
-    <Button variant="ghost" size="sm" onClick={onClick} className="gap-1.5" {...hoverProps}>
+    <Button variant="segment" size="segment" onClick={onClick} {...hoverProps}>
       {/* size-3! gerekli: Button'ın [&_svg:not([class*='size-'])]:size-4 kuralı
           :not() attribute seçicisi yüzünden daha yüksek specificity'ye sahip. */}
       <ArrowPathIcon ref={ref} size={12} className="flex shrink-0 [&>svg]:size-3!" aria-hidden />
@@ -37,12 +38,12 @@ function RefreshButton({ onClick }: { onClick: () => void }) {
   );
 }
 
-/** Global yazdırma — rafın sağ ucunu demirleyen tek ink segment. */
+/** Global yazdırma — yolun sağ ucunda öne çıkan bg-card hap (ink birincil tedarikçi yolundaki Gönder'dir). */
 function PrintPdfButton({ onClick, disabled }: { onClick: () => void; disabled: boolean }) {
   const { ref, hoverProps } = useIconHover();
 
   return (
-    <Button size="sm" onClick={onClick} disabled={disabled} className="gap-1.5" {...hoverProps}>
+    <Button variant="segment-card" size="segment" onClick={onClick} disabled={disabled} {...hoverProps}>
       <PrinterIcon ref={ref} size={12} className="flex shrink-0 [&>svg]:size-3!" aria-hidden />
       Yazdır / PDF
     </Button>
@@ -271,15 +272,9 @@ export default function RaporPage() {
         eyebrow="RAPOR"
         title="Satın Alma Raporu"
         description={`Son ${report.salesWindowDays} günün satış hızına göre · ${generatedAt.toLocaleString('tr-TR')}`}
-      />
-
-      {/* Özet + aksiyon rafı (panelle tek silüet) — tek tedarikçi yazdırmada çıktıya girmez */}
-      <ReportKpiStrip
-        report={report}
-        vendorCount={displayVendors.filter(v => v.vendorId !== null).length}
-        printVendorId={printVendorId}
+        // Sayfa araçları tek yolda (DESIGN.md §5 "Araç yolu"); print'te gizli.
         actions={
-          <>
+          <ToolTrack aria-label="Rapor işlemleri" className="print:hidden">
             <ReportParamsPopover
               leadTimeDays={report.leadTimeDays}
               targetStockDays={report.targetStockDays}
@@ -307,11 +302,17 @@ export default function RaporPage() {
               onResetBasket={handleResetBasket}
               onVendorSent={handleVendorSent}
             />
-            {/* Ghost segmentlerle ink birincil arasında ince ayraç */}
-            <span aria-hidden className="mx-1 h-4 w-px bg-hairline" />
+            <ToolTrackDivider />
             <PrintPdfButton onClick={() => window.print()} disabled={Object.keys(basket).length === 0} />
-          </>
+          </ToolTrack>
         }
+      />
+
+      {/* Özet — tek tedarikçi yazdırmada çıktıya girmez */}
+      <ReportKpiStrip
+        report={report}
+        vendorCount={displayVendors.filter(v => v.vendorId !== null).length}
+        printVendorId={printVendorId}
       />
 
       {displayVendors.length === 0 ? (

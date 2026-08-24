@@ -181,10 +181,10 @@ export function AddProductsDialog({ token, vendorName, onAssigned, compact }: Ad
       <DialogTrigger asChild>
         <Button
           ref={triggerRef}
-          // Kompakt hali aksiyon rafında yaşar — rafın ghost segment dili.
-          variant={compact ? 'ghost' : 'outline'}
-          size="sm"
-          className={compact ? 'h-6 gap-1 px-2 text-xs' : 'gap-1.5'}
+          // Kompakt hali tedarikçi işlem yolunda yaşar — yolun segment dili.
+          variant={compact ? 'segment' : 'outline'}
+          size={compact ? 'segment' : 'sm'}
+          className={compact ? undefined : 'gap-1.5'}
           aria-label={`${vendorName} tedarikçisine ürün ekle`}
           {...hoverProps}
         >

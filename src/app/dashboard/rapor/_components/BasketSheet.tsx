@@ -152,9 +152,8 @@ export function BasketSheet({
     <Sheet>
       <SheetTrigger asChild>
         <Button
-          variant="ghost"
-          size="sm"
-          className="gap-1.5"
+          variant="segment"
+          size="segment"
           aria-label={`Sepet, ${totals.count} kalem`}
           {...cartHoverProps}
         >

@@ -84,7 +84,7 @@ export function AddVendorDialog({ token, onCreated }: AddVendorDialogProps) {
       }}
     >
       <DialogTrigger asChild>
-        <Button variant="ghost" size="sm" className="gap-1.5" {...hoverProps}>
+        <Button variant="segment" size="segment" {...hoverProps}>
           <PlusIcon ref={plusRef} size={12} className="flex shrink-0 [&>svg]:size-3!" aria-hidden />
           Tedarikçi Ekle
         </Button>

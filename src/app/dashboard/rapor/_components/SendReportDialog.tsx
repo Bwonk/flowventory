@@ -33,10 +33,11 @@ interface SendReportDialogProps {
   /** Tetik butonuna ek sınıf — ör. muted zeminde hover yüzeyini bg-card yapmak. */
   triggerClassName?: string;
   /**
-   * Tetik görünümü: 'shelf' (varsayılan) aksiyon rafındaki ghost "Gönder";
-   * 'group' sepet grubunun altındaki tam genişlik ink "Sipariş Ver — ₺X".
+   * Tetik görünümü: 'track' tedarikçi işlem yolundaki ink hap "Gönder";
+   * 'group' sepet grubunun altındaki tam genişlik ink "Sipariş Ver — ₺X";
+   * 'shelf' kompakt ghost (eski raf dili, sepet çekmecesi dışında kullanılmaz).
    */
-  variant?: 'shelf' | 'group';
+  variant?: 'shelf' | 'group' | 'track';
 }
 
 /**
@@ -85,12 +86,11 @@ export function SendReportDialog({
     <Dialog open={open} onOpenChange={next => !sending && setOpen(next)}>
       <DialogTrigger asChild>
         <Button
-          variant={variant === 'group' ? 'default' : 'ghost'}
-          size="sm"
+          variant={variant === 'shelf' ? 'ghost' : 'default'}
+          size={variant === 'track' ? 'segment' : 'sm'}
           className={cn(
-            variant === 'group'
-              ? 'h-8 w-full gap-1.5 text-xs tabular-nums'
-              : 'h-6 gap-1 px-2 text-xs',
+            variant === 'group' && 'h-8 w-full gap-1.5 text-xs tabular-nums',
+            variant === 'shelf' && 'h-6 gap-1 px-2 text-xs',
             'print:hidden',
             triggerClassName,
           )}
