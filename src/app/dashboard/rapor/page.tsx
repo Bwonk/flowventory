@@ -13,6 +13,7 @@ import { markReportViewed, markStoreSynced } from '@/lib/onboarding';
 import { RaporSkeleton } from './_components/RaporSkeleton';
 import { clampQty, seedBasket, type BasketState } from './_components/basket';
 import { ReportActionBar } from './_components/ReportActionBar';
+import { ReportInfoTip } from './_components/ReportInfoTip';
 import { ReportKpiStrip } from './_components/ReportKpiStrip';
 import { VendorTabsPanel } from './_components/VendorTabsPanel';
 import type { VendorListItem } from '@/app/api/vendors/route';
@@ -238,7 +239,13 @@ export default function RaporPage() {
       <PageHeader
         eyebrow="RAPOR"
         title="Satın Alma Raporu"
-        description={`Son ${report.salesWindowDays} günün satış hızına göre · ${generatedAt.toLocaleString('tr-TR')}`}
+        // Açıklama satırı yerine başlık yanındaki "i" balonu — araç yolu açılınca
+        // üstüne gelecek metin kalmaz; bilgi istendiğinde bir hover uzakta.
+        titleAccessory={
+          <ReportInfoTip
+            text={`Son ${report.salesWindowDays} günün satış hızına göre · ${generatedAt.toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' })}`}
+          />
+        }
         // Sayfa araçları kompakt ikon yolunda (DESIGN.md §5 "Araç yolu"); print'te gizli.
         actions={
           <ReportActionBar
