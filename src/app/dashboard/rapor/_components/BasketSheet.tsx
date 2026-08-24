@@ -168,13 +168,11 @@ export function BasketSheet({
         </Button>
       </SheetTrigger>
       <SheetContent side="right" className="w-full sm:max-w-md">
-        <SheetHeader className="border-b border-hairline pb-3">
-          {/* Mono mikro-etiket aynı zamanda erişilebilir başlık — ayrı toplam satırı yok,
-              toplamlar grup kartlarında ve footer'da yaşar. */}
-          <SheetTitle className="font-mono text-[10px] font-normal uppercase tracking-wider text-muted-foreground">
-            Sepet
-          </SheetTitle>
-          <SheetDescription className="text-xs">
+        <SheetHeader className="border-b border-hairline py-3">
+          {/* Tek satır başlık (kart başlığı dili) — açıklama yok; toplamlar grup
+              kartlarında ve footer'da, gönderim notu footer'da yaşar. */}
+          <SheetTitle className="text-sm font-medium text-foreground">Sepet</SheetTitle>
+          <SheetDescription className="sr-only">
             Adetleri burada düzenleyin; sipariş tedarikçi başına e-posta ile gider.
           </SheetDescription>
         </SheetHeader>

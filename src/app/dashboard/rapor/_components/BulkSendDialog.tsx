@@ -1,7 +1,9 @@
 'use client';
 
 import { logger } from '@/lib/logger';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { ApiRequests } from '@/lib/api-requests';
 import { Button } from '@/components/ui/button';
@@ -15,6 +17,7 @@ import {
 } from '@/components/ui/dialog';
 import { PaperAirplaneIcon } from '@/components/ui/icons/paper-airplane';
 import { useIconHover } from '@/components/ui/icons/use-icon-hover';
+import { cn } from '@/lib/utils';
 import { formatPrice } from '@/lib/currency';
 import type { PurchaseReportVendor } from '@/app/api/reports/purchase/route';
 import type { BasketLine } from './basket';
@@ -41,9 +44,19 @@ interface BulkSendDialogProps {
  */
 export function BulkSendDialog({ token, groups, onVendorSent }: BulkSendDialogProps) {
   const { ref: sendRef, hoverProps } = useIconHover();
+  const reduceMotion = useReducedMotion();
   const [open, setOpen] = useState(false);
   const [sending, setSending] = useState(false);
   const [progress, setProgress] = useState<string | null>(null);
+  // Gönderim başarısında tetik butonu kısa süre "Sipariş verildi" olur —
+  // ikon+etiket takası (DESIGN.md §6 ikon swap motifi), sonra dinlenmeye döner.
+  const [done, setDone] = useState(false);
+  useEffect(() => {
+    if (!done) return;
+    const timer = setTimeout(() => setDone(false), 3000);
+    return () => clearTimeout(timer);
+  }, [done]);
+  const swap = reduceMotion ? { duration: 0 } : ({ type: 'spring', stiffness: 350, damping: 35 } as const);
 
   const ready = groups.filter(g => g.email);
   const skipped = groups.filter(g => !g.email);
@@ -74,7 +87,10 @@ export function BulkSendDialog({ token, groups, onVendorSent }: BulkSendDialogPr
     setSending(false);
     setProgress(null);
     setOpen(false);
-    if (sent.length > 0) toast.success(`${sent.length} tedarikçiye sipariş gönderildi`);
+    if (sent.length > 0) {
+      setDone(true);
+      toast.success(`${sent.length} tedarikçiye sipariş gönderildi`);
+    }
     if (failed.length > 0) toast.error(`Gönderilemedi: ${failed.join(', ')}`);
   };
 
@@ -83,20 +99,49 @@ export function BulkSendDialog({ token, groups, onVendorSent }: BulkSendDialogPr
       <DialogTrigger asChild>
         <Button
           size="sm"
-          className="h-8 w-full gap-1.5 text-xs tabular-nums"
-          disabled={ready.length === 0}
+          // done: tıklanamaz ama soluk değil — onay durumu tam mürekkeple okunur.
+          className={cn('h-8 w-full gap-1.5 text-xs', done && 'disabled:opacity-100')}
+          disabled={done || ready.length === 0}
           title={
-            ready.length === 0
+            !done && ready.length === 0
               ? groups.length === 0
                 ? 'Sepet boş'
                 : 'Tedarikçi e-postaları eksik'
               : undefined
           }
-          aria-label="Tüm tedarikçilere sipariş e-postalarını gönder"
+          aria-label={
+            done ? 'Sipariş verildi' : `Tüm tedarikçilere sipariş e-postalarını gönder (${ready.length} tedarikçi)`
+          }
+          aria-live="polite"
           {...hoverProps}
         >
-          <PaperAirplaneIcon ref={sendRef} size={12} className="flex shrink-0 [&>svg]:size-3!" aria-hidden />
-          Hepsini Sipariş Ver · {ready.length} tedarikçi
+          <AnimatePresence initial={false} mode="popLayout">
+            {done ? (
+              <motion.span
+                key="done"
+                initial={{ opacity: 0, scale: 0.25, filter: 'blur(4px)' }}
+                animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+                exit={{ opacity: 0, scale: 0.25, filter: 'blur(4px)' }}
+                transition={swap}
+                className="flex items-center gap-1.5"
+              >
+                <Check className="size-3" aria-hidden />
+                Sipariş verildi
+              </motion.span>
+            ) : (
+              <motion.span
+                key="send"
+                initial={{ opacity: 0, scale: 0.25, filter: 'blur(4px)' }}
+                animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+                exit={{ opacity: 0, scale: 0.25, filter: 'blur(4px)' }}
+                transition={swap}
+                className="flex items-center gap-1.5"
+              >
+                <PaperAirplaneIcon ref={sendRef} size={12} className="flex shrink-0 [&>svg]:size-3!" aria-hidden />
+                Hepsini Sipariş Ver
+              </motion.span>
+            )}
+          </AnimatePresence>
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-md">
