@@ -34,7 +34,8 @@ interface SendReportDialogProps {
   triggerClassName?: string;
   /**
    * Tetik görünümü: 'track' tedarikçi işlem yolundaki ink hap "Gönder";
-   * 'group' sepet grubunun altındaki tam genişlik ink "Sipariş Ver — ₺X";
+   * 'group' sepet grubunun altındaki tam genişlik ink "Sipariş Ver" (tutar
+   * hemen üstteki grup başlığında yazıyor, butonda tekrarlanmaz);
    * 'shelf' kompakt ghost (eski raf dili, sepet çekmecesi dışında kullanılmaz).
    */
   variant?: 'shelf' | 'group' | 'track';
@@ -89,7 +90,7 @@ export function SendReportDialog({
           variant={variant === 'shelf' ? 'ghost' : 'default'}
           size={variant === 'track' ? 'segment' : 'sm'}
           className={cn(
-            variant === 'group' && 'h-8 w-full gap-1.5 text-xs tabular-nums',
+            variant === 'group' && 'h-8 w-full gap-1.5 text-xs',
             variant === 'shelf' && 'h-6 gap-1 px-2 text-xs',
             'print:hidden',
             triggerClassName,
@@ -100,7 +101,7 @@ export function SendReportDialog({
           {...hoverProps}
         >
           <PaperAirplaneIcon ref={sendRef} size={12} className="flex shrink-0 [&>svg]:size-3!" aria-hidden />
-          {variant === 'group' ? <>Sipariş Ver — {formatPrice(totalCost)}</> : 'Gönder'}
+          {variant === 'group' ? 'Sipariş Ver' : 'Gönder'}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-md">
