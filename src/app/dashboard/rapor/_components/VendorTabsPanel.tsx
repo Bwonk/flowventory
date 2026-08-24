@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useReducedMotion } from 'motion/react';
-import { Badge } from '@/components/ui/badge';
-import { SegmentedTrack } from '@/components/shared/tool-track';
+import { ExpandableActionBar, type ExpandableActionBarItem } from '@/components/motion/expandable-action-bar';
 import { cn } from '@/lib/utils';
 import { formatPrice } from '@/lib/currency';
 import type { PurchaseReportVendor } from '@/app/api/reports/purchase/route';
@@ -17,6 +16,13 @@ import { VendorOrderTable } from './VendorOrderTable';
 /** Tab/print anahtarı — printVendorId ile aynı konvansiyon. */
 export function vendorKey(vendor: PurchaseReportVendor): string {
   return vendor.vendorId ?? 'none';
+}
+
+/** Kapalı sekmenin ikonu: adın ilk iki kelimesinin baş harfleri ("Anadolu Tekstil" → AT). */
+function monogram(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  const letters = words.length >= 2 ? words[0][0] + words[1][0] : words[0]?.slice(0, 2) ?? '?';
+  return letters.toLocaleUpperCase('tr');
 }
 
 interface VendorTabsPanelProps {
@@ -116,26 +122,34 @@ export function VendorTabsPanel({
   return (
     <section>
       <div className="mb-3 flex items-center justify-between gap-3 print:hidden">
-        <SegmentedTrack
-          role="tablist"
-          aria-label="Tedarikçiler"
-          value={effectiveActiveKey}
-          onChange={onActiveKeyChange}
-          className="flex-1"
-          options={orderedVendors.map(vendor => {
-            const urgentCount = vendor.lines.filter(line => line.urgent).length;
-            return {
-              value: vendorKey(vendor),
-              // Dar yolda uzun adlar tek satırı bozmasın
-              label: (
-                <span className="max-w-36 truncate">
-                  {vendor.vendorId === null ? 'Tedarikçi atanmamış' : vendor.vendorName}
-                </span>
-              ),
-              badge: urgentCount > 0 ? <Badge variant="critical">{urgentCount}</Badge> : undefined,
-            };
-          })}
-        />
+        {/* Tedarikçi sekmeleri — kapalı halde monogram, hover/focus'ta ad; aktif olan bg-card hap. */}
+        <div className="min-w-0 flex-1">
+          <ExpandableActionBar
+            role="tablist"
+            aria-label="Tedarikçiler"
+            activeId={effectiveActiveKey}
+            items={orderedVendors.map(vendor => {
+              const key = vendorKey(vendor);
+              const name = vendor.vendorId === null ? 'Tedarikçi atanmamış' : vendor.vendorName;
+              const urgentCount = vendor.lines.filter(line => line.urgent).length;
+              return {
+                id: key,
+                icon: (
+                  <span className="font-mono text-[10px] font-medium uppercase tracking-wider">
+                    {vendor.vendorId === null ? '—' : monogram(vendor.vendorName)}
+                  </span>
+                ),
+                // Dar yolda uzun adlar tek satırı bozmasın
+                label: <span className="max-w-36 truncate">{name}</span>,
+                'aria-label': name,
+                badge: urgentCount > 0 ? urgentCount : undefined,
+                badgeVariant: 'critical',
+                active: key === effectiveActiveKey,
+                onClick: () => onActiveKeyChange(key),
+              } satisfies ExpandableActionBarItem;
+            })}
+          />
+        </div>
 
         {/* Tedarikçi işlem yolu — aktif tedarikçi; kompakt ikonlar, hover'da etiket */}
         <VendorActionBar

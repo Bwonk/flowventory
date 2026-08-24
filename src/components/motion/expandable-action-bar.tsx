@@ -24,6 +24,7 @@ import {
 import { useDismiss } from '@/lib/hooks/use-dismiss';
 import { useHoverGesture } from '@/lib/hooks/use-hover-gesture';
 import { useTapGesture } from '@/lib/hooks/use-tap-gesture';
+import { TrackSlider, useTrackOverflow } from '@/components/shared/tool-track/track-overflow';
 import { cn } from '@/lib/utils';
 
 export type ExpandableActionBarVariant = 'ghost' | 'card' | 'ink';
@@ -38,6 +39,8 @@ export type ExpandableActionBarItem = {
   active?: boolean;
   /** Etiketin sağındaki sayaç; kapalı halde köşe rozetine döner. */
   badge?: ReactNode;
+  /** Rozet rengi: ink (varsayılan, sayaç) · critical (acil sinyali). */
+  badgeVariant?: 'ink' | 'critical';
   /** ghost (varsayılan) · card (bg-card + hairline) · ink (birincil). Yol başına en fazla bir ink. */
   variant?: ExpandableActionBarVariant;
   /** Öğeden önce ince dikey ayraç. */
@@ -78,6 +81,8 @@ export interface ExpandableActionBarProps {
   expandOnHover?: boolean;
   expandOnFocus?: boolean;
   collapseDelay?: number;
+  /** 'toolbar' aksiyon kümesi; 'tablist' sekmeler (öğeler role="tab", aktif aria-selected). */
+  role?: 'toolbar' | 'tablist';
   'aria-label'?: string;
   className?: string;
   classNames?: ExpandableActionBarClassNames;
@@ -126,6 +131,7 @@ export function ExpandableActionBar({
   expandOnHover = true,
   expandOnFocus = true,
   collapseDelay = 90,
+  role = 'toolbar',
   'aria-label': ariaLabel,
   className,
   classNames,
@@ -199,6 +205,11 @@ export function ExpandableActionBar({
 
   const activeItemId = activeId ?? items.find(item => item.active)?.id;
   const highlightId = hoveredId ?? activeItemId;
+  // Taşma: kaydırıcı, tekerlek, kenar solması, aktif öğenin görünüre kayması.
+  const { overflow, maskStyle, sliderProps } = useTrackOverflow(trackRef, {
+    activeValue: activeItemId ?? null,
+    itemCount: items.length,
+  });
 
   return (
     <LayoutGroup id={layoutId}>
@@ -212,13 +223,14 @@ export function ExpandableActionBar({
         onFocus={onRootFocus}
         onBlur={onRootBlur}
         transition={SPRING}
-        className={cn('inline-flex max-w-full', classNames?.root, className)}
+        className={cn('group/track relative inline-flex max-w-full', classNames?.root, className)}
       >
         <motion.div
           ref={trackRef}
           layout="size"
-          role="toolbar"
+          role={role}
           aria-label={ariaLabel}
+          style={maskStyle}
           className={cn(
             // Etiketli aksiyonlar sığdığı alanı aşabilir — yol kendi içinde kayar,
             // son aksiyon kenardan taşıp erişilmez olmaz.
@@ -237,6 +249,9 @@ export function ExpandableActionBar({
               <motion.button
                 layout="position"
                 type="button"
+                data-value={item.id}
+                role={role === 'tablist' ? 'tab' : undefined}
+                aria-selected={role === 'tablist' ? isActive : undefined}
                 disabled={item.disabled}
                 title={item.title ?? label}
                 aria-label={item['aria-label'] ?? label}
@@ -297,7 +312,11 @@ export function ExpandableActionBar({
                 ) : null}
 
                 <span
-                  className={cn('inline-flex size-3 shrink-0 items-center justify-center [&>svg]:size-3', classNames?.icon)}
+                  className={cn(
+                    // Monogram gibi metin ikonlar 12px'ten geniş olabilir — yükseklik sabit, genişlik içerik.
+                    'inline-flex h-3 min-w-3 shrink-0 items-center justify-center leading-none [&>svg]:size-3',
+                    classNames?.icon,
+                  )}
                 >
                   {item.icon}
                 </span>
@@ -330,7 +349,10 @@ export function ExpandableActionBar({
                 {item.badge ? (
                   <span
                     className={cn(
-                      'inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium tabular-nums text-primary-foreground',
+                      'inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-medium tabular-nums',
+                      item.badgeVariant === 'critical'
+                        ? 'bg-critical text-critical-foreground'
+                        : 'bg-primary text-primary-foreground',
                       isExpanded ? 'ml-1.5' : 'absolute top-0 right-0 h-3.5 min-w-3.5 text-[9px]',
                       classNames?.badge,
                     )}
@@ -349,6 +371,7 @@ export function ExpandableActionBar({
             );
           })}
         </motion.div>
+        <TrackSlider overflow={overflow} sliderProps={sliderProps} />
       </motion.div>
     </LayoutGroup>
   );

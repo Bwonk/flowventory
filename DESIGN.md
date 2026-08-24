@@ -206,16 +206,21 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   prop'u). Statik gruplar için `ToolTrack` (`Button variant="segment"`,
   `segment-card`, `default`; ayraç `ToolTrackDivider`) —
   [src/components/shared/tool-track/](src/components/shared/tool-track/).
+  Sekmeler de aynı bileşenle (`role="tablist"`): ikonu olmayan öğe kapalı
+  halde **monogramla** (adın baş harfleri, mono 10px) durur, aktif olan
+  `bg-card` hapı taşır, acil sayacı `badgeVariant="critical"` köşe rozeti.
+  Taşma davranışı ortak `useTrackOverflow` + `TrackSlider`'dan gelir.
   Çentik, kavis, kaynaşık yüzey yok — yol kartın üstünde serbest durur. Tab niteliğindeki seçimler
   `SegmentedTrack`: aktif segment `bg-card` + hairline haptır ve **tek
   elemandır**, seçim değişince `layoutId` + spring 350/35 ile eski segmentten
   yenisine kayar; kompakt hali `SegmentedControl` (32px, grafik/kart
-  başlığı). Taşma: yol yatay kayar (scrollbar gizli), altında 2px kaydırıcı
-  belirir (thumb `bg-muted-foreground`, yola hover'da ink; sürüklenir, raya
-  tıklayınca atlar), fare yolun üstündeyken tekerlek yatay kaydırır, taşan
-  kenar 28px mask ile solar, seçilen segment görünür alana kayar. Emsal:
-  satın alma raporu (`ReportActionBar` sayfa araçları, `VendorTabsPanel`
-  tab yolu, `VendorActionBar` tedarikçi işlemleri).
+  başlığı). Taşma (`useTrackOverflow`): yol yatay kayar (scrollbar gizli),
+  altında 2px kaydırıcı belirir (thumb `bg-muted-foreground`, yola hover'da
+  ink; sürüklenir, raya tıklayınca atlar), fare yolun üstündeyken tekerlek
+  yatay kaydırır, taşan kenar 28px mask ile solar, seçilen segment görünür
+  alana kayar. Emsal: satın alma raporu (`ReportActionBar` sayfa araçları,
+  `VendorTabsPanel` tedarikçi sekmeleri, `VendorActionBar` tedarikçi
+  işlemleri).
 - **Grafikler:** [src/components/ui/chart.tsx](src/components/ui/chart.tsx);
   palet yalnızca `--chart-1..5` (chart-1 = accent mavi); grid çizgileri
   hairline, eksen etiketleri mono.
