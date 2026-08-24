@@ -1,7 +1,7 @@
 'use client';
 
 import { logger } from '@/lib/logger';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { ApiRequests } from '@/lib/api-requests';
 import type { VendorListItem } from '@/app/api/vendors/route';
@@ -25,6 +25,8 @@ interface AddVendorDialogProps {
   token: string;
   /** Yeni tedarikçi sayfadaki listeye eklenir — atama popover'ında hemen görünür. */
   onCreated: (vendor: VendorListItem) => void;
+  /** Dış tetikleyici (ör. ExpandableActionBar öğesi); verilmezse varsayılan segment buton. */
+  trigger?: ReactNode;
 }
 
 /**
@@ -33,7 +35,7 @@ interface AddVendorDialogProps {
  * tedarikçi yaratılamadığı için kayıt yerelde açılır; bir ürüne atanınca
  * ikas id'sine bağlanır.
  */
-export function AddVendorDialog({ token, onCreated }: AddVendorDialogProps) {
+export function AddVendorDialog({ token, onCreated, trigger }: AddVendorDialogProps) {
   const { ref: plusRef, hoverProps } = useIconHover();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
@@ -84,10 +86,12 @@ export function AddVendorDialog({ token, onCreated }: AddVendorDialogProps) {
       }}
     >
       <DialogTrigger asChild>
-        <Button variant="segment" size="segment" {...hoverProps}>
-          <PlusIcon ref={plusRef} size={12} className="flex shrink-0 [&>svg]:size-3!" aria-hidden />
-          Tedarikçi Ekle
-        </Button>
+        {trigger ?? (
+          <Button variant="segment" size="segment" {...hoverProps}>
+            <PlusIcon ref={plusRef} size={12} className="flex shrink-0 [&>svg]:size-3!" aria-hidden />
+            Tedarikçi Ekle
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="max-w-sm">
         <DialogHeader>

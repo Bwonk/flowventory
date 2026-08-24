@@ -1,7 +1,7 @@
 'use client';
 
 import { logger } from '@/lib/logger';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { AdjustmentsHorizontalIcon } from '@/components/ui/icons/adjustments-horizontal';
 import { useIconHover } from '@/components/ui/icons/use-icon-hover';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,8 @@ interface ReportParamsPopoverProps {
   targetStockDays: number;
   /** Kaydeder ve raporu yeniden hesaplatır; hata fırlatırsa popover açık kalır. */
   onApply: (leadTimeDays: number, targetStockDays: number) => Promise<void>;
+  /** Dış tetikleyici (ör. ExpandableActionBar öğesi); verilmezse varsayılan segment buton. */
+  trigger?: ReactNode;
 }
 
 /**
@@ -27,7 +29,7 @@ interface ReportParamsPopoverProps {
  * aksiyonlarındaki popover'a taşındı — trigger mevcut değerleri veri olarak
  * gösterir, düzenleme tek tık uzakta.
  */
-export function ReportParamsPopover({ leadTimeDays, targetStockDays, onApply }: ReportParamsPopoverProps) {
+export function ReportParamsPopover({ leadTimeDays, targetStockDays, onApply, trigger }: ReportParamsPopoverProps) {
   const { ref: paramsRef, hoverProps: paramsHoverProps } = useIconHover();
   const [open, setOpen] = useState(false);
   const [leadDraft, setLeadDraft] = useState(leadTimeDays);
@@ -62,17 +64,19 @@ export function ReportParamsPopover({ leadTimeDays, targetStockDays, onApply }: 
       }}
     >
       <PopoverTrigger asChild>
-        <Button variant="segment" size="segment" aria-label="Hesap parametreleri" {...paramsHoverProps}>
-          <AdjustmentsHorizontalIcon
-            ref={paramsRef}
-            size={12}
-            className="flex shrink-0 [&>svg]:size-3!"
-            aria-hidden
-          />
-          <span className="font-mono text-xs tabular-nums">
-            {leadTimeDays}g · {targetStockDays}g
-          </span>
-        </Button>
+        {trigger ?? (
+          <Button variant="segment" size="segment" aria-label="Hesap parametreleri" {...paramsHoverProps}>
+            <AdjustmentsHorizontalIcon
+              ref={paramsRef}
+              size={12}
+              className="flex shrink-0 [&>svg]:size-3!"
+              aria-hidden
+            />
+            <span className="font-mono text-xs tabular-nums">
+              {leadTimeDays}g · {targetStockDays}g
+            </span>
+          </Button>
+        )}
       </PopoverTrigger>
       <PopoverContent align="end" sideOffset={6} className="w-64 rounded-lg p-3">
         <PopoverHeader>

@@ -5,50 +5,17 @@ import { useCallback, useEffect, useState } from 'react';
 import { TokenHelpers } from '@/helpers/token-helpers';
 import { ApiRequests } from '@/lib/api-requests';
 import type { PurchaseReportApiResponse } from '@/app/api/reports/purchase/route';
-import { Button } from '@/components/ui/button';
-import { ToolTrack, ToolTrackDivider } from '@/components/shared/tool-track';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { ErrorState } from '@/components/shared/ErrorState';
 import { useMerchantCurrency } from '@/lib/currency';
 import { markReportViewed, markStoreSynced } from '@/lib/onboarding';
-import { ArrowPathIcon } from '@/components/ui/icons/arrow-path';
-import { PrinterIcon } from '@/components/ui/icons/printer';
-import { useIconHover } from '@/components/ui/icons/use-icon-hover';
 import { RaporSkeleton } from './_components/RaporSkeleton';
-import { AddVendorDialog } from './_components/AddVendorDialog';
-import { BasketSheet } from './_components/BasketSheet';
 import { clampQty, seedBasket, type BasketState } from './_components/basket';
+import { ReportActionBar } from './_components/ReportActionBar';
 import { ReportKpiStrip } from './_components/ReportKpiStrip';
-import { ReportParamsPopover } from './_components/ReportParamsPopover';
 import { VendorTabsPanel } from './_components/VendorTabsPanel';
 import type { VendorListItem } from '@/app/api/vendors/route';
-
-/** Yenile aksiyonu — sayfa araç yolunun segmenti; ikon animasyonu butondan sürülür. */
-function RefreshButton({ onClick }: { onClick: () => void }) {
-  const { ref, hoverProps } = useIconHover();
-
-  return (
-    <Button variant="segment" size="segment" onClick={onClick} {...hoverProps}>
-      {/* size-3! gerekli: Button'ın [&_svg:not([class*='size-'])]:size-4 kuralı
-          :not() attribute seçicisi yüzünden daha yüksek specificity'ye sahip. */}
-      <ArrowPathIcon ref={ref} size={12} className="flex shrink-0 [&>svg]:size-3!" aria-hidden />
-      Yenile
-    </Button>
-  );
-}
-
-/** Global yazdırma — yolun sağ ucunda öne çıkan bg-card hap (ink birincil tedarikçi yolundaki Gönder'dir). */
-function PrintPdfButton({ onClick, disabled }: { onClick: () => void; disabled: boolean }) {
-  const { ref, hoverProps } = useIconHover();
-
-  return (
-    <Button variant="segment-card" size="segment" onClick={onClick} disabled={disabled} {...hoverProps}>
-      <PrinterIcon ref={ref} size={12} className="flex shrink-0 [&>svg]:size-3!" aria-hidden />
-      Yazdır / PDF
-    </Button>
-  );
-}
 
 /**
  * Satın Alma Raporu sayfası.
@@ -272,39 +239,29 @@ export default function RaporPage() {
         eyebrow="RAPOR"
         title="Satın Alma Raporu"
         description={`Son ${report.salesWindowDays} günün satış hızına göre · ${generatedAt.toLocaleString('tr-TR')}`}
-        // Sayfa araçları tek yolda (DESIGN.md §5 "Araç yolu"); print'te gizli.
+        // Sayfa araçları kompakt ikon yolunda (DESIGN.md §5 "Araç yolu"); print'te gizli.
         actions={
-          <ToolTrack aria-label="Rapor işlemleri" className="print:hidden">
-            <ReportParamsPopover
-              leadTimeDays={report.leadTimeDays}
-              targetStockDays={report.targetStockDays}
-              onApply={applySettings}
-            />
-            {token && (
-              <AddVendorDialog
-                token={token}
-                onCreated={vendor => {
-                  setVendorList(prev =>
-                    [...prev, vendor].sort((a, b) => a.vendorName.localeCompare(b.vendorName, 'tr')),
-                  );
-                  // Yeni tedarikçinin tab'ı anında oluşur ve aktif olur.
-                  setActiveVendorKey(vendor.vendorId);
-                }}
-              />
-            )}
-            <RefreshButton onClick={initialize} />
-            <BasketSheet
-              token={token}
-              vendors={displayVendors}
-              vendorList={vendorList}
-              basket={basket}
-              onLineQtyChange={handleLineQtyChange}
-              onResetBasket={handleResetBasket}
-              onVendorSent={handleVendorSent}
-            />
-            <ToolTrackDivider />
-            <PrintPdfButton onClick={() => window.print()} disabled={Object.keys(basket).length === 0} />
-          </ToolTrack>
+          <ReportActionBar
+            token={token}
+            leadTimeDays={report.leadTimeDays}
+            targetStockDays={report.targetStockDays}
+            onApplySettings={applySettings}
+            onVendorCreated={vendor => {
+              setVendorList(prev =>
+                [...prev, vendor].sort((a, b) => a.vendorName.localeCompare(b.vendorName, 'tr')),
+              );
+              // Yeni tedarikçinin tab'ı anında oluşur ve aktif olur.
+              setActiveVendorKey(vendor.vendorId);
+            }}
+            onRefresh={initialize}
+            vendors={displayVendors}
+            vendorList={vendorList}
+            basket={basket}
+            onLineQtyChange={handleLineQtyChange}
+            onResetBasket={handleResetBasket}
+            onVendorSent={handleVendorSent}
+            onPrint={() => window.print()}
+          />
         }
       />
 

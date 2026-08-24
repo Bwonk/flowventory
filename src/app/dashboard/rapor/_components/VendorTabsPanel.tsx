@@ -3,19 +3,15 @@
 import { useEffect, useState } from 'react';
 import { useReducedMotion } from 'motion/react';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { PrinterIcon } from '@/components/ui/icons/printer';
-import { useIconHover } from '@/components/ui/icons/use-icon-hover';
-import { SegmentedTrack, ToolTrack, ToolTrackDivider } from '@/components/shared/tool-track';
+import { SegmentedTrack } from '@/components/shared/tool-track';
 import { cn } from '@/lib/utils';
 import { formatPrice } from '@/lib/currency';
 import type { PurchaseReportVendor } from '@/app/api/reports/purchase/route';
 import type { VendorListItem } from '@/app/api/vendors/route';
 import { AddProductsDialog } from './AddProductsDialog';
-import { vendorBasketLines, vendorBasketTotals, type BasketState } from './basket';
+import { vendorBasketTotals, type BasketState } from './basket';
 import { DeleteVendorDialog } from './DeleteVendorDialog';
-import { SendReportDialog } from './SendReportDialog';
-import { VendorContactPopover } from './VendorContactPopover';
+import { VendorActionBar } from './VendorActionBar';
 import { VendorOrderTable } from './VendorOrderTable';
 
 /** Tab/print anahtarı — printVendorId ile aynı konvansiyon. */
@@ -71,7 +67,6 @@ export function VendorTabsPanel({
   printVendorId,
   onPrintVendor,
 }: VendorTabsPanelProps) {
-  const { ref: printRef, hoverProps: printHoverProps } = useIconHover();
   const reduceMotion = useReducedMotion();
   // Maliyet desc, maliyetsizler ada göre (henüz ürünsüz yeni kayıtlar da
   // araya girer); "Tedarikçi atanmamış" (vendorId null) sona pinlenir.
@@ -116,7 +111,6 @@ export function VendorTabsPanel({
   const shownVendorKey = orderedVendors.some(v => vendorKey(v) === shownKey)
     ? (shownKey as string)
     : effectiveActiveKey;
-  const activeBasketCount = vendorBasketTotals(activeVendor, basket).count;
   const activeContact = vendorList.find(v => v.vendorId === activeVendor.vendorId);
 
   return (
@@ -143,52 +137,17 @@ export function VendorTabsPanel({
           })}
         />
 
-        {/* Tedarikçi işlem yolu — aktif tedarikçi; tek ink birincil "Gönder" */}
-        <ToolTrack aria-label={`${activeVendor.vendorName} işlemleri`}>
-          {token && activeVendor.vendorId !== null && (
-            <AddProductsDialog
-              token={token}
-              vendorName={activeVendor.vendorName}
-              onAssigned={() => onProductsAssigned(activeVendor.vendorName)}
-              compact
-            />
-          )}
-          <Button
-            variant="segment"
-            size="segment"
-            onClick={() => onPrintVendor(effectiveActiveKey)}
-            disabled={activeBasketCount === 0}
-            title={activeBasketCount === 0 ? 'Sepet boş' : undefined}
-            aria-label={`${activeVendor.vendorName} siparişini yazdır`}
-            {...printHoverProps}
-          >
-            <PrinterIcon ref={printRef} size={12} className="flex shrink-0 [&>svg]:size-3!" aria-hidden />
-            Yazdır
-          </Button>
-          {token && activeVendor.vendorId !== null && (
-            <VendorContactPopover
-              token={token}
-              vendorId={activeVendor.vendorId}
-              vendorName={activeVendor.vendorName}
-              contact={activeContact ?? { email: null, phone: null }}
-              onSaved={next => onVendorContactSaved(activeVendor.vendorId!, next)}
-            />
-          )}
-          {token && activeVendor.vendorId !== null && (
-            <>
-              <ToolTrackDivider />
-              <SendReportDialog
-                token={token}
-                vendorId={activeVendor.vendorId}
-                vendorName={activeVendor.vendorName}
-                email={activeContact?.email ?? null}
-                lines={vendorBasketLines(activeVendor, basket)}
-                onSent={() => onVendorSent(activeVendor.vendorId!)}
-                variant="track"
-              />
-            </>
-          )}
-        </ToolTrack>
+        {/* Tedarikçi işlem yolu — aktif tedarikçi; kompakt ikonlar, hover'da etiket */}
+        <VendorActionBar
+          token={token}
+          vendor={activeVendor}
+          contact={activeContact ?? { email: null, phone: null }}
+          basket={basket}
+          onPrint={() => onPrintVendor(effectiveActiveKey)}
+          onProductsAssigned={onProductsAssigned}
+          onContactSaved={onVendorContactSaved}
+          onSent={onVendorSent}
+        />
       </div>
 
       <div className="overflow-hidden rounded-lg border border-hairline bg-card print:border-neutral-400">

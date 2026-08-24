@@ -1,7 +1,7 @@
 'use client';
 
 import { logger } from '@/lib/logger';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { ApiRequests } from '@/lib/api-requests';
 import { Button } from '@/components/ui/button';
@@ -25,13 +25,15 @@ interface VendorContactPopoverProps {
   contact: { email: string | null; phone: string | null };
   /** Sayfadaki vendorList entry'sini patch'ler — rapor refetch'i gerekmez. */
   onSaved: (contact: { email: string | null; phone: string | null }) => void;
+  /** Dış tetikleyici (ör. ExpandableActionBar öğesi); verilmezse varsayılan ikon segment. */
+  trigger?: ReactNode;
 }
 
 /**
  * Tedarikçi kartı başlığından hızlı iletişim düzenleme. Ayarlar →
  * Tedarikçiler ile aynı endpoint'i (PUT /api/vendors) kullanır.
  */
-export function VendorContactPopover({ token, vendorId, vendorName, contact, onSaved }: VendorContactPopoverProps) {
+export function VendorContactPopover({ token, vendorId, vendorName, contact, onSaved, trigger }: VendorContactPopoverProps) {
   const { ref: envelopeRef, hoverProps } = useIconHover();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState(contact.email ?? '');
@@ -78,16 +80,18 @@ export function VendorContactPopover({ token, vendorId, vendorName, contact, onS
       }}
     >
       <PopoverTrigger asChild>
-        <Button
-          variant="segment"
-          size="icon-segment"
-          className="print:hidden"
-          title="İletişim"
-          aria-label={`${vendorName} iletişim bilgileri`}
-          {...hoverProps}
-        >
-          <EnvelopeIcon ref={envelopeRef} size={12} className="flex shrink-0 [&>svg]:size-3!" aria-hidden />
-        </Button>
+        {trigger ?? (
+          <Button
+            variant="segment"
+            size="icon-segment"
+            className="print:hidden"
+            title="İletişim"
+            aria-label={`${vendorName} iletişim bilgileri`}
+            {...hoverProps}
+          >
+            <EnvelopeIcon ref={envelopeRef} size={12} className="flex shrink-0 [&>svg]:size-3!" aria-hidden />
+          </Button>
+        )}
       </PopoverTrigger>
       <PopoverContent align="end" sideOffset={6} className="z-[100] w-64 rounded-lg p-3">
         <PopoverHeader>

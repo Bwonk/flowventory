@@ -191,15 +191,22 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   `ErrorState`. Sayısal kolonlar sağa dayalı `tabular-nums`; mono yalnız
   başlık/kod. [src/components/ui/table.tsx](src/components/ui/table.tsx)
   kullanılmaz.
-- **Araç yolu (ToolTrack / SegmentedTrack):**
-  [src/components/shared/tool-track/](src/components/shared/tool-track/).
+- **Araç yolu (ExpandableActionBar / ToolTrack / SegmentedTrack):**
   Birbirine bağlı aksiyonlar tek `bg-muted` parçada yaşar: 36px yol, 3px iç
-  boşluk, `rounded-lg`; segmentler 30px `rounded-md` (`Button
-  variant="segment" size="segment"`, ikon-only `icon-segment`). Segment dili:
-  ghost `segment` (yalnız metin rengi değişir), öne çıkan ikincil
-  `segment-card` (bg-card + hairline hap), birincil `default` (ink hap) — yol
-  başına en fazla bir ink; ayraç `ToolTrackDivider`. Çentik, kavis, kaynaşık
-  yüzey yok — yol kartın üstünde serbest durur. Tab niteliğindeki seçimler
+  boşluk, `rounded-lg`; segmentler 30px `rounded-md`. Aksiyon kümeleri
+  [src/components/motion/expandable-action-bar.tsx](src/components/motion/expandable-action-bar.tsx)
+  (beui uyarlaması): dinlenmede yalnız ikon (30px kare), imleç yola gelince /
+  odak girince etiketler paylaşımlı-layout ile açılır (spring 350/35, etiket
+  blur 3px→0), dokunmatikte ilk dokunuş açar ikincisi çalıştırır; hover
+  vurgusu `bg-card` + hairline hap olarak öğeler arasında kayar. Öğe
+  varyantları: ghost, `card` (bg-card + hairline — öne çıkan ikincil), `ink`
+  (birincil; yol başına en fazla bir), `separatorBefore` ayraç; ikon
+  animasyonu `hoverProps` ile parent'tan sürülür; Dialog/Popover/Sheet
+  tetikleyicileri `wrap` ile butona `asChild` biner (bileşenlerin `trigger`
+  prop'u). Statik gruplar için `ToolTrack` (`Button variant="segment"`,
+  `segment-card`, `default`; ayraç `ToolTrackDivider`) —
+  [src/components/shared/tool-track/](src/components/shared/tool-track/).
+  Çentik, kavis, kaynaşık yüzey yok — yol kartın üstünde serbest durur. Tab niteliğindeki seçimler
   `SegmentedTrack`: aktif segment `bg-card` + hairline haptır ve **tek
   elemandır**, seçim değişince `layoutId` + spring 350/35 ile eski segmentten
   yenisine kayar; kompakt hali `SegmentedControl` (32px, grafik/kart
@@ -207,8 +214,8 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   belirir (thumb `bg-muted-foreground`, yola hover'da ink; sürüklenir, raya
   tıklayınca atlar), fare yolun üstündeyken tekerlek yatay kaydırır, taşan
   kenar 28px mask ile solar, seçilen segment görünür alana kayar. Emsal:
-  satın alma raporu (`rapor/page.tsx` sayfa araçları, `VendorTabsPanel` tab
-  ve tedarikçi işlem yolları).
+  satın alma raporu (`ReportActionBar` sayfa araçları, `VendorTabsPanel`
+  tab yolu, `VendorActionBar` tedarikçi işlemleri).
 - **Grafikler:** [src/components/ui/chart.tsx](src/components/ui/chart.tsx);
   palet yalnızca `--chart-1..5` (chart-1 = accent mavi); grid çizgileri
   hairline, eksen etiketleri mono.

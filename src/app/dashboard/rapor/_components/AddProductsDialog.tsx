@@ -2,7 +2,7 @@
 
 import { logger } from '@/lib/logger';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import Image from 'next/image';
 import { Check } from 'lucide-react';
 import { toast } from 'sonner';
@@ -45,6 +45,8 @@ interface AddProductsDialogProps {
   onAssigned: () => Promise<void>;
   /** Aksiyon kümesindeki kompakt buton (h-6) — boş tab CTA'sında normal boy. */
   compact?: boolean;
+  /** Dış tetikleyici (ör. ExpandableActionBar öğesi); büyüme kökeni yine tetikleyiciden ölçülür. */
+  trigger?: ReactNode;
 }
 
 /**
@@ -53,7 +55,7 @@ interface AddProductsDialogProps {
  * ikas'a vendor olarak yazılır — tedarikçi ikas admin'de ilk atamayla
  * gerçekten oluşur. Başka tedarikçideki ürün uyarıyla taşınabilir.
  */
-export function AddProductsDialog({ token, vendorName, onAssigned, compact }: AddProductsDialogProps) {
+export function AddProductsDialog({ token, vendorName, onAssigned, compact, trigger }: AddProductsDialogProps) {
   const { ref: plusRef, hoverProps } = useIconHover();
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -178,19 +180,21 @@ export function AddProductsDialog({ token, vendorName, onAssigned, compact }: Ad
         if (!next) reset();
       }}
     >
-      <DialogTrigger asChild>
-        <Button
-          ref={triggerRef}
-          // Kompakt hali tedarikçi işlem yolunda yaşar — yolun segment dili.
-          variant={compact ? 'segment' : 'outline'}
-          size={compact ? 'segment' : 'sm'}
-          className={compact ? undefined : 'gap-1.5'}
-          aria-label={`${vendorName} tedarikçisine ürün ekle`}
-          {...hoverProps}
-        >
-          <PlusIcon ref={plusRef} size={12} className="flex shrink-0 [&>svg]:size-3!" aria-hidden />
-          Ürün Ekle
-        </Button>
+      {/* ref DialogTrigger'da: asChild ile dış tetikleyiciye de biner (büyüme kökeni). */}
+      <DialogTrigger asChild ref={triggerRef}>
+        {trigger ?? (
+          <Button
+            // Kompakt hali tedarikçi işlem yolunda yaşar — yolun segment dili.
+            variant={compact ? 'segment' : 'outline'}
+            size={compact ? 'segment' : 'sm'}
+            className={compact ? undefined : 'gap-1.5'}
+            aria-label={`${vendorName} tedarikçisine ürün ekle`}
+            {...hoverProps}
+          >
+            <PlusIcon ref={plusRef} size={12} className="flex shrink-0 [&>svg]:size-3!" aria-hidden />
+            Ürün Ekle
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent ref={setContentNode} className="max-w-md" style={GROW_FROM_TRIGGER_STYLE}>
         <DialogHeader>

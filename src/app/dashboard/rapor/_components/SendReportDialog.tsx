@@ -1,7 +1,7 @@
 'use client';
 
 import { logger } from '@/lib/logger';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { PaperAirplaneIcon } from '@/components/ui/icons/paper-airplane';
 import { useIconHover } from '@/components/ui/icons/use-icon-hover';
 import { toast } from 'sonner';
@@ -39,6 +39,8 @@ interface SendReportDialogProps {
    * 'shelf' kompakt ghost (eski raf dili, sepet çekmecesi dışında kullanılmaz).
    */
   variant?: 'shelf' | 'group' | 'track';
+  /** Dış tetikleyici (ör. ExpandableActionBar öğesi); disabled/title dışarıda hesaplanır. */
+  trigger?: ReactNode;
 }
 
 /**
@@ -55,6 +57,7 @@ export function SendReportDialog({
   onSent,
   triggerClassName,
   variant = 'shelf',
+  trigger,
 }: SendReportDialogProps) {
   const { ref: sendRef, hoverProps } = useIconHover();
   const [open, setOpen] = useState(false);
@@ -86,6 +89,7 @@ export function SendReportDialog({
   return (
     <Dialog open={open} onOpenChange={next => !sending && setOpen(next)}>
       <DialogTrigger asChild>
+        {trigger ?? (
         <Button
           variant={variant === 'shelf' ? 'ghost' : 'default'}
           size={variant === 'track' ? 'segment' : 'sm'}
@@ -103,6 +107,7 @@ export function SendReportDialog({
           <PaperAirplaneIcon ref={sendRef} size={12} className="flex shrink-0 [&>svg]:size-3!" aria-hidden />
           {variant === 'group' ? 'Sipariş Ver' : 'Gönder'}
         </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader>

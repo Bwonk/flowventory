@@ -11,7 +11,7 @@ export function RaporSkeleton() {
           <Skeleton className="h-8 w-72" />
           <Skeleton className="mt-2 h-3 w-56" />
         </div>
-        <Skeleton className="h-9 w-[420px] max-w-full rounded-lg" />
+        <Skeleton className="h-9 w-[184px] max-w-full rounded-lg" />
       </div>
 
       <div className="mb-4 overflow-hidden rounded-lg border border-hairline bg-card">
@@ -27,7 +27,7 @@ export function RaporSkeleton() {
 
       <div className="mb-3 flex items-center justify-between gap-3">
         <Skeleton className="h-9 w-96 max-w-full rounded-lg" />
-        <Skeleton className="h-9 w-72 rounded-lg" />
+        <Skeleton className="h-9 w-[156px] rounded-lg" />
       </div>
       <div className="overflow-hidden rounded-lg border border-hairline bg-card">
         <div className="flex h-[33px] items-center gap-6 border-b border-border px-5">

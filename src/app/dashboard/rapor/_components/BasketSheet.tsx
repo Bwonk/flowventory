@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import type { ReactNode } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AnimatedNumber } from '@/components/shared/AnimatedNumber';
@@ -41,6 +42,8 @@ interface BasketSheetProps {
   onResetBasket: () => void;
   /** Gönderim başarısında o tedarikçinin satırları sepetten düşer. */
   onVendorSent: (vendorId: string) => void;
+  /** Dış tetikleyici (ör. ExpandableActionBar öğesi); verilmezse varsayılan segment buton. */
+  trigger?: ReactNode;
 }
 
 /** Satırı sepetten çıkarır — hover animasyonu butondan sürülür (DESIGN.md ikon kuralı). */
@@ -73,6 +76,7 @@ export function BasketSheet({
   onLineQtyChange,
   onResetBasket,
   onVendorSent,
+  trigger,
 }: BasketSheetProps) {
   const { ref: cartRef, hoverProps: cartHoverProps } = useIconHover();
   // Tab sırasıyla aynı mantık: "Tedarikçi atanmamış" sona pinlenir.
@@ -88,20 +92,22 @@ export function BasketSheet({
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button
-          variant="segment"
-          size="segment"
-          aria-label={`Sepet, ${totals.count} kalem`}
-          {...cartHoverProps}
-        >
-          <ShoppingCartIcon ref={cartRef} size={12} className="flex shrink-0 [&>svg]:size-3!" aria-hidden />
-          Sepet
-          {totals.count > 0 && (
-            <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium tabular-nums text-primary-foreground">
-              <AnimatedNumber value={totals.count} />
-            </span>
-          )}
-        </Button>
+        {trigger ?? (
+          <Button
+            variant="segment"
+            size="segment"
+            aria-label={`Sepet, ${totals.count} kalem`}
+            {...cartHoverProps}
+          >
+            <ShoppingCartIcon ref={cartRef} size={12} className="flex shrink-0 [&>svg]:size-3!" aria-hidden />
+            Sepet
+            {totals.count > 0 && (
+              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium tabular-nums text-primary-foreground">
+                <AnimatedNumber value={totals.count} />
+              </span>
+            )}
+          </Button>
+        )}
       </SheetTrigger>
       <SheetContent side="right" className="w-full sm:max-w-md">
         <SheetHeader className="border-b border-hairline py-3">
