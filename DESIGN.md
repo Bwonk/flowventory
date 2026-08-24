@@ -287,6 +287,13 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   200ms çıkar; satır aksiyonu ve sıralama oku 150ms; skeleton → içerik 200ms
   grup opacity, satır başı stagger yok (`animate-enter` KPI karolarına
   mahsustur). Hepsi `prefers-reduced-motion`'da anlık.
+- **Sayı geçişi** — [src/components/shared/AnimatedNumber.tsx](src/components/shared/AnimatedNumber.tsx):
+  arttır/azalt ile değişen her sayı (adet, satır tutarı, grup/genel toplam,
+  rozet sayacı) yön farkındalıklı kayar — artışta yeni değer alttan gelir,
+  azalışta üstten; giren/çıkan aynı spring 350/35, `popLayout`, ilk
+  boyamada ve reduced-motion'da anlık. −/+ kontrolü
+  [src/components/shared/QtyStepper.tsx](src/components/shared/QtyStepper.tsx):
+  sayıya tıklayınca yerinde giriş açılır.
 - Hover/press geçişleri: `transition-colors duration-150`; asla
   `transition-all`. Basma geri bildirimi `active:scale-[0.99]`'u geçmez.
 - `prefers-reduced-motion` her girişte ve press efektinde saygı görür; ikon

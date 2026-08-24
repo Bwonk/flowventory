@@ -1,11 +1,11 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
-import { Minus, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { AnimatedNumber } from '@/components/shared/AnimatedNumber';
 import { RowActions } from '@/components/shared/data-table/data-table';
+import { QtyStepper } from '@/components/shared/QtyStepper';
 import { ShoppingCartIcon } from '@/components/ui/icons/shopping-cart';
 import { TrashIcon } from '@/components/ui/icons/trash';
 import { useIconHover } from '@/components/ui/icons/use-icon-hover';
@@ -24,7 +24,6 @@ import type { PurchaseReportVendor } from '@/app/api/reports/purchase/route';
 import type { VendorListItem } from '@/app/api/vendors/route';
 import {
   basketTotals,
-  clampQty,
   vendorBasketLines,
   vendorBasketTotals,
   type BasketState,
@@ -42,69 +41,6 @@ interface BasketSheetProps {
   onResetBasket: () => void;
   /** Gönderim başarısında o tedarikçinin satırları sepetten düşer. */
   onVendorSent: (vendorId: string) => void;
-}
-
-/**
- * −/input/+ adet düzenleyici — hairline çerçeveli tek hap (sepet canvas'ındaki
- * "Kart Grupları" yönü); 1'de eksi satırı sepetten çıkarır.
- */
-function QtyStepper({
-  qty,
-  onChange,
-  onRemove,
-  label,
-}: {
-  qty: number;
-  onChange: (qty: number) => void;
-  onRemove: () => void;
-  label: string;
-}) {
-  const [text, setText] = useState(String(qty));
-  useEffect(() => setText(String(qty)), [qty]);
-
-  const commit = () => {
-    const parsed = Number(text);
-    // Boş/0/geçersiz giriş sepetten satır düşürmez — önceki değere dönülür.
-    if (!Number.isFinite(parsed) || parsed < 1) {
-      setText(String(qty));
-      return;
-    }
-    onChange(clampQty(parsed));
-  };
-
-  return (
-    <div className="flex h-6 shrink-0 items-center rounded-md border border-border bg-card">
-      <Button
-        variant="ghost"
-        size="sm"
-        className="size-5.5 rounded-r-none p-0 text-muted-foreground hover:text-foreground"
-        onClick={() => (qty <= 1 ? onRemove() : onChange(qty - 1))}
-        aria-label={`${label} adedini azalt`}
-      >
-        <Minus className="size-3" aria-hidden />
-      </Button>
-      <input
-        inputMode="numeric"
-        value={text}
-        onChange={e => setText(e.target.value.replace(/[^\d]/g, ''))}
-        onBlur={commit}
-        onKeyDown={e => {
-          if (e.key === 'Enter') e.currentTarget.blur();
-        }}
-        aria-label={`${label} adedi`}
-        className="h-full w-8 bg-transparent text-center text-xs font-medium tabular-nums text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      />
-      <Button
-        variant="ghost"
-        size="sm"
-        className="size-5.5 rounded-l-none p-0 text-muted-foreground hover:text-foreground"
-        onClick={() => onChange(clampQty(qty + 1))}
-        aria-label={`${label} adedini artır`}
-      >
-        <Plus className="size-3" aria-hidden />
-      </Button>
-    </div>
-  );
 }
 
 /** Satırı sepetten çıkarır — hover animasyonu butondan sürülür (DESIGN.md ikon kuralı). */
@@ -162,7 +98,7 @@ export function BasketSheet({
           Sepet
           {totals.count > 0 && (
             <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium tabular-nums text-primary-foreground">
-              {totals.count}
+              <AnimatedNumber value={totals.count} />
             </span>
           )}
         </Button>
@@ -208,14 +144,16 @@ export function BasketSheet({
                       >
                         {vendor.vendorId === null ? 'Tedarikçi atanmamış' : vendor.vendorName}
                       </p>
-                      <p className="text-xs tabular-nums text-muted-foreground">{vendorTotals.count} kalem</p>
+                      <p className="text-xs tabular-nums text-muted-foreground">
+                        <AnimatedNumber value={vendorTotals.count} /> kalem
+                      </p>
                     </div>
                     {/* Grup toplamı sağda vurgulu (Kart × Sevkiyat karması) */}
                     <p
                       className="shrink-0 text-sm font-semibold tabular-nums text-foreground"
                       title={vendorTotals.hasEstimate ? 'Bazı satırlarda alış fiyatı yok; satış fiyatı kullanıldı' : undefined}
                     >
-                      {formatPrice(vendorTotals.total)}
+                      <AnimatedNumber value={vendorTotals.total} format={formatPrice} />
                     </p>
                   </div>
                   <ul className="mx-2 mb-2 divide-y divide-border rounded-md bg-card">
@@ -259,7 +197,7 @@ export function BasketSheet({
                           className="w-14 shrink-0 text-right text-xs font-medium tabular-nums text-foreground"
                           title={line.isEstimate ? 'Alış fiyatı tanımlı değil; satış fiyatıyla hesaplandı' : undefined}
                         >
-                          {formatPrice(qty * line.unitCost)}
+                          <AnimatedNumber value={qty * line.unitCost} format={formatPrice} />
                         </p>
                         <RowActions className="shrink-0">
                           <RemoveLineButton
@@ -301,7 +239,7 @@ export function BasketSheet({
               Sıfırla
             </Button>
             <p className="text-sm font-semibold tabular-nums text-foreground">
-              {formatPrice(totals.total)}
+              <AnimatedNumber value={totals.total} format={formatPrice} />
               {totals.hasEstimate && (
                 <span
                   className="text-xs font-normal text-muted-foreground"
