@@ -206,10 +206,10 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   prop'u). Statik gruplar için `ToolTrack` (`Button variant="segment"`,
   `segment-card`, `default`; ayraç `ToolTrackDivider`) —
   [src/components/shared/tool-track/](src/components/shared/tool-track/).
-  Sekmeler de aynı bileşenle (`role="tablist"`): ikonu olmayan öğe kapalı
-  halde **monogramla** (adın baş harfleri, mono 10px) durur, aktif olan
-  `bg-card` hapı taşır, acil sayacı `badgeVariant="critical"` köşe rozeti.
-  Taşma davranışı ortak `useTrackOverflow` + `TrackSlider`'dan gelir.
+  Sekmeler etiketli kalır (`SegmentedTrack`) — ikonu olmayan öğe kapalı
+  halde okunmaz; `role="tablist"` desteği bileşende durur ama sekmelerde
+  kullanılmaz. Taşma davranışı ortak `useTrackOverflow` + `TrackSlider`'dan
+  gelir.
   Çentik, kavis, kaynaşık yüzey yok — yol kartın üstünde serbest durur. Tab niteliğindeki seçimler
   `SegmentedTrack`: aktif segment `bg-card` + hairline haptır ve **tek
   elemandır**, seçim değişince `layoutId` + spring 350/35 ile eski segmentten
