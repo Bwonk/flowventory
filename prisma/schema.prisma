@@ -5,9 +5,13 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// Neon Postgres — local geliştirme `dev` branch'ine, production `main` branch'ine bağlanır.
+// DATABASE_URL: havuzlu (pooled) bağlantı — uygulama sorguları.
+// DATABASE_URL_UNPOOLED: doğrudan bağlantı — yalnız migration'lar (pooler DDL/advisory lock taşımaz).
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 model AuthToken {
@@ -125,7 +129,7 @@ model ProductSnapshot {
   vendorName        String?
   brandId           String?
   brandName         String?
-  categoriesJson    String?  // [{id,name}] — SQLite'ta Json tipi yok, string tutuyoruz
+  categoriesJson    String?  // [{id,name}] — SQLite döneminden JSON string; Json tipine geçiş ayrı iş
   variantId         String
   sku               String?
   imageUrl          String?

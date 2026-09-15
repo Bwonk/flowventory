@@ -24,6 +24,7 @@ pnpm install
 | Değişken | Nereden |
 |---|---|
 | `NEXT_PUBLIC_CLIENT_ID` / `CLIENT_SECRET` | ikas Partner panelindeki app bilgileri (eski bilgisayardaki `.env`'den kopyala) |
+| `DATABASE_URL` / `DATABASE_URL_UNPOOLED` | Neon → proje → **`dev` branch** → Connect: havuzlu (pooled) ve doğrudan adres. Production'daki `main` branch'ini localde asla kullanma |
 | `SECRET_COOKIE_PASSWORD` | Eski `.env`'den kopyala (32+ karakter) |
 | `NEXT_PUBLIC_GRAPH_API_URL` | `https://api.myikas.com/api/v2/admin/graphql` |
 | `NEXT_PUBLIC_ADMIN_URL` | `https://{storeName}.myikas.com/admin` |
@@ -33,12 +34,16 @@ pnpm install
 | `CRON_SECRET` | Opsiyonel — zamanlanmış özet raporu için (`openssl rand -hex 32`); boşsa `/api/cron/digest` kapalı (503) |
 
 ```bash
-pnpm prisma migrate dev     # boş dev.db'yi 8 migration'dan kurar + client üretir
-pnpm views:import           # görüntülenme geçmişini (1095+504 satır) + ayarları geri yükler
+pnpm prisma migrate deploy  # Neon dev branch'ine migration'ları uygular (zaten güncelse no-op)
+pnpm prisma generate
+pnpm views:import           # yalnız boş bir dev branch'ine: görüntülenme geçmişi + ayarlar
 pnpm dev                    # (veya ikas CLI dev komutu)
 ```
 
-**Kurulum sonrası zorunlu 2 adım:**
+Veritabanı artık Neon'da olduğu için bilgisayar değiştirmek veri taşımayı gerektirmez — aynı
+dev branch'ine bağlanmak yeterli. Şema değişikliğinde: `pnpm prisma migrate dev --name <ad>`.
+
+**Kurulum sonrası zorunlu 2 adım (yalnız boş bir veritabanıyla başlarken):**
 1. **Uygulamayı ikas'tan yeniden yetkilendir** — yeni DB'de AuthToken yok; ayrıca webhook kaydı (order/product/stock scope'ları) OAuth callback'te yapılıyor.
 2. **Ayarlar → Takip scriptini yeniden kur** — eski kurulu script token'sız; yeni script HMAC imzalı token içeriyor, yoksa görüntülenmeler 401 alır.
 
@@ -113,8 +118,8 @@ pnpm dev                    # (veya ikas CLI dev komutu)
 
 ### M) Zamanlanmış özet raporu
 - [ ] Ayarlar → E-posta bildirimleri: Günlük/Haftalık + gün/saat kaydediliyor, sayfa yenilenince korunuyor
-- [ ] "Örnek özet gönder" → kayıtlı adrese e-posta geliyor (Resend key gerekli); 3 denemeden sonra 429
-- [ ] Cron: `curl -H "Authorization: Bearer $CRON_SECRET" localhost:3000/api/cron/digest` — seçilen saatte (mağaza TZ'si, +3 saat telafi penceresi) `sent: 1`, aynı saatte ikinci çağrı `due: 0` (DigestLog tekrar göndermiyor)
+- [x] "Örnek özet gönder" → kayıtlı adrese e-posta geliyor (Resend key gerekli) — 10 Eyl 2026, curl ile; 429 sınırı denenmedi
+- [x] Cron: `curl -H "Authorization: Bearer $CRON_SECRET" localhost:3000/api/cron/digest` — seçilen saatte (mağaza TZ'si, +3 saat telafi penceresi) `sent: 1`, aynı saatte ikinci çağrı `due: 0` (DigestLog tekrar göndermiyor) — 10 Eyl 2026 geçti, yanlış anahtar 401
 - [ ] E-postadaki tükenen/az kalan/ölü stok sayıları dashboard'la tutuyor mu
 - [ ] Günlük özet dünü, haftalık özet dünden geriye 7 günü kapsıyor (bugün dahil değil)
 
@@ -138,7 +143,9 @@ pnpm dev                    # (veya ikas CLI dev komutu)
 ### Karar bekleyenler (bloklu)
 | İş | Bekleyen karar | Not |
 |---|---|---|
-| **1.5 Postgres geçişi** | Mentör cevabı (soru hazır, `FLOWVENTORY-SENIOR-PLAN.md` sohbetinde: tek VM + WAL eşiği, geçiş zamanı, hosting, yedekleme) | Şema hazır; geçiş = provider değişikliği + migration'ları yeniden üretme. Production öncesi ŞART (SQLite tek yazıcı + serverless'ta dosya kaybı) |
+| ~~**1.5 Postgres geçişi**~~ | ✅ Mentör kararı (11 Eyl 2026): Neon serverless Postgres, hosting Vercel | Provider `postgresql`, SQLite migration'ları tek `init`'e indirildi. Local = Neon `dev` branch (Prisma'da provider env'den okunamadığı ve migration'lar SQL lehçesine özgü olduğu için local SQLite bırakıldı), production = `main` branch. Yedek: Neon'un zaman noktasına geri dönüşü — plan penceresini kontrol et |
+| **RLS (satır düzeyi güvenlik)** | Lansman şartı mı? (mentöre sorulacak) | Kod her sorguyu `merchantId` ile filtreliyor + cross-tenant testi var. RLS ikinci katman: Prisma'da her sorguyu `set_config`'li transaction'a sarmak + cron/webhook/OAuth için bypass rolü gerekir |
+| **Tracker yazma kuyruğu** | Ölçüm | Mentör "ufak kuyruk" önerdi; Postgres eşzamanlı upsert'i kaldırdığı için şimdilik yok. Serverless'ta bellek içi kuyruk çalışmaz → gerekirse Vercel Queues / Upstash |
 | **4.5 i18n (TR/EN)** | Hedef pazar/dil kararı | Tüm string'ler Türkçe; App Store'a yurtdışı hedefiyle çıkmadan önce. Yarım çeviri yapma — tek seferde |
 | **4.7 Faturalandırma** | Fiyat/plan kararı | ikas `createMerchantAppPayment` + `getMerchantLicence` akışı; karar sonrası ~1 gün |
 | **Sentry / hata izleme** | Hesap + DSN | Logger hazır (prod'da JSON); Sentry eklemek ~15 dk |
@@ -168,12 +175,14 @@ pnpm dev                    # (veya ikas CLI dev komutu)
 - ~~Sell-through / stok devir hızı metriği~~ → Analiz sayfası + `src/lib/reports/sell-through.ts`
 
 ### Üretim öncesi hatırlatmalar
-- [ ] Postgres'e geç (yukarıda)
+- [x] Postgres'e geç — şema + migration hazır (yukarıda); production branch'ine `prisma migrate deploy` ilk deploy'da
 - [ ] Seed/demo verilerini temizle (`prisma/seed.ts`, dev route)
 - [ ] `NEXT_PUBLIC_DEPLOY_URL` kalıcı domain'e sabitle (webhook + tracker bu URL'i kullanıyor)
-- [ ] Resend'de doğrulanmış gönderici domain'i (`RESEND_FROM`)
-- [ ] `CRON_SECRET` üret + `/api/cron/digest`'i saatte bir çağıran zamanlayıcı kur (hosting kararına göre: Vercel Cron `vercel.json`'da `"schedule": "0 * * * *"`, ya da GitHub Actions / sunucu crontab'ı `curl -H "Authorization: Bearer …"`)
-- [ ] `.env` production değerleriyle; `SECRET_COOKIE_PASSWORD` yenile
+- [x] Resend'de doğrulanmış gönderici domain'i — kök domain eu-west-1'de verified (bkz. `RESEND-KURULUM.md`); production için ayrı sending anahtarı üretilecek
+- [ ] `CRON_SECRET` (production için ayrı) üret → Vercel env + GitHub repo secret `CRON_SECRET`; repo variable `APP_URL`. Tetikleyici `.github/workflows/digest-cron.yml` (saatte bir) — Vercel Hobby cron'u günde bir kez çalışabildiği için GitHub Actions
+- [ ] Vercel env production değerleriyle; `SECRET_COOKIE_PASSWORD` yenile. Neon'u Vercel Marketplace'ten bağla (`DATABASE_URL*` otomatik); bölge Frankfurt (`vercel.json` → `fra1`)
+- [ ] ikas Partner paneli: uygulama + redirect URL'i production domain'ine çek → yeniden yetkilendir → takip scriptini yeniden kur
+- [ ] Deploy sonrası: takip scripti kurulumu (`tracker.js` fonksiyon paketinde mi — `next.config.js` `outputFileTracingIncludes`), örnek özet, cron `workflow_dispatch` ile elle tetikle
 
 ---
 
