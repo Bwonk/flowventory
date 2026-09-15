@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 
 /**
  * Kanonik tablo alt bölgesi notu: sonuç sayısı, kesme notu gibi tek satırlık
- * bilgi. 48px — seçimli listelerdeki `ListFooter` ile aynı yükseklik.
+ * bilgi. 48px — `InfiniteScrollFooter` ile aynı yükseklik.
  */
 export function TableFooterNote({ children }: { children: ReactNode }) {
   return (

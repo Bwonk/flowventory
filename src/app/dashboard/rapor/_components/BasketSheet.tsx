@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AnimatedNumber } from '@/components/shared/AnimatedNumber';
-import { RowActions } from '@/components/shared/data-table/data-table';
+import { RowActions } from '@/components/shared/data-table/RowActions';
 import { QtyStepper } from '@/components/shared/QtyStepper';
 import { ShoppingCartIcon } from '@/components/ui/icons/shopping-cart';
 import { TrashIcon } from '@/components/ui/icons/trash';
@@ -185,7 +185,7 @@ export function BasketSheet({
                             {line.productName}
                             {line.urgent && (
                               <Badge variant="critical" className="ml-1.5 align-middle">
-                                acil
+                                Acil
                               </Badge>
                             )}
                           </p>

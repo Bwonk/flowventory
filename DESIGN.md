@@ -71,9 +71,9 @@ uygulaması (ikas paneli) dark modu bize iletmez.
 ### Yükseklik (elevation)
 
 Sınır çizgileri gölgenin yerini alır: yüzeyler `border border-hairline` ile
-ayrılır, `shadow-*` kullanılmaz. Üç sanksiyonlu istisna: açılır katmanlar
-(`Popover`, `Dialog`, `DropdownMenu` — shadcn'in kendi `shadow-md`'si kalır),
-sticky tablo başlığı altındaki 1px çizgi ve floating sidebar + bildirim
+ayrılır, `shadow-*` kullanılmaz. İki sanksiyonlu istisna: açılır katmanlar
+(`Popover`, `Dialog`, `DropdownMenu` — shadcn'in kendi `shadow-md`'si kalır)
+ve floating sidebar + bildirim
 drawer "pill"i (`shadow-sm` — canvas üzerinde yüzen kalıcı katman, Freeform
 tarzı derinlik; bilinçli istisna). Kart içinde kart gerekiyorsa ikinci
 seviye `bg-muted` zeminle, gölgeyle değil ayrılır.
@@ -170,27 +170,49 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   (nötr: `bg-muted-foreground`) + yanında metin; renk tek başına sinyal
   olamaz (erişilebilirlik). Okunmamış bildirim sinyali kırmızıdır
   (`bg-status-critical`); accent-blue dot kullanılmaz.
-- **Liste kalıbı:** tüm listeler (stok, analiz, satın alma, dashboard
-  listeleri, sepet, bildirimler) tek iskeleti paylaşır —
-  [src/components/shared/data-table/](src/components/shared/data-table/).
-  Kart `TableSection` (hairline, gölgesiz); içinde sırayla *başlık şeridi*
-  (opsiyonel, `h-12 border-b`: başlık + sağda aksiyonlar), *filtre satırı*
-  (opsiyonel, stok/analiz `FilterBar`), *tablo başlığı* (`DataTableHeaderRow`,
-  mono `text-[10px] uppercase tracking-wider`, `py-2`, kenar `px-5`),
-  *satırlar* (`DataTableRow`: `py-2.5`, hairline, hover `bg-muted/40`, seçili
-  `bg-muted`, pending `opacity-60`), *alt bölge* (`ListFooter`, 48px).
-  Sıralama `DataTableSortHeadCell`: ok pasifte gizli, hover'da yarı, aktifte
-  tam, yön değişince 150ms döner; sıralanan kolonun hücreleri vurgulanmaz.
-  Satır aksiyonları `RowActions` içinde: yeri hep ayrılı (layout kaymaz),
-  satır hover/focus-within'de ve içindeki popover açıkken görünür,
-  dokunmatikte kalıcı. Alt bölge tek yerdir: dinlenmede not ("N satır
-  listelendi"), seçim varken toplu çubuk ("N satır seçildi" + toplam/aksiyon
-  + ✕) — not 100ms söner, çubuk 8px yukarı kayarak 300ms belirir, 200ms
-  çıkar. Durumlar aynı ritimde: yükleniyor `SkeletonRows` (41px satır, grup
-  halinde 200ms solar — satır başı stagger yok), boş `EmptyState`, hata
-  `ErrorState`. Sayısal kolonlar sağa dayalı `tabular-nums`; mono yalnız
-  başlık/kod. [src/components/ui/table.tsx](src/components/ui/table.tsx)
-  kullanılmaz.
+- **Liste kalıbı:** tüm kolonlu listeler (stok, analiz, satın alma,
+  dashboard listeleri) tek iskeleti paylaşır — kart `TableSection`
+  ([src/components/shared/data-table/](src/components/shared/data-table/);
+  hairline, gölgesiz, `overflow-hidden`), içinde sırayla *başlık şeridi*
+  (opsiyonel, `h-12 border-b`: başlık + sağda aksiyonlar), *tablo* ve *alt bölge* (48px:
+  `TableFooterNote` / `InfiniteScrollFooter`; rapor listesinde alt bölge yok). Tablo =
+  [src/components/motion/table/](src/components/motion/table/) `Table` — beui
+  `@beui/table` uyarlaması, `columns[]` bildirimsel (`sortable`, `numeric`,
+  `width`/`minWidth`, `printHidden`, `cell`, `cellClassName`); kendi çerçevesi
+  yok, kartın içinde yaşar. Başlık mono `text-[10px] uppercase tracking-wider`,
+  `py-2`, kenar kolon `px-5` / ara `px-3` (türetilir); başlık **akışta durur,
+  kaydırırken yapışmaz** — sticky başlık yok (kullanıcı kararı, 25 Ağu 2026;
+  yeniden önerilmez); tablo konteynerden genişse yalnız o zaman yatay
+  kaydırıcı açılır (`table-layout: fixed`, esnek tek kolon = ürün). Satırlar `py-2.5`, hairline, hover
+  `bg-muted/40`, seçili satır zemin değiştirmez — yalnız tik işareti
+  (kullanıcı kararı, 25 Ağu 2026), pending `opacity-60` (`rowState`). 80+
+  satırda sanal liste (`@tanstack/react-virtual`, kaydırıcı `sidebar-inset`);
+  yazdırmada ve altında tüm satırlar çizilir. Sıralama: ok pasifte gizli,
+  hover'da yarı, aktifte tam, yön değişince 150ms döner, mutlak konumlu
+  (genişlik kaplamaz), her hizada başlığın sağında; `sortCycle='toggle'` asc↔desc, kolonun `defaultDirection`
+  doğal yönü; stok/analizde `clientSort={false}` — başlık ↔ dropdown ↔ çip tek
+  state; sıralanan kolonun hücreleri vurgulanmaz; boş değer ("—") her yönde sona.
+  Seçim `selectable` + `AnimatedCheckbox`
+  ([src/components/shared/AnimatedCheckbox.tsx](src/components/shared/AnimatedCheckbox.tsx),
+  spring 350/35, üçlü başlık), `onSelectionChange(ids, {added, removed})`.
+  Satır aksiyonları bir `actions` kolonunda `RowActions` içinde: yeri hep
+  ayrılı (layout kaymaz), satır hover/focus-within'de ve içindeki popover
+  açıkken görünür, dokunmatikte kalıcı; `rowMenu`/`columnMenu` "…" menüleri
+  `DropdownMenu`'dür (yıkıcı öğe `text-destructive`). **Başlıklar sabittir:** kolon
+  genişletme (`resizable`, tutamaç `hover:bg-border` / `active:bg-foreground`)
+  ve kolon sırası değiştirme (`reorderable`) bileşende hazır ama hiçbir
+  listede açılmaz — kullanıcı
+  kararı (25 Ağu 2026); düzenlenebilir hücre ve kolon adı
+  (`editable`/`onColumnRename`) da varsayılan kapalı. Portal
+  hap, gölge, scale animasyonu, `text-rose` yok. Alt bölge: dinlenmede
+  not ("N satır listelendi") ya da sonsuz kaydırma; seçimli listede toplu çubuk
+  YOK — rapor listesinin altındaki "N satır seçildi + toplam + ✕" çubuğu
+  kullanıcı isteğiyle kaldırıldı (25 Ağu 2026); seçim toplamı sepet
+  çekmecesinde ve tedarikçi yolundaki rozette yaşar. Durumlar aynı ritimde: yükleniyor `loading`
+  (tablo içi `<tr>` iskeleti, 41px ritim, grup halinde 200ms solar — satır
+  başı stagger yok; sayfa iskeletlerinde div tabanlı `SkeletonRows`), boş
+  `EmptyState` (tablo yerine tek başına), hata `ErrorState`. Sayısal kolonlar
+  `numeric` → sağa dayalı `tabular-nums`; mono yalnız başlık/kod/sıra no.
 - **Araç yolu (ExpandableActionBar / ToolTrack / SegmentedTrack):**
   Birbirine bağlı aksiyonlar tek `bg-muted` parçada yaşar: 36px yol, 3px iç
   boşluk, `rounded-lg`; segmentler 30px `rounded-md`. Aksiyon kümeleri
@@ -212,6 +234,20 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   edilmez, her dokunuş doğrudan çalışır (`staticOnMobile`, varsayılan). Statik gruplar için `ToolTrack` (`Button variant="segment"`,
   `segment-card`, `default`; ayraç `ToolTrackDivider`) —
   [src/components/shared/tool-track/](src/components/shared/tool-track/).
+  **Filtreler de yolda yüzer** (stok `FilterBar`, analiz `AnalysisFilterBar`;
+  rapor ile aynı dil, 25 Ağu 2026 — tasarım kanvası "Filtre Yolu"): kartın
+  üstünde TEK `ToolTrack` (`mb-3`): `ExpandableSearch` segmenti (dinlenmede
+  yalnız büyüteç; tıklanınca `bg-card` + hairline hapa dönüşür, giriş spring
+  350/35 ile 220px açılır, mobilde 160; değer varken açık kalır, × temizler,
+  boşken odak çıkınca/Escape'le kapanır) · `ToolTrackDivider` · `Dropdown
+  variant="segment"` tetikleyicileri. Filtre segmenti bir *değer taşıyan
+  alan* olduğu için açık aramayla aynı `bg-card` + hairline hap; varsayılan
+  değerde metin muted, aktifken ink + 500 + 6px ink nokta (ThresholdControl
+  işareti). Arama açılınca filtreler aynı yolda kayar — satır kırılmaz; yol
+  sığmazsa kendi içinde kayar (kaydırıcı + kenar solması). Aktif filtre çipi
+  satırı YOK (kullanıcı kararı, 25 Ağu 2026) — değer segmentte okunur,
+  sıfırlama menüdeki "Tümü"/boş tablodaki "Filtreleri temizle"; kart yalnız tablo. İki ayrı yol (sarma) ve tamamen
+  beyaz filtre yolu (yol dilini tersine çevirir) değerlendirilip elendi.
   Sekmeler etiketli kalır (`SegmentedTrack`) — ikonu olmayan öğe kapalı
   halde okunmaz; `role="tablist"` desteği bileşende durur ama sekmelerde
   kullanılmaz. Taşma davranışı ortak `useTrackOverflow` + `TrackSlider`'dan
@@ -227,6 +263,24 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   alana kayar. Emsal: satın alma raporu (`ReportActionBar` sayfa araçları,
   `VendorTabsPanel` tedarikçi sekmeleri, `VendorActionBar` tedarikçi
   işlemleri).
+- **Kaydırmalı liste (SwipeableList):**
+  [src/components/motion/swipeable-list/](src/components/motion/swipeable-list/) —
+  beui `swipeable-list` uyarlaması; emsal bildirim drawer'ı
+  ([src/components/layout/NotificationSwipeList.tsx](src/components/layout/NotificationSwipeList.tsx)).
+  Satır düz drawer dilinde kalır: hairline ayraç, yuvarlak hap / gölge / satır
+  aralığı yok; kaydırma yüzeyi opak `bg-card` (altındaki ray sızmaz), okunmamış
+  tonu (`bg-accent/40`) içerikte yaşar (`renderItem` zorunlu — bileşenin kendi
+  başlık/açıklama düzeni yok). Aksiyon rayı `bg-muted`; her aksiyon 56px sütun,
+  ikon `size-4` + `text-[10px]` etiket + `aria-label` — ikon tek başına yetmez.
+  Tonlar yalnız nötr (`text-muted-foreground hover:text-foreground`) ve yıkıcı
+  (`text-destructive`; zemin boyanmaz — `bg-destructive` butona mahsus);
+  yeşil/sarı ton yok. Bildirimde sağa kaydır = okundu/okunmadı (sol ray), sola
+  kaydır = kaldır (sağ ray, soft delete). Aynı anda tek satır açık: başka satırı
+  sürüklemek açık olanı kapatır, açık yüzeye dokunuş kapatır ve gezinmez,
+  sürüklemeyi izleyen click yutulur; fare sürüklemesi de çalışır. Klavye: satır
+  odaklıyken → sol rayı, ← sağ rayı açar ve odak ilk aksiyona geçer; Esc rayı
+  kapatıp odağı satıra iade eder (drawer'ı değil — drawer `onEscapeKeyDown`'da
+  ayırt eder); kapalı ray `inert`, Tab sırasında yer almaz.
 - **Grafikler:** [src/components/ui/chart.tsx](src/components/ui/chart.tsx);
   palet yalnızca `--chart-1..5` (chart-1 = accent mavi); grid çizgileri
   hairline, eksen etiketleri mono.
@@ -268,7 +322,8 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   (dialog, popover, sheet). `motion` yalnızca animate-ui bileşenlerinde,
   `src/components/ui/icons/` altındaki animasyonlu ikonlarda ve sidebar
   onboarding kartının slayt geçişinde
-  ([src/components/layout/OnboardingCard.tsx](src/components/layout/OnboardingCard.tsx));
+  ([src/components/layout/OnboardingCard.tsx](src/components/layout/OnboardingCard.tsx))
+  ve `motion/swipeable-list` sürükleme jestinde (repodaki tek `drag` kullanımı);
   ikisi bilinçli olarak birlikte yaşar — yeni animasyon için önce mevcut
   utility'ye bak.
 - **Slayt (carousel) motifi** — onboarding kartı emsaldir: yön farkındalıklı
@@ -301,10 +356,23 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
 - **Liste ve araç yolu ritmi** (§5 "Liste kalıbı" / "Araç yolu"): hover
   150ms renk; hap/paylaşımlı-layout kayması spring 350/35; tab içeriği
   değişirken eski içerik 100ms söner, yenisi 150ms belirir (yatay kayma yok —
-  tablo ağır); toplu çubuk 300ms ease-out girer (8px yukarı + opacity),
-  200ms çıkar; satır aksiyonu ve sıralama oku 150ms; skeleton → içerik 200ms
+  tablo ağır); satır aksiyonu, sıralama oku ve kolon sürükleme opaklığı CSS
+  150ms; sepet tiki `AnimatedCheckbox` spring 350/35; skeleton → içerik 200ms
   grup opacity, satır başı stagger yok (`animate-enter` KPI karolarına
-  mahsustur). Hepsi `prefers-reduced-motion`'da anlık.
+  mahsustur); yazdırmada sanal liste `beforeprint`te senkron kapanır. Hepsi
+  `prefers-reduced-motion`'da anlık.
+- **Kaydırma motifi** (§5 "Kaydırmalı liste"): sürüklerken yüzey parmağı /
+  imleci birebir izler (`dragElastic 0.04`, momentum yok); bırakınca kanonik
+  `spring 350/35` ile hedefe oturur (`restDelta 0.5`, devredilen hız ±1500'e
+  kıskaçlı; ~230ms — beui'nin 560/48'iyle aynı sürede olduğundan istisna
+  açılmadı). Eşikler saf `resolveSwipeRelease`'te (vitest): açılma
+  `max(34px, ray×0.46)` ya da fırlatma (>720px/s ve >14px); kapanma ray×0.72
+  altı ya da ters fırlatma (>320px/s); açıkken karşı rayın eşiği aşılırsa tek
+  jestte taraf değişir (beui'de yoktu: önce kapatıyordu). Kaldırılan satır `AnimatePresence` ile
+  çöker: opaklık 120ms, yükseklik 200ms `easeOut` (40ms gecikmeli) — çıkış
+  girişten sessiz (sonradan gelen satırın girişi yalnız 150ms opaklık, ilk
+  boyamada yok). `prefers-reduced-motion`: oturma anlık (`x.set`), çöküş
+  süresiz.
 - **Sayı geçişi** — [src/components/shared/AnimatedNumber.tsx](src/components/shared/AnimatedNumber.tsx):
   arttır/azalt ile değişen her sayı (adet, satır tutarı, grup/genel toplam,
   rozet sayacı) yön farkındalıklı kayar — artışta yeni değer alttan gelir,
@@ -333,9 +401,11 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
       tüm değişken sayılar `tabular-nums`
 - [ ] Kartlar `border-hairline`, `shadow-*` yok (popover katmanları hariç)
 - [ ] Sayısal tablo kolonları sağa hizalı `font-mono`
-- [ ] Listeler `data-table/` primitifleriyle: sıralanabilir başlık
-      `DataTableSortHeadCell`, satır aksiyonları `RowActions`, alt bölge 48px
-      (`TableFooterNote` / `ListFooter`), yükleniyor `SkeletonRows`
+- [ ] Listeler `TableSection` + `motion/table` `Table` ile: `columns[]`
+      tanımı (`sortable`/`numeric`/`width`/`printHidden`), satır aksiyonları
+      `actions` kolonunda `RowActions`, alt bölge 48px (`TableFooterNote` /
+      `InfiniteScrollFooter`; toplu seçim çubuğu yok), yükleniyor `loading`, boş
+      `EmptyState`; başlık sticky değil
 - [ ] Bağlı aksiyonlar tek `ToolTrack`/`SegmentedTrack` parçasında; çentik,
       kavis, kaynaşık yüzey yok; yol başına en fazla bir ink segment
 - [ ] `transition-all` yok; animasyonlar mevcut utility/bileşenlerden

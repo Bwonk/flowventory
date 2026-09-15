@@ -1,19 +1,11 @@
 'use client';
 
-import React from 'react';
+import React, { useCallback, useMemo } from 'react';
 import type { ProductRow, SortBy } from '@/lib/products/types';
 import { CategoryBadge } from '@/components/shared/badges/CategoryBadge';
 import { StatusBadge } from '@/components/shared/badges/StatusBadge';
 import { StockLifeBadge } from '@/components/shared/badges/StockLifeBadge';
-import {
-  DataTable,
-  DataTableCell,
-  DataTableHeadCell,
-  DataTableHeaderRow,
-  DataTableRow,
-  DataTableSortHeadCell,
-  type SortDirection,
-} from '@/components/shared/data-table/data-table';
+import { Table, type SortDirection, type SortState, type TableColumn } from '@/components/motion/table';
 import { EmptyState } from '@/components/shared/data-table/EmptyState';
 import { InfiniteScrollFooter } from '@/components/shared/data-table/InfiniteScrollFooter';
 import { ProductThumb } from '@/components/shared/filters/atoms';
@@ -51,7 +43,64 @@ const NATURAL_DIRECTION: Record<SortBy, SortDirection> = {
   'isim-az': 'asc',
 };
 
-/** Ürün tablosu — liste kalıbı (DESIGN.md §5), sonsuz kaydırmalı. */
+const COLUMNS: TableColumn<ProductRow>[] = [
+  {
+    key: 'index',
+    header: '#',
+    width: '48px',
+    align: 'center',
+    cell: (_, ctx) => (
+      <span className="font-mono text-xs tabular-nums text-muted-foreground">{String(ctx.index + 1).padStart(2, '0')}</span>
+    ),
+  },
+  {
+    key: 'name',
+    header: 'Ürün',
+    sortable: true,
+    minWidth: 220,
+    cell: row => (
+      <div className="flex items-center gap-2.5">
+        <ProductThumb src={row.thumbnail} alt="" sizeClass="h-7 w-7" roundedClass="rounded" />
+        <div className="min-w-0">
+          <p className="truncate font-medium text-foreground">{row.productName}</p>
+          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            {row.variantCount} varyant
+            {row.category && <CategoryBadge name={row.category} />}
+          </p>
+        </div>
+      </div>
+    ),
+  },
+  { key: 'status', header: 'Durum', sortable: true, width: '128px', cell: row => <StatusBadge status={row.status} size="sm" /> },
+  {
+    key: 'views',
+    header: 'Görüntülenme',
+    numeric: true,
+    width: '128px',
+    cell: row => (row.viewCount != null ? row.viewCount : <span className="text-muted-foreground">—</span>),
+  },
+  {
+    key: 'stockLife',
+    header: 'Stok Ömrü',
+    sortable: true,
+    align: 'right',
+    width: '120px',
+    cell: row =>
+      row.totalStock === 0 ? <span className="text-muted-foreground">—</span> : <StockLifeBadge days={row.daysRemaining ?? null} />,
+  },
+  {
+    key: 'stock',
+    header: 'Toplam Stok',
+    sortable: true,
+    defaultDirection: 'desc',
+    numeric: true,
+    width: '120px',
+    cellClassName: 'font-medium',
+    cell: row => <span className={row.totalStock === 0 ? 'text-status-critical' : 'text-foreground'}>{row.totalStock}</span>,
+  },
+];
+
+/** Ürün tablosu — liste kalıbı (DESIGN.md §5), sonsuz kaydırmalı; 80+ satırda sanal liste. */
 export const ProductTable: React.FC<ProductTableProps> = ({
   rows,
   hasActiveFilters,
@@ -71,11 +120,18 @@ export const ProductTable: React.FC<ProductTableProps> = ({
       : ((Object.keys(COLUMN_SORT) as SortColumn[]).find(col => COLUMN_SORT[col] === sortBy) ?? null);
   const natural = NATURAL_DIRECTION[sortBy];
   const direction: SortDirection = sortReversed ? (natural === 'asc' ? 'desc' : 'asc') : natural;
-  const sortProps = {
-    activeKey: activeColumn,
-    direction,
-    onSort: (col: SortColumn) => (col === activeColumn ? onToggleSortDirection() : onSortBy(COLUMN_SORT[col])),
-  };
+  const sort = useMemo<SortState | null>(() => (activeColumn ? { key: activeColumn, direction } : null), [activeColumn, direction]);
+
+  // Sıralama hook'ta yaşar: aynı kolona tıklamak yönü çevirir, başka kolon seçeneği değiştirir.
+  const handleSortChange = useCallback(
+    (next: SortState | null) => {
+      if (!next) return;
+      const col = next.key as SortColumn;
+      if (col === activeColumn) onToggleSortDirection();
+      else onSortBy(COLUMN_SORT[col]);
+    },
+    [activeColumn, onSortBy, onToggleSortDirection],
+  );
 
   if (rows.length === 0 && !loadingMore) {
     return (
@@ -89,57 +145,17 @@ export const ProductTable: React.FC<ProductTableProps> = ({
 
   return (
     <>
-      <DataTable>
-        <DataTableHeaderRow>
-          <DataTableHeadCell edge align="center" className="w-[48px]">#</DataTableHeadCell>
-          <DataTableSortHeadCell sortKey="name" {...sortProps}>Ürün</DataTableSortHeadCell>
-          <DataTableSortHeadCell sortKey="status" {...sortProps}>Durum</DataTableSortHeadCell>
-          <DataTableHeadCell align="right">Görüntülenme</DataTableHeadCell>
-          <DataTableSortHeadCell sortKey="stockLife" align="right" {...sortProps}>Stok Ömrü</DataTableSortHeadCell>
-          <DataTableSortHeadCell sortKey="stock" align="right" edge {...sortProps}>Toplam Stok</DataTableSortHeadCell>
-        </DataTableHeaderRow>
-        <tbody>
-          {rows.map((row, rowIndex) => (
-            <DataTableRow key={row.productId} onClick={() => onSelectProduct(row.productId)}>
-              <DataTableCell edge align="center" className="w-[48px]">
-                <span className="font-mono text-xs tabular-nums text-muted-foreground">
-                  {String(rowIndex + 1).padStart(2, '0')}
-                </span>
-              </DataTableCell>
-              <DataTableCell>
-                <div className="flex items-center gap-2.5">
-                  <ProductThumb src={row.thumbnail} alt="" sizeClass="h-7 w-7" roundedClass="rounded" />
-                  <div className="min-w-0">
-                    <p className="truncate font-medium text-foreground">{row.productName}</p>
-                    <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      {row.variantCount} varyant
-                      {row.category && <CategoryBadge name={row.category} />}
-                    </p>
-                  </div>
-                </div>
-              </DataTableCell>
-              <DataTableCell>
-                <StatusBadge status={row.status} size="sm" />
-              </DataTableCell>
-              <DataTableCell numeric>
-                {row.viewCount != null ? row.viewCount : <span className="text-muted-foreground">—</span>}
-              </DataTableCell>
-              <DataTableCell align="right">
-                {row.totalStock === 0 ? (
-                  <span className="text-muted-foreground">—</span>
-                ) : (
-                  <StockLifeBadge days={row.daysRemaining ?? null} />
-                )}
-              </DataTableCell>
-              <DataTableCell numeric edge className="font-medium">
-                <span className={row.totalStock === 0 ? 'text-status-critical' : 'text-foreground'}>
-                  {row.totalStock}
-                </span>
-              </DataTableCell>
-            </DataTableRow>
-          ))}
-        </tbody>
-      </DataTable>
+      <Table
+        data={rows}
+        columns={COLUMNS}
+        getRowId={row => row.productId}
+        rowHeight={49}
+        onRowClick={row => onSelectProduct(row.productId)}
+        sort={sort}
+        onSortChange={handleSortChange}
+        clientSort={false}
+        loading={loadingMore && rows.length === 0}
+      />
 
       <InfiniteScrollFooter hasMore={hasMore} loadingMore={loadingMore} onLoadMore={onLoadMore} itemCount={rows.length} />
     </>

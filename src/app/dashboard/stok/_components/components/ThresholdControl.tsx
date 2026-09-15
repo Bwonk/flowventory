@@ -25,12 +25,11 @@ export const ThresholdControl: React.FC = () => {
 
   return (
     <Dropdown
-      label={
-        <span className="inline-flex items-center gap-1.5">
-          Stok Eşiği
-          {isActive && <span className="size-2 rounded-full bg-primary" />}
-        </span>
-      }
+      variant="segment"
+      label="Stok Eşiği"
+      active={isActive}
+      // Panelde tik yok — Uygula/Sıfırla anında kapatır.
+      closeDelay={0}
       align="end"
       panelClassName="!min-w-0 !p-0"
     >

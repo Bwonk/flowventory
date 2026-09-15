@@ -192,8 +192,13 @@ export function ExpandableActionBar({
     const root = rootRef.current;
     if (!overlay || !root) return;
     const rect = root.getBoundingClientRect();
-    const spaceLeft = rect.right - 12;
-    const spaceRight = window.innerWidth - rect.left - 12;
+    // Sınır pencere değil içerik alanı (sidebar-inset `overflow-x-hidden`):
+    // sidebar'ın altına uzayan yol sessizce kırpılmasın, kaydırıcıya düşsün.
+    const bounds = root.closest('main')?.getBoundingClientRect();
+    const boundLeft = bounds?.left ?? 0;
+    const boundRight = bounds?.right ?? window.innerWidth;
+    const spaceLeft = rect.right - boundLeft - 12;
+    const spaceRight = boundRight - rect.left - 12;
     const side = spaceLeft >= spaceRight ? 'right' : 'left';
     setAnchor({ side, maxWidth: Math.max(rect.width, side === 'right' ? spaceLeft : spaceRight) });
   }, [overlay]);
@@ -296,6 +301,34 @@ export function ExpandableActionBar({
     return () => observer.disconnect();
   }, [overlay, items.length]);
 
+  // Sağa demirli yol içerik alanına sığmayıp taşarsa görünür uç tetikleyicinin
+  // yanı (sağ) olsun: açılış animasyonu boyunca kaydırma sona sabitlenir;
+  // tekerlek ya da kaydırıcı dokunuşu sabitlemeyi bırakır.
+  useEffect(() => {
+    const el = trackRef.current;
+    const root = rootRef.current;
+    if (!overlay || !isExpanded || anchor?.side !== 'right' || !el || !root) return;
+    let stuck = true;
+    const release = () => {
+      stuck = false;
+    };
+    root.addEventListener('wheel', release, { passive: true });
+    root.addEventListener('pointerdown', release);
+    const start = performance.now();
+    let frame = 0;
+    const tick = () => {
+      if (!stuck) return;
+      el.scrollLeft = el.scrollWidth - el.clientWidth;
+      if (performance.now() - start < 1500) frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => {
+      cancelAnimationFrame(frame);
+      root.removeEventListener('wheel', release);
+      root.removeEventListener('pointerdown', release);
+    };
+  }, [overlay, isExpanded, anchor?.side]);
+
   const activeItemId = activeId ?? items.find(item => item.active)?.id;
   const highlightId = hoveredId ?? activeItemId;
   // Taşma: kaydırıcı, tekerlek, kenar solması, aktif öğenin görünüre kayması.
@@ -328,7 +361,11 @@ export function ExpandableActionBar({
       >
         <motion.div
           ref={trackRef}
-          layout="size"
+          // Yol ve butonlarda layout animasyonu YOK: genişlik zaten etiket
+          // spring'iyle kare kare akıyor; üstüne binen layout transform'u
+          // (hover/anchor re-render'larında yeniden başlar) içeriği yolun
+          // kutusundan kaydırıp sağ ucu kırpıyor ve hayalet taşma (kaydırıcı,
+          // kenar solması) üretiyordu.
           role={role}
           aria-label={ariaLabel}
           style={
@@ -359,7 +396,6 @@ export function ExpandableActionBar({
 
             const button = (
               <motion.button
-                layout="position"
                 type="button"
                 data-value={item.id}
                 role={role === 'tablist' ? 'tab' : undefined}

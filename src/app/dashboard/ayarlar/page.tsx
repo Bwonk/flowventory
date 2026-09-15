@@ -44,6 +44,10 @@ export default function AyarlarPage() {
                 ? {
                     notificationEmail: settings.notificationEmail,
                     emailNotifications: settings.emailNotifications,
+                    digestFrequency: settings.digestFrequency,
+                    digestWeekday: settings.digestWeekday,
+                    digestHour: settings.digestHour,
+                    timezone: settings.timezone,
                   }
                 : null
             }

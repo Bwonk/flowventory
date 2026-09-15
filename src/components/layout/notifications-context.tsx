@@ -30,6 +30,10 @@ type NotificationsContextValue = {
   retry: () => void;
   markAllRead: () => void;
   markOneRead: (id: string) => void;
+  /** Okundu ↔ okunmadı (kaydırma rayı). */
+  toggleRead: (id: string) => void;
+  /** Listeden kaldır (soft delete). */
+  dismissOne: (id: string) => void;
 };
 
 const NotificationsContext = createContext<NotificationsContextValue | null>(null);
@@ -158,6 +162,43 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     [token, items],
   );
 
+  const toggleRead = useCallback(
+    (id: string) => {
+      if (!token) return;
+      const target = items.find(i => i.id === id);
+      if (!target) return;
+      const next = !target.read;
+      const prevItems = items;
+      const prevUnread = unreadCount;
+      setItems(prev => prev.map(i => (i.id === id ? { ...i, read: next } : i)));
+      setUnreadCount(prev => Math.max(0, prev + (next ? -1 : 1)));
+      ApiRequests.notifications.markRead(token, [id], next).catch(() => {
+        setItems(prevItems);
+        setUnreadCount(prevUnread);
+      });
+    },
+    [token, items, unreadCount],
+  );
+
+  const dismissOne = useCallback(
+    (id: string) => {
+      if (!token) return;
+      const target = items.find(i => i.id === id);
+      if (!target) return;
+      const prevItems = items;
+      const prevUnread = unreadCount;
+      // Satır listeden düşer; çöküş animasyonu listede (SwipeableList AnimatePresence).
+      setItems(prev => prev.filter(i => i.id !== id));
+      if (!target.read) setUnreadCount(prev => Math.max(0, prev - 1));
+      ApiRequests.notifications.dismiss(token, [id]).catch(() => {
+        // Sıra korunur: anlık görüntü geri yüklenir.
+        setItems(prevItems);
+        setUnreadCount(prevUnread);
+      });
+    },
+    [token, items, unreadCount],
+  );
+
   const value = useMemo(
     () => ({
       items,
@@ -170,8 +211,22 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       retry,
       markAllRead,
       markOneRead,
+      toggleRead,
+      dismissOne,
     }),
-    [items, unreadCount, status, errorMessage, open, setOpen, retry, markAllRead, markOneRead],
+    [
+      items,
+      unreadCount,
+      status,
+      errorMessage,
+      open,
+      setOpen,
+      retry,
+      markAllRead,
+      markOneRead,
+      toggleRead,
+      dismissOne,
+    ],
   );
 
   return <NotificationsContext.Provider value={value}>{children}</NotificationsContext.Provider>;

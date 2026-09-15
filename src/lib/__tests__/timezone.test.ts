@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dateKeyInTz, dayRangeInTz, hourInTz } from '@/lib/timezone';
+import { dateKeyInTz, dayRangeInTz, hourInTz, shiftDateKey, weekdayInTz } from '@/lib/timezone';
 
 const TZ = 'Europe/Istanbul'; // UTC+3, DST yok (2016'dan beri sabit)
 
@@ -54,5 +54,21 @@ describe('dayRangeInTz', () => {
     expect(dateKeyInTz(endMs, TZ)).toBe('2026-08-11');
     expect(dateKeyInTz(startMs - 1, TZ)).toBe('2026-08-10');
     expect(dateKeyInTz(endMs + 1, TZ)).toBe('2026-08-12');
+  });
+});
+
+describe('weekdayInTz', () => {
+  it('haftanın gününü merchant saat diliminde döndürür', () => {
+    // 2026-09-06 Pazar 22:30 UTC = 2026-09-07 Pazartesi 01:30 Istanbul
+    expect(weekdayInTz(new Date('2026-09-06T22:30:00Z'), TZ)).toBe(1);
+    expect(weekdayInTz(new Date('2026-09-06T22:30:00Z'), 'UTC')).toBe(0);
+  });
+});
+
+describe('shiftDateKey', () => {
+  it('ay ve yıl sınırlarını geçer', () => {
+    expect(shiftDateKey('2026-09-01', -1)).toBe('2026-08-31');
+    expect(shiftDateKey('2026-12-31', 1)).toBe('2027-01-01');
+    expect(shiftDateKey('2026-03-01', -7)).toBe('2026-02-22');
   });
 });

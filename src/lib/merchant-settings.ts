@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { isDigestFrequency, type DigestFrequency } from '@/lib/digest/schedule';
 import { DEFAULT_MERCHANT_TIMEZONE } from '@/lib/timezone';
 
 /**
@@ -16,6 +17,9 @@ export type ResolvedMerchantSettings = {
   targetStockDays: number;
   notificationEmail: string | null;
   emailNotifications: boolean;
+  digestFrequency: DigestFrequency;
+  digestWeekday: number;
+  digestHour: number;
 };
 
 export const MERCHANT_SETTINGS_DEFAULTS: ResolvedMerchantSettings = {
@@ -27,6 +31,9 @@ export const MERCHANT_SETTINGS_DEFAULTS: ResolvedMerchantSettings = {
   targetStockDays: 30,
   notificationEmail: null,
   emailNotifications: false,
+  digestFrequency: 'off',
+  digestWeekday: 1,
+  digestHour: 9,
 };
 
 export async function getMerchantSettings(merchantId: string): Promise<ResolvedMerchantSettings> {
@@ -41,6 +48,9 @@ export async function getMerchantSettings(merchantId: string): Promise<ResolvedM
     targetStockDays: row.targetStockDays,
     notificationEmail: row.notificationEmail,
     emailNotifications: row.emailNotifications,
+    digestFrequency: isDigestFrequency(row.digestFrequency) ? row.digestFrequency : 'off',
+    digestWeekday: row.digestWeekday,
+    digestHour: row.digestHour,
   };
 }
 

@@ -1,6 +1,7 @@
 import { logger } from '@/lib/logger';
 import { getUserFromRequest } from '@/lib/auth-helpers';
 import { prisma } from '@/lib/prisma';
+import { DIGEST_FREQUENCIES, isDigestFrequency, type DigestFrequency } from '@/lib/digest/schedule';
 import { DEFAULT_MERCHANT_TIMEZONE } from '@/lib/timezone';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
@@ -25,6 +26,11 @@ export type MerchantSettingsApiResponse = {
   targetStockDays: number;
   notificationEmail: string | null;
   emailNotifications: boolean;
+  digestFrequency: DigestFrequency;
+  /** 0=Pazar … 6=Cumartesi. */
+  digestWeekday: number;
+  /** 0-23, mağaza saat diliminde. */
+  digestHour: number;
 };
 
 const DEFAULTS: MerchantSettingsApiResponse = {
@@ -36,6 +42,9 @@ const DEFAULTS: MerchantSettingsApiResponse = {
   targetStockDays: 30,
   notificationEmail: null,
   emailNotifications: false,
+  digestFrequency: 'off',
+  digestWeekday: 1,
+  digestHour: 9,
 };
 
 const updateSchema = z
@@ -48,6 +57,9 @@ const updateSchema = z
     targetStockDays: z.number().int().min(1).max(365).optional(),
     notificationEmail: z.string().email().max(320).nullable().optional(),
     emailNotifications: z.boolean().optional(),
+    digestFrequency: z.enum(DIGEST_FREQUENCIES).optional(),
+    digestWeekday: z.number().int().min(0).max(6).optional(),
+    digestHour: z.number().int().min(0).max(23).optional(),
   })
   .refine(
     v =>
@@ -66,6 +78,9 @@ function toResponse(row: {
   targetStockDays: number;
   notificationEmail: string | null;
   emailNotifications: boolean;
+  digestFrequency: string;
+  digestWeekday: number;
+  digestHour: number;
 }): MerchantSettingsApiResponse {
   return {
     criticalThreshold: row.criticalThreshold,
@@ -76,6 +91,9 @@ function toResponse(row: {
     targetStockDays: row.targetStockDays,
     notificationEmail: row.notificationEmail,
     emailNotifications: row.emailNotifications,
+    digestFrequency: isDigestFrequency(row.digestFrequency) ? row.digestFrequency : 'off',
+    digestWeekday: row.digestWeekday,
+    digestHour: row.digestHour,
   };
 }
 

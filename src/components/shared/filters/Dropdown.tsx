@@ -1,7 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Check, ChevronDown } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { ChevronDown } from 'lucide-react';
+import { useReducedMotion } from 'motion/react';
+import { CHECK_ANIMATION_MS, CheckIcon, type CheckIconHandle } from '@/components/ui/icons/check';
+import { useIconHover } from '@/components/ui/icons/use-icon-hover';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,6 +15,16 @@ import { cn } from '@/lib/utils';
 interface DropdownProps {
   label: React.ReactNode;
   active?: boolean;
+  /**
+   * 'default' serbest duran tetikleyici; 'segment' `ToolTrack` içindeki 30px
+   * `bg-card` + hairline hap — aktifken ink metin + nokta (DESIGN.md §5 "Araç yolu").
+   */
+  variant?: 'default' | 'segment';
+  /**
+   * `children(close)` çağrısından kapanışa kadar bekleme (ms). Varsayılan tik
+   * çizimi süresi — `OptionButton` listeleri için; tik olmayan paneller 0 verir.
+   */
+  closeDelay?: number;
   align?: 'start' | 'end';
   panelClassName?: string;
   children: (close: () => void) => React.ReactNode;
@@ -22,8 +35,35 @@ interface DropdownProps {
  * children(close) sözleşmesi korunur; panel içeriği serbest biçimlidir
  * (OptionButton listesi veya ThresholdControl formu).
  */
-export const Dropdown: React.FC<DropdownProps> = ({ label, active, align = 'start', panelClassName, children }) => {
+export const Dropdown: React.FC<DropdownProps> = ({
+  label,
+  active,
+  variant = 'default',
+  closeDelay = CHECK_ANIMATION_MS,
+  align = 'start',
+  panelClassName,
+  children,
+}) => {
   const [open, setOpen] = useState(false);
+  const reduceMotion = useReducedMotion();
+  const closeTimer = useRef<number | null>(null);
+  useEffect(
+    () => () => {
+      if (closeTimer.current) window.clearTimeout(closeTimer.current);
+    },
+    [],
+  );
+
+  // Seçim sonrası menü, seçili satırdaki tik çizimini (400ms) bitirip kapanır;
+  // reduced-motion'da ya da closeDelay=0'da anında.
+  const close = () => {
+    if (closeTimer.current) window.clearTimeout(closeTimer.current);
+    if (reduceMotion || closeDelay <= 0) {
+      setOpen(false);
+      return;
+    }
+    closeTimer.current = window.setTimeout(() => setOpen(false), closeDelay);
+  };
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
@@ -31,14 +71,31 @@ export const Dropdown: React.FC<DropdownProps> = ({ label, active, align = 'star
         <button
           type="button"
           className={cn(
-            'inline-flex items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-            active
-              ? 'bg-muted font-medium text-foreground'
-              : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+            'inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md text-sm transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+            // Segment: değer taşıyan bir alan — açık arama hapıyla aynı bg-card +
+            // hairline; varsayılan değerde metin muted, aktifken ink + nokta.
+            variant === 'segment'
+              ? cn(
+                  'h-[30px] border border-hairline bg-card px-3',
+                  active ? 'font-medium text-foreground' : 'text-muted-foreground hover:text-foreground',
+                )
+              : cn(
+                  'px-3 py-2',
+                  active
+                    ? 'bg-muted font-medium text-foreground'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                ),
           )}
         >
           {label}
-          <ChevronDown className={cn('size-4 transition-transform', open && 'rotate-180')} />
+          {variant === 'segment' && active && <span aria-hidden className="size-1.5 rounded-full bg-foreground" />}
+          <ChevronDown
+            className={cn(
+              'transition-transform duration-150',
+              variant === 'segment' ? 'size-3.5' : 'size-4',
+              open && 'rotate-180',
+            )}
+          />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
@@ -46,23 +103,32 @@ export const Dropdown: React.FC<DropdownProps> = ({ label, active, align = 'star
         sideOffset={6}
         className={cn('min-w-[200px] rounded-lg border-hairline p-1.5', panelClassName)}
       >
-        {children(() => setOpen(false))}
+        {children(close)}
       </DropdownMenuContent>
     </DropdownMenu>
   );
 };
 
+/** Menü seçeneği — seçili satırda ink tik (heroicons-animated `check`): menü açılınca çizilir, satır hover'ında yeniden oynar. */
 export const OptionButton: React.FC<{ label: string; selected: boolean; onClick: () => void }> = ({
   label,
   selected,
   onClick,
-}) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className="flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-muted"
-  >
-    <span className="truncate">{label}</span>
-    {selected && <Check className="size-4 shrink-0 text-accent-blue" />}
-  </button>
-);
+}) => {
+  const check = useIconHover<CheckIconHandle>();
+  useEffect(() => {
+    if (selected) check.ref.current?.startAnimation();
+  }, [selected, check.ref]);
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      {...(selected ? check.hoverProps : {})}
+      className="flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-muted"
+    >
+      <span className="truncate">{label}</span>
+      {selected && <CheckIcon ref={check.ref} size={16} className="flex shrink-0 text-foreground" aria-hidden />}
+    </button>
+  );
+};

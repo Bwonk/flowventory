@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Package, X } from 'lucide-react';
+import { Package } from 'lucide-react';
 
 export const MonoLabel: React.FC<{ children: React.ReactNode; className?: string }> = ({
   children,
@@ -38,14 +38,3 @@ export const ProductThumb: React.FC<{ src?: string; alt: string; sizeClass?: str
     />
   );
 };
-
-export const FilterChip: React.FC<{ label: string; onRemove: () => void }> = ({ label, onRemove }) => (
-  <button
-    type="button"
-    onClick={onRemove}
-    className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-sm text-foreground transition-colors hover:bg-border focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-  >
-    {label}
-    <X className="h-3.5 w-3.5 text-foreground" />
-  </button>
-);

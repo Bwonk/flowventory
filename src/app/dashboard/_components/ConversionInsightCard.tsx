@@ -5,17 +5,13 @@ import { useRouter } from 'next/navigation';
 import { AlertTriangle, Eye } from 'lucide-react';
 import type { ConversionInsightApiResponse } from '@/app/api/insights/conversion/route';
 import { Badge } from '@/components/ui/badge';
-import {
-  DataTable,
-  DataTableCell,
-  DataTableHeadCell,
-  DataTableHeaderRow,
-  DataTableRow,
-} from '@/components/shared/data-table/data-table';
+import { Table, type TableColumn } from '@/components/motion/table';
 import { EmptyState } from '@/components/shared/data-table/EmptyState';
 import { TableFooterNote } from '@/components/shared/data-table/TableFooterNote';
 import { ProductThumb } from '@/components/shared/filters/atoms';
 import { DashboardListSection } from './DashboardListSection';
+
+type ConversionItem = ConversionInsightApiResponse['items'][number];
 
 function formatPercent(rate: number): string {
   return `%${(rate * 100).toLocaleString('tr-TR', { maximumFractionDigits: 1 })}`;
@@ -23,6 +19,35 @@ function formatPercent(rate: number): string {
 
 const TITLE = 'Görüntülenme → Satış Dönüşümü';
 const MAX_ROWS = 8;
+
+const COLUMNS: TableColumn<ConversionItem>[] = [
+  {
+    key: 'product',
+    header: 'Ürün',
+    minWidth: 200,
+    cell: item => (
+      <div className="flex items-center gap-2.5">
+        <ProductThumb src={item.imageUrl ?? undefined} alt="" sizeClass="h-7 w-7" roundedClass="rounded" />
+        <span className="truncate font-medium text-foreground">{item.productName}</span>
+        {item.lowConversion && (
+          <Badge variant="warning" className="shrink-0">
+            Düşük Dönüşüm
+          </Badge>
+        )}
+      </div>
+    ),
+  },
+  { key: 'views', header: 'Görüntülenme', numeric: true, width: '128px', cell: item => item.views.toLocaleString('tr-TR') },
+  { key: 'sold', header: 'Satış', numeric: true, width: '96px', cell: item => item.soldQty.toLocaleString('tr-TR') },
+  {
+    key: 'conversion',
+    header: 'Dönüşüm',
+    numeric: true,
+    width: '112px',
+    cellClassName: 'font-medium',
+    cell: item => formatPercent(item.conversionRate),
+  },
+];
 
 /**
  * Görüntülenme → satış dönüşümü kartı.
@@ -89,53 +114,18 @@ export function ConversionInsightCard({
   }
 
   return (
-    <DashboardListSection
-      title={TITLE}
-      subtitle={subtitle}
-      badge={
-        flagged > 0 ? (
-          <Badge variant="warning" size="md">{flagged} ürün ilgi görüyor ama satmıyor</Badge>
-        ) : undefined
-      }
-    >
-      <DataTable>
-        <DataTableHeaderRow>
-          <DataTableHeadCell edge>Ürün</DataTableHeadCell>
-          <DataTableHeadCell align="right">Görüntülenme</DataTableHeadCell>
-          <DataTableHeadCell align="right">Satış</DataTableHeadCell>
-          <DataTableHeadCell align="right" edge>Dönüşüm</DataTableHeadCell>
-        </DataTableHeaderRow>
-        <tbody>
-          {shown.map(item => (
-            <DataTableRow
-              key={item.productId}
-              onClick={() => router.push(`/dashboard/stok?product=${item.productId}`)}
-            >
-              <DataTableCell edge>
-                <div className="flex items-center gap-2.5">
-                  <ProductThumb src={item.imageUrl ?? undefined} alt="" sizeClass="h-7 w-7" roundedClass="rounded" />
-                  <span className="truncate font-medium text-foreground">{item.productName}</span>
-                  {item.lowConversion && (
-                    <Badge variant="warning" className="shrink-0">
-                      düşük dönüşüm
-                    </Badge>
-                  )}
-                </div>
-              </DataTableCell>
-              <DataTableCell numeric>{item.views.toLocaleString('tr-TR')}</DataTableCell>
-              <DataTableCell numeric>{item.soldQty.toLocaleString('tr-TR')}</DataTableCell>
-              <DataTableCell numeric edge className="font-medium">
-                {formatPercent(item.conversionRate)}
-              </DataTableCell>
-            </DataTableRow>
-          ))}
-        </tbody>
-      </DataTable>
+    <DashboardListSection title={TITLE} subtitle={subtitle}>
+      <Table
+        data={shown}
+        columns={COLUMNS}
+        getRowId={item => item.productId}
+        onRowClick={item => router.push(`/dashboard/stok?product=${item.productId}`)}
+      />
       <TableFooterNote>
         {insight.items.length > shown.length
           ? `İlk ${shown.length} ürün gösteriliyor · ${insight.items.length} üründe görüntülenme verisi var`
           : `${shown.length} ürün listelendi`}
-        {flagged > 0 && <> · &quot;düşük dönüşüm&quot; = dönüşüm, mağaza ortalamasının yarısının altında</>}
+        {flagged > 0 && <> · &quot;Düşük Dönüşüm&quot; = dönüşüm, mağaza ortalamasının yarısının altında</>}
       </TableFooterNote>
     </DashboardListSection>
   );

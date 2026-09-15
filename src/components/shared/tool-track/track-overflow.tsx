@@ -21,6 +21,20 @@ export interface TrackOverflow {
   atEnd: boolean;
 }
 
+/**
+ * Yolun içerik genişliği — yerleşimden (offset), scrollWidth'ten değil:
+ * scrollWidth, animasyon sırasındaki transform'ları (motion layout/translate)
+ * da sayar ve olmayan bir taşma bildirirdi.
+ */
+function contentWidth(el: HTMLElement): number {
+  const paddingRight = parseFloat(getComputedStyle(el).paddingRight) || 0;
+  let end = 0;
+  for (const child of Array.from(el.children) as HTMLElement[]) {
+    end = Math.max(end, child.offsetLeft + child.offsetWidth);
+  }
+  return end + paddingRight;
+}
+
 const NO_OVERFLOW: TrackOverflow = { on: false, left: 0, width: 100, atStart: true, atEnd: true };
 const FADE = 28;
 
@@ -48,12 +62,12 @@ export function useTrackOverflow(
   const measure = useCallback(() => {
     const el = trackRef.current;
     if (!el) return;
-    const max = el.scrollWidth - el.clientWidth;
+    const max = contentWidth(el) - el.clientWidth;
     if (max <= 1) {
       setOverflow(prev => (prev.on ? NO_OVERFLOW : prev));
       return;
     }
-    const width = Math.max(8, (el.clientWidth / el.scrollWidth) * 100);
+    const width = Math.max(8, (el.clientWidth / (max + el.clientWidth)) * 100);
     const ratio = el.scrollLeft / max;
     const next: TrackOverflow = {
       on: true,

@@ -1,19 +1,13 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { LucideIcon } from 'lucide-react';
 import { Badge, type BadgeVariant } from '@/components/ui/badge';
 import type { StockStatus } from '@/components/shared/badges/StatusBadge';
 import { StatusBadge } from '@/components/shared/badges/StatusBadge';
-import {
-  DataTable,
-  DataTableCell,
-  DataTableHeadCell,
-  DataTableHeaderRow,
-  DataTableRow,
-} from '@/components/shared/data-table/data-table';
+import { Table, type TableColumn } from '@/components/motion/table';
 import { EmptyState } from '@/components/shared/data-table/EmptyState';
 import { TableFooterNote } from '@/components/shared/data-table/TableFooterNote';
 import { ProductThumb } from '@/components/shared/filters/atoms';
@@ -52,7 +46,7 @@ interface ProductListCardProps {
   };
 }
 
-/** Dashboard ürün listesi — kanonik DataTable düzeni (stok tablosuyla aynı dialekt). */
+/** Dashboard ürün listesi — kanonik Table düzeni (stok tablosuyla aynı dialekt); kısa liste, sıralama bilinçli olarak yok. */
 export const ProductListCard: React.FC<ProductListCardProps> = ({
   title,
   subtitle,
@@ -66,6 +60,47 @@ export const ProductListCard: React.FC<ProductListCardProps> = ({
 }) => {
   const router = useRouter();
   const truncated = totalCount != null && totalCount > items.length;
+
+  const columns = useMemo<TableColumn<ProductListItem>[]>(
+    () => [
+      {
+        key: 'index',
+        header: '#',
+        width: '48px',
+        align: 'center',
+        cell: item => (
+          <span className="font-mono text-xs tabular-nums text-muted-foreground">{String(item.index).padStart(2, '0')}</span>
+        ),
+      },
+      {
+        key: 'name',
+        header: 'Ürün',
+        minWidth: 200,
+        cell: item => (
+          <div className="flex items-center gap-2.5">
+            <ProductThumb src={item.image} alt="" sizeClass="h-7 w-7" roundedClass="rounded" />
+            <div className="min-w-0">
+              <p className="truncate font-medium text-foreground">{item.name}</p>
+              {item.meta && <p className="truncate text-xs text-muted-foreground">{item.meta}</p>}
+            </div>
+          </div>
+        ),
+      },
+      ...(statusHeader
+        ? [
+            {
+              key: 'status',
+              header: statusHeader,
+              width: '120px',
+              cell: (item: ProductListItem) =>
+                item.status ? <StatusBadge status={item.status} size="sm" /> : <span className="text-muted-foreground">—</span>,
+            } satisfies TableColumn<ProductListItem>,
+          ]
+        : []),
+      { key: 'value', header: valueHeader, numeric: true, width: '96px', cellClassName: 'font-medium' },
+    ],
+    [statusHeader, valueHeader],
+  );
 
   return (
     <DashboardListSection
@@ -83,49 +118,12 @@ export const ProductListCard: React.FC<ProductListCardProps> = ({
         />
       ) : (
         <>
-          <DataTable>
-            <DataTableHeaderRow>
-              <DataTableHeadCell edge align="center" className="w-[48px]">#</DataTableHeadCell>
-              <DataTableHeadCell>Ürün</DataTableHeadCell>
-              {statusHeader && <DataTableHeadCell>{statusHeader}</DataTableHeadCell>}
-              <DataTableHeadCell align="right" edge>{valueHeader}</DataTableHeadCell>
-            </DataTableHeaderRow>
-            <tbody>
-              {items.map(item => (
-                <DataTableRow
-                  key={item.productId}
-                  onClick={() => router.push(`/dashboard/stok?product=${item.productId}`)}
-                >
-                  <DataTableCell edge align="center" className="w-[48px]">
-                    <span className="font-mono text-xs tabular-nums text-muted-foreground">
-                      {String(item.index).padStart(2, '0')}
-                    </span>
-                  </DataTableCell>
-                  <DataTableCell>
-                    <div className="flex items-center gap-2.5">
-                      <ProductThumb src={item.image} alt="" sizeClass="h-7 w-7" roundedClass="rounded" />
-                      <div className="min-w-0">
-                        <p className="truncate font-medium text-foreground">{item.name}</p>
-                        {item.meta && <p className="truncate text-xs text-muted-foreground">{item.meta}</p>}
-                      </div>
-                    </div>
-                  </DataTableCell>
-                  {statusHeader && (
-                    <DataTableCell>
-                      {item.status ? (
-                        <StatusBadge status={item.status} size="sm" />
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </DataTableCell>
-                  )}
-                  <DataTableCell numeric edge className="font-medium">
-                    {item.value}
-                  </DataTableCell>
-                </DataTableRow>
-              ))}
-            </tbody>
-          </DataTable>
+          <Table
+            data={items}
+            columns={columns}
+            getRowId={item => item.productId}
+            onRowClick={item => router.push(`/dashboard/stok?product=${item.productId}`)}
+          />
           <TableFooterNote>
             {truncated ? (
               <>

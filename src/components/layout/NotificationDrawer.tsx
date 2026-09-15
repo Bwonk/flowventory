@@ -2,16 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import {
-  AlertTriangle,
-  Archive,
-  Bell,
-  CheckCheck,
-  RotateCcw,
-  TrendingUp,
-  X,
-} from 'lucide-react';
-import type { NotificationItem } from '@/app/api/notifications/route';
+import { AlertTriangle, Bell, CheckCheck, RotateCcw, X } from 'lucide-react';
 import {
   Sheet,
   SheetClose,
@@ -25,14 +16,10 @@ import {
   SIDEBAR_WIDTH_ICON,
   useSidebar,
 } from '@/components/animate-ui/components/radix/sidebar';
+import type { SwipeableListValue } from '@/components/motion/swipeable-list';
 import { SkeletonRows } from '@/components/shared/data-table/SkeletonRows';
 import { useNotifications } from '@/components/layout/notifications-context';
-
-const TYPE_ICONS: Record<string, typeof Bell> = {
-  'critical-stock': AlertTriangle,
-  'dead-stock': Archive,
-  'sales-spike': TrendingUp,
-};
+import { NotificationSwipeList } from '@/components/layout/NotificationSwipeList';
 
 // Floating sidebar geometrisi: container p-2 taşır, collapsed container
 // genişliği calc(icon + 1rem + 2px) (bkz. sidebar.tsx floating dalı).
@@ -44,77 +31,8 @@ const CLIP_LEFT_COLLAPSED = `calc(${SIDEBAR_WIDTH_ICON} + 2px)`;
 /** API son 50 kaydı döndürür — listenin kesildiğini kullanıcıya söyleriz. */
 const LIST_CAP = 50;
 
-const absoluteFormatter = new Intl.DateTimeFormat('tr-TR', {
-  dateStyle: 'long',
-  timeStyle: 'short',
-});
-
-function timeAgo(iso: string, now: number): string {
-  const diffMs = now - new Date(iso).getTime();
-  const minutes = Math.floor(diffMs / 60_000);
-  if (minutes < 1) return 'şimdi';
-  if (minutes < 60) return `${minutes} dk önce`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} sa önce`;
-  return `${Math.floor(hours / 24)} gün önce`;
-}
-
 const ICON_BUTTON_CLASS =
   'rounded-md p-1 text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
-
-function NotificationRow({
-  item,
-  now,
-  onNavigate,
-}: {
-  item: NotificationItem;
-  now: number;
-  onNavigate: (id: string) => void;
-}) {
-  const Icon = TYPE_ICONS[item.type] ?? Bell;
-  const rowClass = `flex gap-2.5 border-b border-border px-4 py-3 last:border-b-0 ${
-    item.read ? '' : 'bg-accent/40'
-  }`;
-
-  const content = (
-    <>
-      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-      <div className="min-w-0 flex-1">
-        <p className={`text-sm text-foreground ${item.read ? 'font-normal' : 'font-medium'}`}>
-          {item.title}
-        </p>
-        <p className="mt-0.5 text-xs text-muted-foreground">{item.body}</p>
-        <p className="mt-1 text-[10px] text-muted-foreground">
-          <time dateTime={item.createdAt} title={absoluteFormatter.format(new Date(item.createdAt))}>
-            {timeAgo(item.createdAt, now)}
-          </time>
-        </p>
-      </div>
-      {/* Okunmamış sinyali: arka plan tonu tek başına yeterince görünür değil
-          ve renk tek sinyal olamaz — nokta + başlık ağırlığı birlikte taşır. */}
-      {!item.read && (
-        <span className="mt-1.5 shrink-0">
-          <span className="block size-2 rounded-full bg-status-critical" aria-hidden />
-          <span className="sr-only">Okunmamış</span>
-        </span>
-      )}
-    </>
-  );
-
-  if (!item.productId) {
-    return <div className={rowClass}>{content}</div>;
-  }
-
-  return (
-    <Link
-      href={`/dashboard/stok?product=${item.productId}`}
-      onClick={() => onNavigate(item.id)}
-      className={`${rowClass} transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring`}
-    >
-      {content}
-    </Link>
-  );
-}
 
 /**
  * Bildirim drawer'ı — layout seviyesinde mount edilir ki mobilde sidebar
@@ -134,6 +52,8 @@ export function NotificationDrawer() {
     retry,
     markAllRead,
     markOneRead,
+    toggleRead,
+    dismissOne,
   } = useNotifications();
   const { state, isMobile } = useSidebar();
 
@@ -146,6 +66,21 @@ export function NotificationDrawer() {
     const id = window.setInterval(() => setNow(Date.now()), 60_000);
     return () => window.clearInterval(id);
   }, [open]);
+
+  // Açık kaydırma rayı: drawer kapanınca sıfırlanır; Esc önce rayı kapatır.
+  const [swipeValue, setSwipeValue] = useState<SwipeableListValue | null>(null);
+  useEffect(() => {
+    if (!open) setSwipeValue(null);
+  }, [open]);
+
+  // Radix Escape dinleyicisi capture aşamasında: açık bir ray varsa drawer'ı
+  // değil rayı kapat.
+  const handleEscapeKeyDown = (event: KeyboardEvent) => {
+    if (swipeValue) {
+      event.preventDefault();
+      setSwipeValue(null);
+    }
+  };
 
   // Collapse/expand'de drawer açık kalır ve clip container'ın transition-[left]'i
   // sidebar'ın 400ms genişlik animasyonunu birebir takip eder. Yalnızca
@@ -209,17 +144,19 @@ export function NotificationDrawer() {
   } else {
     body = (
       <>
-        {items.map(item => (
-          <NotificationRow
-            key={item.id}
-            item={item}
-            now={now}
-            onNavigate={id => {
-              markOneRead(id);
-              setOpen(false);
-            }}
-          />
-        ))}
+        <NotificationSwipeList
+          items={items}
+          now={now}
+          value={swipeValue}
+          onValueChange={setSwipeValue}
+          onNavigate={id => {
+            markOneRead(id);
+            setOpen(false);
+          }}
+          onToggleRead={toggleRead}
+          onDismiss={dismissOne}
+          aria-label="Bildirimler"
+        />
         {items.length >= LIST_CAP && (
           <p className="px-4 py-3 text-center font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
             Son {LIST_CAP} bildirim gösteriliyor
@@ -252,7 +189,7 @@ export function NotificationDrawer() {
           </SheetClose>
         </div>
       </div>
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{body}</div>
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-x-none">{body}</div>
     </>
   );
 
@@ -277,6 +214,7 @@ export function NotificationDrawer() {
                 aria-modal="true"
                 aria-describedby={undefined}
                 onCloseAutoFocus={handleCloseAutoFocus}
+                onEscapeKeyDown={handleEscapeKeyDown}
                 className="z-50 flex w-[85vw] max-w-80 flex-col border-r border-hairline bg-background"
               >
                 {drawerBody}
@@ -311,6 +249,7 @@ export function NotificationDrawer() {
                   aria-modal="true"
                   aria-describedby={undefined}
                   onCloseAutoFocus={handleCloseAutoFocus}
+                  onEscapeKeyDown={handleEscapeKeyDown}
                   className="pointer-events-auto flex h-full w-80 flex-col overflow-hidden rounded-r-lg border border-l-0 border-hairline bg-sidebar shadow-sm"
                   style={{ position: 'absolute' }}
                 >

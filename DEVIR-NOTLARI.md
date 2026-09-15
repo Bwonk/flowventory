@@ -29,7 +29,8 @@ pnpm install
 | `NEXT_PUBLIC_ADMIN_URL` | `https://{storeName}.myikas.com/admin` |
 | `NEXT_PUBLIC_DEPLOY_URL` | Tunnel/deploy URL'i (her `ikas dev` oturumunda değişiyorsa güncelle) |
 | `MERCHANT_TIMEZONE` | `Europe/Istanbul` (opsiyonel, varsayılan bu) |
-| `RESEND_API_KEY` / `RESEND_FROM` | Opsiyonel — e-posta alarmı istenirse resend.com'dan |
+| `RESEND_API_KEY` / `RESEND_FROM` | Opsiyonel — e-posta alarmı / özet raporu istenirse resend.com'dan |
+| `CRON_SECRET` | Opsiyonel — zamanlanmış özet raporu için (`openssl rand -hex 32`); boşsa `/api/cron/digest` kapalı (503) |
 
 ```bash
 pnpm prisma migrate dev     # boş dev.db'yi 8 migration'dan kurar + client üretir
@@ -110,6 +111,13 @@ pnpm dev                    # (veya ikas CLI dev komutu)
 ### J) Onboarding
 - [ ] 3 adımın durumları doğru mu; adım tamamlanınca ✓; ✕ ile kapatınca geri gelmiyor mu
 
+### M) Zamanlanmış özet raporu
+- [ ] Ayarlar → E-posta bildirimleri: Günlük/Haftalık + gün/saat kaydediliyor, sayfa yenilenince korunuyor
+- [ ] "Örnek özet gönder" → kayıtlı adrese e-posta geliyor (Resend key gerekli); 3 denemeden sonra 429
+- [ ] Cron: `curl -H "Authorization: Bearer $CRON_SECRET" localhost:3000/api/cron/digest` — seçilen saatte (mağaza TZ'si, +3 saat telafi penceresi) `sent: 1`, aynı saatte ikinci çağrı `due: 0` (DigestLog tekrar göndermiyor)
+- [ ] E-postadaki tükenen/az kalan/ölü stok sayıları dashboard'la tutuyor mu
+- [ ] Günlük özet dünü, haftalık özet dünden geriye 7 günü kapsıyor (bugün dahil değil)
+
 ### K) Regresyon
 - [ ] Stok Takibi sayfası: filtreler, deep link'ler (`?filter=tukendi`, `?view=dead`, `?product=...`)
 - [ ] Ürün modal'ı: chart periyotları (24s/7g/30g/1y/özel), varyant seçince "Görüntülenme" gizlenmesi
@@ -146,7 +154,6 @@ pnpm dev                    # (veya ikas CLI dev komutu)
 | — | `src/app/api/dev/seed-orders` + mock-analytics: production build'e girmiyor ama App Store öncesi tamamen silinebilir | Not — manuel QA bitene kadar dursun |
 
 ### Plandan kalan özellik fikirleri (Katman 2-3, hiç başlanmadı)
-- Zamanlanmış özet raporu (günlük/haftalık e-posta — alarm altyapısı hazır, cron gerekiyor)
 - Kaydedilmiş görünümler / paylaşılabilir filtreler
 - Excel export (CSV var; rapor bazlı export yok)
 - Tedarikçi yönetimi (leadTime'ı tedarikçi bazına indir; vendor'suz ürünler için uyarı)
@@ -157,6 +164,7 @@ pnpm dev                    # (veya ikas CLI dev komutu)
 - ~~Çoklu depo desteği (depo adları + transfer önerisi)~~ — ikas Admin API'sinde depo/lokasyon listeleyen bir sorgu yok (MCP list + introspect ile doğrulandı; `getMerchant` de vermiyor). Depoları "DEPO 1 / DEPO 2" diye numaralandırmaktan öteye gidemez, yarım kalır. B16'daki **veri tutarsızlığı zaten giderildi** — eksik olan sadece ürünleşme. ikas bu sorguyu eklerse yeniden açılır.
 
 **Tamamlananlar:**
+- ~~Zamanlanmış özet raporu~~ → Ayarlar'da Kapalı/Günlük/Haftalık + gün/saat; `src/lib/digest/` (zamanlama, içerik, e-posta, orkestrasyon) + `GET|POST /api/cron/digest` (CRON_SECRET) + `POST /api/digest/test` (örnek gönderim). Harici zamanlayıcının saatte bir çağırması gerekir — bkz. üretim öncesi.
 - ~~Sell-through / stok devir hızı metriği~~ → Analiz sayfası + `src/lib/reports/sell-through.ts`
 
 ### Üretim öncesi hatırlatmalar
@@ -164,6 +172,7 @@ pnpm dev                    # (veya ikas CLI dev komutu)
 - [ ] Seed/demo verilerini temizle (`prisma/seed.ts`, dev route)
 - [ ] `NEXT_PUBLIC_DEPLOY_URL` kalıcı domain'e sabitle (webhook + tracker bu URL'i kullanıyor)
 - [ ] Resend'de doğrulanmış gönderici domain'i (`RESEND_FROM`)
+- [ ] `CRON_SECRET` üret + `/api/cron/digest`'i saatte bir çağıran zamanlayıcı kur (hosting kararına göre: Vercel Cron `vercel.json`'da `"schedule": "0 * * * *"`, ya da GitHub Actions / sunucu crontab'ı `curl -H "Authorization: Bearer …"`)
 - [ ] `.env` production değerleriyle; `SECRET_COOKIE_PASSWORD` yenile
 
 ---

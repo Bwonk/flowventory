@@ -29,12 +29,12 @@ export async function GET(request: NextRequest) {
 
     const [rows, unreadCount] = await Promise.all([
       prisma.notification.findMany({
-        where: { merchantId: user.merchantId },
+        where: { merchantId: user.merchantId, dismissedAt: null },
         orderBy: { createdAt: 'desc' },
         take: 50,
       }),
       prisma.notification.count({
-        where: { merchantId: user.merchantId, readAt: null },
+        where: { merchantId: user.merchantId, readAt: null, dismissedAt: null },
       }),
     ]);
 
@@ -57,13 +57,19 @@ export async function GET(request: NextRequest) {
   }
 }
 
-const markReadSchema = z.object({
-  /** Belirli id'ler; boş/verilmemişse tümü okundu sayılır. */
-  ids: z.array(z.string()).optional(),
-});
+const markReadSchema = z
+  .object({
+    /** Belirli id'ler; boş/verilmemişse tümü okundu sayılır. */
+    ids: z.array(z.string()).optional(),
+    /** false → okunmadı işaretle (yalnız belirli id'lerle; "tümünü okunmadı" yok). */
+    read: z.boolean().optional(),
+  })
+  .refine(v => v.read !== false || (v.ids?.length ?? 0) > 0, {
+    message: 'Okunmadı işaretleme için id gerekir',
+  });
 
 /**
- * POST /api/notifications — okundu işaretle.
+ * POST /api/notifications — okundu / okunmadı işaretle.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -75,18 +81,54 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Geçersiz istek gövdesi' }, { status: 400 });
     }
 
+    const unread = parsed.data.read === false;
     await prisma.notification.updateMany({
       where: {
         merchantId: user.merchantId,
-        readAt: null,
+        dismissedAt: null,
+        readAt: unread ? { not: null } : null,
         ...(parsed.data.ids?.length ? { id: { in: parsed.data.ids } } : {}),
       },
-      data: { readAt: new Date() },
+      data: { readAt: unread ? null : new Date() },
     });
 
     return NextResponse.json({ data: { ok: true } });
   } catch (error) {
     logger.error('Notifications mark-read error', { error });
     return NextResponse.json({ error: 'Failed to mark notifications' }, { status: 500 });
+  }
+}
+
+const dismissSchema = z.object({
+  ids: z.array(z.string()).min(1).max(50),
+});
+
+/**
+ * DELETE /api/notifications — kaldır (soft delete: dismissedAt). Kayıt silinmez;
+ * dedupeKey kaldığı için aynı uyarı aynı periyotta yeniden üretilmez.
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    const user = getUserFromRequest(request);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const parsed = dismissSchema.safeParse(await request.json().catch(() => ({})));
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Geçersiz istek gövdesi' }, { status: 400 });
+    }
+
+    await prisma.notification.updateMany({
+      where: {
+        merchantId: user.merchantId,
+        id: { in: parsed.data.ids },
+        dismissedAt: null,
+      },
+      data: { dismissedAt: new Date() },
+    });
+
+    return NextResponse.json({ data: { ok: true } });
+  } catch (error) {
+    logger.error('Notifications dismiss error', { error });
+    return NextResponse.json({ error: 'Failed to dismiss notifications' }, { status: 500 });
   }
 }

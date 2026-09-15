@@ -17,6 +17,7 @@ import { AssignVendorApiResponse } from '../app/api/ikas/assign-vendor/route';
 import { VendorsApiResponse, VendorListItem, DeleteVendorApiResponse } from '../app/api/vendors/route';
 import { SendVendorReportApiResponse } from '../app/api/vendors/send-report/route';
 import { SyncApiResponse } from '../app/api/sync/route';
+import { DigestTestApiResponse } from '../app/api/digest/test/route';
 
 export async function makePostRequest<T>({ url, data, token }: { url: string; data?: Record<string, unknown>; token?: string }) {
   return axios.post<ApiResponseType<T>>(url, data, {
@@ -124,8 +125,16 @@ export const ApiRequests = {
   notifications: {
     list: (token: string) =>
       makeGetRequest<NotificationsApiResponse>({ url: '/api/notifications', token }),
-    markRead: (token: string, ids?: string[]) =>
-      makePostRequest<{ ok: boolean }>({ url: '/api/notifications', token, data: ids ? { ids } : {} }),
+    /** ids yoksa tümü okundu; read=false yalnız belirli id'lerle (okunmadı işaretle). */
+    markRead: (token: string, ids?: string[], read = true) =>
+      makePostRequest<{ ok: boolean }>({
+        url: '/api/notifications',
+        token,
+        data: { ...(ids ? { ids } : {}), read },
+      }),
+    /** Soft delete — listeden kaldırır, kayıt dedupe için kalır. */
+    dismiss: (token: string, ids: string[]) =>
+      makeDeleteRequest<{ ok: boolean }>({ url: '/api/notifications', token, data: { ids } }),
   },
   vendors: {
     list: (token: string) => makeGetRequest<VendorsApiResponse>({ url: '/api/vendors', token }),
@@ -142,6 +151,10 @@ export const ApiRequests = {
   },
   sync: {
     run: (token: string) => makePostRequest<SyncApiResponse>({ url: '/api/sync', token }),
+  },
+  digest: {
+    sendTest: (token: string, input: { frequency: 'daily' | 'weekly' }) =>
+      makePostRequest<DigestTestApiResponse>({ url: '/api/digest/test', token, data: input }),
   },
   merchantSettings: {
     get: (token: string) =>

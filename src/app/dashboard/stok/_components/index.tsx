@@ -1,7 +1,6 @@
 "use client"
 
 import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageContainer } from '@/components/layout/PageContainer';
@@ -54,36 +53,25 @@ const HomePage: React.FC<HomePageProps> = ({ token, products = [], analytics, vi
           eyebrow="STOK YÖNETİMİ"
           title="Stok Takibi"
           actions={
-            <>
-              <Link
-                href="/dashboard/analiz"
-                className="text-sm font-medium text-accent-blue underline-offset-4 hover:underline"
-              >
-                Analize git →
-              </Link>
-              <Button onClick={() => downloadCSV(filters.displayedRows)} className="gap-2">
-                <Download className="size-4" />
-                CSV İndir
-              </Button>
-            </>
+            <Button onClick={() => downloadCSV(filters.displayedRows)} className="gap-2">
+              <Download className="size-4" />
+              CSV İndir
+            </Button>
           }
         />
 
-        {/* Tek kart: başlık + filtre şeridi + tablo (analiz ile aynı düzen) */}
+        {/* Filtre araçları kanvasta yüzer (rapor ile aynı dil); kart yalnız tablo */}
+        <FilterBar
+          query={filters.query}
+          onQueryChange={filters.setQuery}
+          statusFilter={filters.statusFilter}
+          onStatusFilterChange={filters.setStatusFilter}
+          stockRange={filters.stockRange}
+          onStockRangeChange={filters.setStockRange}
+          sortBy={filters.sortBy}
+          onSortByChange={filters.setSortBy}
+        />
         <TableSection label="Ürün listesi">
-          <FilterBar
-            query={filters.query}
-            onQueryChange={filters.setQuery}
-            statusFilter={filters.statusFilter}
-            onStatusFilterChange={filters.setStatusFilter}
-            stockRange={filters.stockRange}
-            onStockRangeChange={filters.setStockRange}
-            sortBy={filters.sortBy}
-            sortReversed={filters.sortReversed}
-            onSortByChange={filters.setSortBy}
-            hasActiveFilters={filters.hasActiveFilters}
-            onClearAll={filters.clearAllFilters}
-          />
           <ProductTable
             rows={filters.displayedRows}
             hasActiveFilters={filters.hasActiveFilters}

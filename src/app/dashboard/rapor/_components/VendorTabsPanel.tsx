@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useReducedMotion } from 'motion/react';
 import { Badge } from '@/components/ui/badge';
 import { SegmentedTrack } from '@/components/shared/tool-track';
+import { TableSection } from '@/components/shared/data-table/TableSection';
 import { cn } from '@/lib/utils';
 import { formatPrice } from '@/lib/currency';
 import type { PurchaseReportVendor } from '@/app/api/reports/purchase/route';
@@ -45,7 +46,7 @@ interface VendorTabsPanelProps {
 
 /**
  * Tedarikçi tab'lı sipariş paneli. Tab yolu (kayan hap) ve tedarikçi işlem
- * yolu kartın üstünde yüzer; kart düz hairline dikdörtgendir. Tüm paneller
+ * yolu kartın üstünde yüzer; kart düz hairline `TableSection`'dır. Tüm paneller
  * DOM'da kalır: ekranda `hidden` gizler, print'te `print:block` bunu ezerek
  * global yazdırmada sepetinde satır olan tüm tedarikçileri sırayla çıktıya sokar.
  */
@@ -150,7 +151,7 @@ export function VendorTabsPanel({
         />
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-hairline bg-card print:border-neutral-400">
+      <TableSection label="Sipariş önerileri" className="print:border-neutral-400">
         <div
           className={cn(
             'transition-opacity print:opacity-100',
@@ -224,7 +225,7 @@ export function VendorTabsPanel({
             );
           })}
         </div>
-      </div>
+      </TableSection>
     </section>
   );
 }

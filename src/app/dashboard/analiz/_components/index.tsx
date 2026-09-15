@@ -191,8 +191,9 @@ export function AnalizContent({ insight, token, initialFilters, onWindowChange }
 
       <AgingSection buckets={insight.agingBuckets} selected={filters.aging} onSelect={handleAgingSelect} />
 
+      {/* Filtre araçları kanvasta yüzer (rapor ile aynı dil); kart yalnız tablo */}
+      <AnalysisFilterBar filters={filters} />
       <TableSection label="Ürün detayı" sectionRef={tableRef}>
-        <AnalysisFilterBar filters={filters} />
         <AnalysisTable
           rows={filters.displayedRows}
           windowDays={insight.windowDays}

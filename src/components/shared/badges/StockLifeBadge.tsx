@@ -5,6 +5,8 @@ interface StockLifeBadgeProps {
   /** Stok ömrü (gün). null = satış yok, ömür hesaplanamıyor. */
   days: number | null;
   size?: BadgeSize;
+  /** Tooltip metni; verilmezse kademe kelimesi (Kritik / Yeterli …) gösterilir. */
+  title?: string;
   className?: string;
 }
 
@@ -29,12 +31,12 @@ function tierFor(days: number | null): string {
  * Stok ömrü rozeti — mevcut stoğun kaç günlük satışa yettiğini renk koduyla gösterir.
  * 365 günden uzun tahminler "365+ gün" tavanıyla gösterilir.
  */
-export function StockLifeBadge({ days, size = 'sm', className }: StockLifeBadgeProps) {
+export function StockLifeBadge({ days, size = 'sm', title, className }: StockLifeBadgeProps) {
   const label =
-    days === null ? 'satışsız' : days > 365 ? '365+ gün' : `${days.toLocaleString('tr-TR')} gün`;
+    days === null ? 'Satışsız' : days > 365 ? '365+ gün' : `${days.toLocaleString('tr-TR')} gün`;
 
   return (
-    <Badge variant={variantFor(days)} size={size} title={tierFor(days)} className={cn('whitespace-nowrap tabular-nums', className)}>
+    <Badge variant={variantFor(days)} size={size} title={title ?? tierFor(days)} className={cn('whitespace-nowrap tabular-nums', className)}>
       {label}
     </Badge>
   );

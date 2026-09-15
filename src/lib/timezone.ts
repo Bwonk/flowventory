@@ -83,3 +83,17 @@ export function dayRangeInTz(
   const endMs = dayStartMsInTz(nextKey, timeZone) - 1;
   return { startMs, endMs };
 }
+
+const WEEKDAY_INDEX: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+
+/** Verilen anın, verilen TZ'deki haftanın günü (0=Pazar … 6=Cumartesi, `Date#getDay` ile aynı). */
+export function weekdayInTz(input: DateLike, timeZone: string = DEFAULT_MERCHANT_TIMEZONE): number {
+  const short = new Intl.DateTimeFormat('en-US', { timeZone, weekday: 'short' }).format(toDate(input));
+  return WEEKDAY_INDEX[short];
+}
+
+/** "YYYY-MM-DD" anahtarını takvim günü olarak kaydırır (TZ'den bağımsız). */
+export function shiftDateKey(dateKey: string, days: number): string {
+  const [y, m, d] = dateKey.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+}

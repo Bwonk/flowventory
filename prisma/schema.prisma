@@ -78,6 +78,12 @@ model MerchantSettings {
   notificationEmail String?
   /** E-posta bildirimleri açık mı? */
   emailNotifications Boolean @default(false)
+  /** Zamanlanmış özet raporu: "off" | "daily" | "weekly" (adres: notificationEmail). */
+  digestFrequency   String   @default("off")
+  /** Haftalık özet günü, merchant TZ'sinde (0=Pazar … 6=Cumartesi). */
+  digestWeekday     Int      @default(1)
+  /** Özet gönderim saati, merchant TZ'sinde (0-23). */
+  digestHour        Int      @default(9)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 }
@@ -94,6 +100,9 @@ model Notification {
   productId  String?
   dedupeKey  String
   readAt     DateTime?
+  // Kullanıcı kaldırdı (soft delete): dedupeKey korunur ki aynı uyarı aynı
+  // periyotta yeniden üretilmesin.
+  dismissedAt DateTime?
   createdAt  DateTime  @default(now())
 
   @@unique([merchantId, dedupeKey])
@@ -194,4 +203,18 @@ model VendorContact {
   updatedAt  DateTime @updatedAt
 
   @@unique([merchantId, vendorId])
+}
+
+// Gönderilen özet raporları — idempotency: saatlik cron'un tekrarları ya da
+// eşzamanlı çağrılar aynı dönemin özetini iki kez göndermesin. Satır gönderimden
+// ÖNCE açılır (claim); gönderim başarısızsa silinir ki sonraki tur yeniden denesin.
+model DigestLog {
+  id         String    @id @default(cuid())
+  merchantId String
+  periodKey  String    // "daily:2026-09-10" | "weekly:2026-09-07"
+  status     String    // "pending" | "sent"
+  createdAt  DateTime  @default(now())
+  sentAt     DateTime?
+
+  @@unique([merchantId, periodKey])
 }
