@@ -4,7 +4,7 @@ import { getUserFromRequest } from '@/lib/auth-helpers';
 import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/prisma';
 import { ruleInputSchema } from '@/lib/rules/schema';
-import { toRuleItem } from '../route';
+import { toRuleItem } from '@/lib/rules/serialize';
 
 type RouteContext = { params: Promise<{ id: string }> };
 

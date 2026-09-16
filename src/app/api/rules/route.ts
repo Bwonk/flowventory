@@ -2,70 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth-helpers';
 import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/prisma';
-import { describeRule } from '@/lib/rules/describe';
 import { ruleInputSchema } from '@/lib/rules/schema';
-import type { RuleMetric, RuleScope, RuleWindowHours, ThresholdUnit } from '@/lib/rules/types';
+import { MAX_RULES_PER_MERCHANT, toRuleItem, type TrackingRuleItem } from '@/lib/rules/serialize';
 
-export type TrackingRuleItem = {
-  id: string;
-  name: string;
-  enabled: boolean;
-  scope: RuleScope;
-  targetId: string | null;
-  targetLabel: string | null;
-  metric: RuleMetric;
-  threshold: number;
-  thresholdUnit: ThresholdUnit;
-  windowHours: RuleWindowHours;
-  emailEnabled: boolean;
-  lastTriggeredAt: string | null;
-  createdAt: string;
-  /** describeRule çıktısı — liste satırı ve bildirim aynı cümleyi kullanır. */
-  sentence: string;
-};
-
+export type { TrackingRuleItem };
 export type RulesApiResponse = { rules: TrackingRuleItem[] };
-
-/** Merchant başına kural üst sınırı — değerlendirme maliyetini sınırlar. */
-export const MAX_RULES_PER_MERCHANT = 50;
-
-type RuleRow = {
-  id: string;
-  name: string;
-  enabled: boolean;
-  scope: string;
-  targetId: string | null;
-  targetLabel: string | null;
-  metric: string;
-  threshold: number;
-  thresholdUnit: string;
-  windowHours: number;
-  emailEnabled: boolean;
-  lastTriggeredAt: Date | null;
-  createdAt: Date;
-};
-
-export function toRuleItem(row: RuleRow): TrackingRuleItem {
-  const typed = {
-    scope: row.scope as RuleScope,
-    metric: row.metric as RuleMetric,
-    thresholdUnit: row.thresholdUnit as ThresholdUnit,
-    windowHours: row.windowHours as RuleWindowHours,
-  };
-  return {
-    id: row.id,
-    name: row.name,
-    enabled: row.enabled,
-    targetId: row.targetId,
-    targetLabel: row.targetLabel,
-    threshold: row.threshold,
-    emailEnabled: row.emailEnabled,
-    lastTriggeredAt: row.lastTriggeredAt?.toISOString() ?? null,
-    createdAt: row.createdAt.toISOString(),
-    ...typed,
-    sentence: describeRule({ ...typed, targetId: row.targetId, targetLabel: row.targetLabel, threshold: row.threshold }),
-  };
-}
 
 /** GET /api/rules — merchant'ın takip kuralları (yeniden eskiye). */
 export async function GET(request: NextRequest) {
