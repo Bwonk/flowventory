@@ -14,7 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { extractErrorMessage } from './QuickStockButton';
+import { extractErrorMessage } from '@/lib/api-error';
 
 interface DeleteVendorDialogProps {
   token: string;

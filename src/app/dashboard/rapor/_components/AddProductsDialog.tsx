@@ -22,7 +22,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
-import { extractErrorMessage } from './QuickStockButton';
+import { extractErrorMessage } from '@/lib/api-error';
 
 type ProductRow = NonNullable<ListProductsApiResponse['products']>[number];
 

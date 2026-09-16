@@ -16,6 +16,7 @@ import {
   getVariantStock,
   getVariantStockLocations,
   stockToStatus,
+  type VariantStockChange,
 } from '@/lib/products/product';
 import {
   getProductQuantity,
@@ -39,7 +40,8 @@ export const ProductDetailContent: React.FC<{
   criticalThreshold?: number;
   warningThreshold?: number;
   portalContainer?: HTMLElement | null;
-}> = ({ product, analytics, token, criticalThreshold = 5, warningThreshold = 10, portalContainer }) => {
+  onVariantStockChange?: (change: VariantStockChange) => void;
+}> = ({ product, analytics, token, criticalThreshold = 5, warningThreshold = 10, portalContainer, onVariantStockChange }) => {
   const [selectedVariantId, setSelectedVariantId] = useState<string>('all');
   const [viewDetail, setViewDetail] = useState<SingleProductViewStats | null>(null);
   const [viewLoading, setViewLoading] = useState(false);
@@ -255,10 +257,15 @@ export const ProductDetailContent: React.FC<{
           <div className="min-w-0 p-4 flex flex-col min-h-0 gap-3">
             {selectedVariant && (
               <StockEditor
+                key={selectedVariant.id}
                 token={token}
                 productId={product.id}
                 variantId={selectedVariant.id}
                 locations={getVariantStockLocations(selectedVariant)}
+                portalContainer={portalContainer}
+                onStockChange={(stockLocationId, stockCount) =>
+                  onVariantStockChange?.({ productId: product.id, variantId: selectedVariant.id, stockLocationId, stockCount })
+                }
               />
             )}
             <TrendChart

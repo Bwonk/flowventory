@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/dialog';
 import { PlusIcon } from '@/components/ui/icons/plus';
 import { useIconHover } from '@/components/ui/icons/use-icon-hover';
-import { extractErrorMessage } from './QuickStockButton';
+import { extractErrorMessage } from '@/lib/api-error';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 

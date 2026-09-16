@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { OptionButton } from '@/components/shared/filters/Dropdown';
-import { extractErrorMessage } from './QuickStockButton';
+import { extractErrorMessage } from '@/lib/api-error';
 
 interface VendorAssignPopoverProps {
   token: string;

@@ -6,6 +6,7 @@ import { XIcon } from 'lucide-react';
 import type { AnalyticsApiResponse } from '@/app/api/ikas/analytics/route';
 import { useStockThreshold } from '@/lib/stock-threshold';
 import type { Product } from '@/lib/products/types';
+import type { VariantStockChange } from '@/lib/products/product';
 import { ProductDetailContent } from './ProductDetailContent';
 
 interface ProductDetailModalProps {
@@ -14,10 +15,12 @@ interface ProductDetailModalProps {
   token: string | null;
   viewStats?: Record<string, number> | null;
   onClose: () => void;
+  /** Stok düzenlemesi onaylanınca üst listeyi güncellemek için (opsiyonel). */
+  onVariantStockChange?: (change: VariantStockChange) => void;
 }
 
 /** Ürün detay modalı: Dialog kabuğu + eşik okuma (prop taşımadan). */
-export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product, analytics, token, viewStats, onClose }) => {
+export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product, analytics, token, viewStats, onClose, onVariantStockChange }) => {
   const { threshold } = useStockThreshold();
   const [portalContainer, setPortalContainer] = React.useState<HTMLElement | null>(null);
 
@@ -44,6 +47,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
             criticalThreshold={threshold.min}
             warningThreshold={threshold.max}
             portalContainer={portalContainer}
+            onVariantStockChange={onVariantStockChange}
           />
         )}
         <DialogClose

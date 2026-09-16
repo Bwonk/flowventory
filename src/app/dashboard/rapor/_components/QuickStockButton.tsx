@@ -2,9 +2,9 @@
 
 import { logger } from '@/lib/logger';
 import { useEffect, useRef, useState } from 'react';
-import { isAxiosError } from 'axios';
 import { Check, Loader2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
+import { extractErrorMessage } from '@/lib/api-error';
 import { ApiRequests } from '@/lib/api-requests';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -20,15 +20,6 @@ interface QuickStockButtonProps {
   addQty: number;
   /** Satırdaki Stok hücresini optimistic güncellemek için. */
   onStockChange: (variantId: string, newTotalStock: number) => void;
-}
-
-/** Sunucunun Türkçe hata mesajını çıkarır; yoksa genel kopya. */
-export function extractErrorMessage(error: unknown, fallback: string): string {
-  if (isAxiosError(error)) {
-    const serverError = (error.response?.data as { error?: string } | undefined)?.error;
-    if (serverError) return serverError;
-  }
-  return fallback;
 }
 
 /**

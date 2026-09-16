@@ -93,3 +93,33 @@ export function getDaysRemaining(product: Product, salesByVariant: VariantSales[
   const dailyRate = soldQuantity / 30;
   return Math.round(totalStock / dailyRate);
 }
+
+export interface VariantStockChange {
+  productId: string;
+  variantId: string;
+  stockLocationId: string;
+  stockCount: number;
+}
+
+/**
+ * Stok düzenleme sonrası ürün listesini yerinde (immutable) günceller —
+ * modal başlığı, varyant kartı ve arkadaki tablo satırı sunucuya gitmeden
+ * yeni değeri görsün. Eşleşmeyen ürün/varyant/depo dokunulmadan kalır.
+ */
+export function applyVariantStockChange(products: Product[], change: VariantStockChange): Product[] {
+  return products.map(p => {
+    if (p.id !== change.productId) return p;
+    return {
+      ...p,
+      variants: p.variants.map(v => {
+        if (v.id !== change.variantId) return v;
+        return {
+          ...v,
+          stocks: (v.stocks ?? []).map(s =>
+            s?.stockLocationId === change.stockLocationId ? { ...s, stockCount: change.stockCount } : s,
+          ),
+        };
+      }),
+    };
+  });
+}

@@ -18,7 +18,7 @@ import {
 import { cn } from '@/lib/utils';
 import { formatPrice } from '@/lib/currency';
 import type { BasketLine } from './basket';
-import { extractErrorMessage } from './QuickStockButton';
+import { extractErrorMessage } from '@/lib/api-error';
 
 interface SendReportDialogProps {
   token: string;

@@ -4,6 +4,7 @@ import { AnalyticsApiResponse } from '@/app/api/ikas/analytics/route';
 export type Product = NonNullable<ListProductsApiResponse['products']>[0];
 export type Variant = Product['variants'][number];
 import type { StockStatus } from '@/components/shared/badges/StatusBadge';
+import type { VariantStockChange } from './product';
 
 export type { StockStatus };
 export type ProductStatus = StockStatus;
@@ -29,6 +30,8 @@ export interface HomePageProps {
   loading: boolean;
   initialStatusFilter?: StatusFilter;
   initialSelectedProductId?: string;
+  /** Modal'daki stok düzenlemesi onaylanınca listeyi yerinde günceller. */
+  onVariantStockChange?: (change: VariantStockChange) => void;
 }
 
 export type StatusFilter = 'all' | 'tukendi' | 'kritik' | 'az-kalan' | 'saglikli';

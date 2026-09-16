@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageContainer } from '@/components/layout/PageContainer';
@@ -14,15 +14,19 @@ import { ProductTable } from './components/ProductTable';
 import { ProductDetailModal } from './product-detail/ProductDetailModal';
 import { downloadCSV } from '@/lib/products/csv';
 
-const HomePage: React.FC<HomePageProps> = ({ token, products = [], analytics, viewStats, loading, initialStatusFilter, initialSelectedProductId }) => {
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+const HomePage: React.FC<HomePageProps> = ({ token, products = [], analytics, viewStats, loading, initialStatusFilter, initialSelectedProductId, onVariantStockChange }) => {
+  // Nesne kopyası değil kimlik tutulur: stok düzenlemesi listeyi güncelleyince modal da güncel ürünü görür.
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const selectedProduct = useMemo<Product | null>(
+    () => (selectedProductId ? products.find(p => p.id === selectedProductId) ?? null : null),
+    [products, selectedProductId],
+  );
   const salesByVariant = analytics?.salesByVariant ?? [];
   const filters = useProductFilters(products, viewStats, salesByVariant, initialStatusFilter);
 
   useEffect(() => {
-    if (initialSelectedProductId && products.length > 0) {
-      const found = products.find(p => p.id === initialSelectedProductId);
-      if (found) setSelectedProduct(found);
+    if (initialSelectedProductId && products.some(p => p.id === initialSelectedProductId)) {
+      setSelectedProductId(initialSelectedProductId);
     }
   }, [initialSelectedProductId, products]);
 
@@ -76,10 +80,7 @@ const HomePage: React.FC<HomePageProps> = ({ token, products = [], analytics, vi
             rows={filters.displayedRows}
             hasActiveFilters={filters.hasActiveFilters}
             onClearFilters={filters.clearAllFilters}
-            onSelectProduct={productId => {
-              const product = products.find(p => p.id === productId);
-              if (product) setSelectedProduct(product);
-            }}
+            onSelectProduct={setSelectedProductId}
             hasMore={filters.hasMore}
             onLoadMore={filters.loadMore}
             loadingMore={filters.loadingMore}
@@ -97,7 +98,8 @@ const HomePage: React.FC<HomePageProps> = ({ token, products = [], analytics, vi
         analytics={analytics}
         token={token}
         viewStats={viewStats}
-        onClose={() => setSelectedProduct(null)}
+        onClose={() => setSelectedProductId(null)}
+        onVariantStockChange={onVariantStockChange}
       />
     </div>
   );

@@ -10,6 +10,7 @@ import { ListProductsApiResponse } from '../../api/ikas/list-products/route';
 import { AnalyticsApiResponse } from '../../api/ikas/analytics/route';
 import { ErrorState } from '@/components/shared/ErrorState';
 import { useMerchantCurrency } from '@/lib/currency';
+import { applyVariantStockChange, type VariantStockChange } from '@/lib/products/product';
 import { StokSkeleton } from './_components/StokSkeleton';
 
 type Product = NonNullable<ListProductsApiResponse['products']>[0];
@@ -116,6 +117,11 @@ function StokPageContent() {
     initializeDashboard();
   }, [initializeDashboard]);
 
+  // Modal'daki stok düzenlemesi: liste sunucuya gitmeden yeni değeri görsün.
+  const handleVariantStockChange = useCallback((change: VariantStockChange) => {
+    setProducts(prev => applyVariantStockChange(prev, change));
+  }, []);
+
   if (loading) {
     return <StokSkeleton />;
   }
@@ -134,6 +140,7 @@ function StokPageContent() {
       loading={loading}
       initialStatusFilter={initialStatusFilter}
       initialSelectedProductId={productParam || undefined}
+      onVariantStockChange={handleVariantStockChange}
     />
   );
 }

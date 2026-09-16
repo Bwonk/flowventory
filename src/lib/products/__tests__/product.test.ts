@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Product, Variant } from '@/lib/products/types';
 import {
+  applyVariantStockChange,
   getProductStatus,
   getTotalStock,
   getVariantStock,
@@ -112,5 +113,32 @@ describe('getVariantStockLocations', () => {
 
   it('depo yoksa boş dizi döner', () => {
     expect(getVariantStockLocations(variant([]))).toEqual([]);
+  });
+});
+
+describe('applyVariantStockChange', () => {
+  const list = [
+    product([
+      variant([{ stockCount: 3, stockLocationId: 'loc-1' }, { stockCount: 7, stockLocationId: 'loc-2' }], 'v1'),
+      variant([{ stockCount: 1, stockLocationId: 'loc-1' }], 'v2'),
+    ]),
+  ];
+
+  it('yalnız hedef deponun stoğunu değiştirir', () => {
+    const next = applyVariantStockChange(list, { productId: 'p1', variantId: 'v1', stockLocationId: 'loc-2', stockCount: 20 });
+    expect(getVariantStock(next[0].variants[0])).toBe(23);
+    expect(getVariantStock(next[0].variants[1])).toBe(1);
+  });
+
+  it('girdiyi değiştirmez (immutable)', () => {
+    const next = applyVariantStockChange(list, { productId: 'p1', variantId: 'v1', stockLocationId: 'loc-1', stockCount: 0 });
+    expect(getVariantStock(list[0].variants[0])).toBe(10);
+    expect(next).not.toBe(list);
+    expect(next[0].variants[1]).toBe(list[0].variants[1]);
+  });
+
+  it('eşleşmeyen üründe listeyi olduğu gibi bırakır', () => {
+    const next = applyVariantStockChange(list, { productId: 'zzz', variantId: 'v1', stockLocationId: 'loc-1', stockCount: 0 });
+    expect(next[0]).toBe(list[0]);
   });
 });
