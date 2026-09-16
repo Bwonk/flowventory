@@ -98,10 +98,11 @@ model MerchantSettings {
 model Notification {
   id         String    @id @default(cuid())
   merchantId String
-  type       String    // "critical-stock" | "dead-stock" | "sales-spike"
+  type       String    // "critical-stock" | "dead-stock" | "sales-spike" | "rule"
   title      String
   body       String
   productId  String?
+  ruleId     String?   // type === "rule" ise tetikleyen TrackingRule
   dedupeKey  String
   readAt     DateTime?
   // Kullanıcı kaldırdı (soft delete): dedupeKey korunur ki aynı uyarı aynı
@@ -240,4 +241,29 @@ model StockHistory {
   @@index([merchantId, variantId, recordedAt])
   @@index([merchantId, productId, recordedAt])
   @@index([recordedAt])
+}
+
+// Kullanıcı tanımlı takip kuralı — "24 saatte bu ürünün stoğu 50 düşerse bildir".
+// Kapsam: tüm ürünler / tek ürün / tek tedarikçi; metrik + eşik + kayan pencere.
+// Değerlendirme: sync sonrası ve saatlik cron (/api/cron/rules). Tetiklenince
+// Notification(type "rule", ruleId) yazılır; aynı ürün+kural windowHours içinde
+// yeniden bildirilmez.
+model TrackingRule {
+  id              String    @id @default(cuid())
+  merchantId      String
+  name            String
+  enabled         Boolean   @default(true)
+  scope           String    // "all" | "product" | "vendor"
+  targetId        String?   // productId | vendorId
+  targetLabel     String?   // görüntüleme için ad (ürün/tedarikçi)
+  metric          String    // "stock_drop" | "stock_below" | "days_of_cover_below" | "sales_above" | "no_sales"
+  threshold       Int
+  thresholdUnit   String    @default("units") // "units" | "percent" | "days"
+  windowHours     Int       // 24 | 48 | 168 | 720 | 2160
+  emailEnabled    Boolean   @default(false)
+  lastTriggeredAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([merchantId, enabled])
 }

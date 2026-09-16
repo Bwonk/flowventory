@@ -1,6 +1,5 @@
 import { Resend } from 'resend';
 import { logger } from '@/lib/logger';
-import type { AlertCandidate } from './rules';
 
 /**
  * Resend ile alarm özeti e-postası.
@@ -12,9 +11,27 @@ const TYPE_LABELS: Record<string, string> = {
   'critical-stock': 'Kritik Stok',
   'dead-stock': 'Ölü Stok',
   'sales-spike': 'Satış Artışı',
+  rule: 'Takip Kuralı',
 };
 
-export async function sendAlertEmail(to: string, alerts: AlertCandidate[]): Promise<void> {
+/** E-postadaki bir satır — AlertCandidate ve kural hit'leri yapısal olarak uyar. */
+export interface AlertEmailItem {
+  type: string;
+  title: string;
+  body: string;
+}
+
+export interface AlertEmailOptions {
+  /** Başlık ve konu için; varsayılan "Stok Uyarıları". */
+  heading?: string;
+}
+
+export async function sendAlertEmail(
+  to: string,
+  alerts: AlertEmailItem[],
+  options: AlertEmailOptions = {},
+): Promise<void> {
+  const heading = options.heading ?? 'Stok Uyarıları';
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     logger.warn('RESEND_API_KEY not set, skipping alert email');
@@ -35,7 +52,7 @@ export async function sendAlertEmail(to: string, alerts: AlertCandidate[]): Prom
   const html = `
     <div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px">
       <p style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#93939f;margin:0 0 4px">FLOWVENTORY</p>
-      <h1 style="font-size:20px;font-weight:600;color:#17171c;margin:0 0 16px">Stok Uyarıları (${alerts.length})</h1>
+      <h1 style="font-size:20px;font-weight:600;color:#17171c;margin:0 0 16px">${heading} (${alerts.length})</h1>
       <table style="width:100%;border-collapse:collapse;border:1px solid #e5e7eb;border-radius:8px">${items}</table>
       <p style="font-size:12px;color:#93939f;margin-top:16px">
         Bu e-posta, Flowventory bildirim ayarlarınız açık olduğu için gönderildi.
@@ -47,7 +64,7 @@ export async function sendAlertEmail(to: string, alerts: AlertCandidate[]): Prom
   const { error } = await resend.emails.send({
     from,
     to,
-    subject: `Flowventory: ${alerts.length} stok uyarısı`,
+    subject: `Flowventory: ${alerts.length} ${options.heading ? 'kural uyarısı' : 'stok uyarısı'}`,
     html,
   });
   if (error) throw new Error(`Resend error: ${error.message}`);

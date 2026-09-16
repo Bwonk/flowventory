@@ -1,4 +1,4 @@
-import { timingSafeEqual } from 'crypto';
+import { isCronAuthorized } from '@/lib/cron-auth';
 import { runDueDigests } from '@/lib/digest/run';
 import { logger } from '@/lib/logger';
 import { EmailNotConfiguredError } from '@/lib/vendors/purchase-email';
@@ -18,16 +18,10 @@ export const dynamic = 'force-dynamic';
  * CRON_SECRET tanımlı değilse endpoint kapalıdır (503).
  */
 
-function isAuthorized(request: NextRequest, secret: string): boolean {
-  const expected = Buffer.from(`Bearer ${secret}`, 'utf8');
-  const received = Buffer.from(request.headers.get('authorization') ?? '', 'utf8');
-  return expected.length === received.length && timingSafeEqual(expected, received);
-}
-
 async function handle(request: NextRequest) {
   const secret = process.env.CRON_SECRET;
   if (!secret) return NextResponse.json({ error: 'CRON_SECRET is not configured' }, { status: 503 });
-  if (!isAuthorized(request, secret)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!isCronAuthorized(request, secret)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
     const result = await runDueDigests();

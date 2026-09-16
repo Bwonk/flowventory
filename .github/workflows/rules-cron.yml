@@ -1,0 +1,28 @@
+# Kural tabanlı takip tetikleyicisi. Kurallar sync sonrasında da değerlendirilir; bu iş
+# kimse dashboard'u açmasa bile saatte bir /api/cron/rules çağırarak "24 saatte 50 düştü"
+# gibi pencereli kuralların işlemesini sağlar. Digest ile ayrı dosya: biri düşünce diğeri
+# etkilenmesin. Gerekenler: repo secret CRON_SECRET, repo variable APP_URL (sonda "/" yok).
+name: Rules cron
+
+on:
+  schedule:
+    - cron: '23 * * * *'
+  workflow_dispatch:
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Call /api/cron/rules
+        env:
+          APP_URL: ${{ vars.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$APP_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "APP_URL ya da CRON_SECRET tanımlı değil — atlanıyor."
+            exit 0
+          fi
+          curl -fsS --max-time 120 -X POST \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$APP_URL/api/cron/rules"

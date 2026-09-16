@@ -1,12 +1,12 @@
 import { Prisma } from '@prisma/client';
 import { logger } from '@/lib/logger';
+import { getMerchantAuthToken } from '@/lib/merchant-auth';
 import { getMerchantSettings } from '@/lib/merchant-settings';
 import { prisma } from '@/lib/prisma';
 import { buildPurchaseReport } from '@/lib/reports/purchase-report';
 import { dateKeyInTz, shiftDateKey } from '@/lib/timezone';
 import { EmailNotConfiguredError } from '@/lib/vendors/purchase-email';
 import type { AuthToken } from '@/models/auth-token';
-import { AuthTokenManager } from '@/models/auth-token/manager';
 import { computeDigest, DEAD_STOCK_WINDOW_DAYS } from './compute';
 import { renderDigestEmail, sendDigestEmail } from './email';
 import { digestRanges, dueDigestPeriodKey, isDigestFrequency, type ActiveDigestFrequency } from './schedule';
@@ -78,15 +78,6 @@ export async function buildDigestEmail(
   });
 
   return renderDigestEmail(content, settings.currencyCode);
-}
-
-async function getMerchantAuthToken(merchantId: string): Promise<AuthToken | undefined> {
-  const row = await prisma.authToken.findFirst({
-    where: { merchantId, deleted: false, authorizedAppId: { not: null } },
-    orderBy: { updatedAt: 'desc' },
-    select: { authorizedAppId: true },
-  });
-  return row?.authorizedAppId ? AuthTokenManager.get(row.authorizedAppId) : undefined;
 }
 
 export type DigestRunResult = {

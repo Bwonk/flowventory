@@ -215,6 +215,8 @@ export async function runFullSync(merchantId: string, authToken: AuthToken): Pro
       // evaluateAlerts kendi içinde yutar). Dinamik import döngüsel bağımlılığı önler.
       const { evaluateAlerts } = await import('@/lib/alerts/evaluate');
       await evaluateAlerts(merchantId);
+      const { evaluateTrackingRules } = await import('@/lib/rules/evaluate');
+      await evaluateTrackingRules(merchantId);
       // Bakım: 120 günden eski stok geçmişini buda (hata yutulur).
       await pruneStockHistory();
       return { productCount, salesDayCount };
