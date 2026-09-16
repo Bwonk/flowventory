@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import Link from 'next/link';
-import { AlertTriangle, Archive, Bell, Mail, MailOpen, Trash2, TrendingUp } from 'lucide-react';
+import { AlertTriangle, Archive, Bell, Mail, MailOpen, Radar, Trash2, TrendingUp } from 'lucide-react';
 import type { NotificationItem } from '@/app/api/notifications/route';
 import {
   SwipeableList,
@@ -14,6 +14,7 @@ const TYPE_ICONS: Record<string, typeof Bell> = {
   'critical-stock': AlertTriangle,
   'dead-stock': Archive,
   'sales-spike': TrendingUp,
+  rule: Radar,
 };
 
 const absoluteFormatter = new Intl.DateTimeFormat('tr-TR', {

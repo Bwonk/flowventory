@@ -1,5 +1,8 @@
 import axios from 'axios';
 import type { StockHistoryApiResponse } from '@/app/api/stock-history/route';
+import type { RulesApiResponse, TrackingRuleItem } from '@/app/api/rules/route';
+import type { ProductOptionsApiResponse } from '@/app/api/products/options/route';
+import type { RuleInput } from '@/lib/rules/schema';
 import { GetMerchantApiResponse } from '../app/api/ikas/get-merchant/route';
 import { ApiResponseType } from '../globals/constants';
 import { ListProductsApiResponse } from '../app/api/ikas/list-products/route';
@@ -154,6 +157,19 @@ export const ApiRequests = {
       makePostRequest<SendVendorReportApiResponse>({ url: '/api/vendors/send-report', token, data: input }),
     delete: (token: string, input: { vendorId: string }) =>
       makeDeleteRequest<DeleteVendorApiResponse>({ url: '/api/vendors', token, data: input }),
+  },
+  rules: {
+    list: (token: string) => makeGetRequest<RulesApiResponse>({ url: '/api/rules', token }),
+    create: (token: string, input: RuleInput) =>
+      makePostRequest<TrackingRuleItem>({ url: '/api/rules', token, data: input }),
+    update: (token: string, id: string, input: RuleInput | { enabled: boolean }) =>
+      makePutRequest<TrackingRuleItem>({ url: `/api/rules/${encodeURIComponent(id)}`, token, data: input }),
+    delete: (token: string, id: string) =>
+      makeDeleteRequest<{ ok: boolean }>({ url: `/api/rules/${encodeURIComponent(id)}`, token }),
+  },
+  products: {
+    /** Seçiciler için hafif ürün listesi (snapshot). */
+    options: (token: string) => makeGetRequest<ProductOptionsApiResponse>({ url: '/api/products/options', token }),
   },
   sync: {
     run: (token: string) => makePostRequest<SyncApiResponse>({ url: '/api/sync', token }),

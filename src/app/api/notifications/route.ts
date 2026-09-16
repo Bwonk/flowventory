@@ -10,6 +10,8 @@ export type NotificationItem = {
   title: string;
   body: string;
   productId: string | null;
+  /** type === 'rule' ise tetikleyen kural. */
+  ruleId: string | null;
   read: boolean;
   createdAt: string;
 };
@@ -45,6 +47,7 @@ export async function GET(request: NextRequest) {
         title: row.title,
         body: row.body,
         productId: row.productId,
+        ruleId: row.ruleId,
         read: row.readAt !== null,
         createdAt: row.createdAt.toISOString(),
       })),
