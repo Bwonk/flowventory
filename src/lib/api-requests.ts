@@ -1,4 +1,5 @@
 import axios from 'axios';
+import type { StockHistoryApiResponse } from '@/app/api/stock-history/route';
 import { GetMerchantApiResponse } from '../app/api/ikas/get-merchant/route';
 import { ApiResponseType } from '../globals/constants';
 import { ListProductsApiResponse } from '../app/api/ikas/list-products/route';
@@ -83,6 +84,11 @@ export const ApiRequests = {
         token,
         data: date ? { date } : undefined,
       }),
+  },
+  stockHistory: {
+    /** Ürün (ya da varyant) için geçmiş stok serisi + projeksiyon + 30/90 gün değişim. */
+    get: (token: string, params: { productId: string; variantId?: string; days: 30 | 90 }) =>
+      makeGetRequest<StockHistoryApiResponse>({ url: '/api/stock-history', token, data: params }),
   },
   productView: {
     getViewStats: (token: string, productId?: string) =>

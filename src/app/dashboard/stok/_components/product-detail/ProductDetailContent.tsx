@@ -30,7 +30,17 @@ import { StatusBadge } from '@/components/shared/badges/StatusBadge';
 import { ModalProductImage } from './atoms';
 import { StockEditor } from './StockEditor';
 import { VariantCard } from './VariantCard';
+import { ProductMetricStrip } from './ProductMetricStrip';
+import { StockRunwayChart } from './StockRunwayChart';
+import { useStockHistory, type StockWindowDays } from './hooks/use-stock-history';
+import { SegmentedControl } from '@/components/shared/trend-chart/SegmentedControl';
 import { TrendChart, type TrendDataPoint } from '@/components/shared/TrendChart';
+
+type ChartTab = 'runway' | 'sales';
+const CHART_TABS: ReadonlyArray<{ value: ChartTab; label: string }> = [
+  { value: 'runway', label: 'Stok Yolu' },
+  { value: 'sales', label: 'Satış' },
+];
 
 export const ProductDetailContent: React.FC<{
   product: Product;
@@ -45,6 +55,10 @@ export const ProductDetailContent: React.FC<{
   const [selectedVariantId, setSelectedVariantId] = useState<string>('all');
   const [viewDetail, setViewDetail] = useState<SingleProductViewStats | null>(null);
   const [viewLoading, setViewLoading] = useState(false);
+  const [chartTab, setChartTab] = useState<ChartTab>('runway');
+  const [runwayDays, setRunwayDays] = useState<StockWindowDays>(30);
+  // StockEditor'daki onaylanmamış toplam — grafikte soluk projeksiyon olarak görünür.
+  const [draftTotal, setDraftTotal] = useState<number | null>(null);
 
   const variants = product.variants;
   const totalStock = getTotalStock(product);
@@ -66,6 +80,8 @@ export const ProductDetailContent: React.FC<{
   const targetRevenue = selectedVariant ? getVariantRevenue(selectedVariant.id, salesByVariant) : productRevenue;
   const soldCount = selectedVariant ? getVariantQuantity(selectedVariant.id, salesByVariant) : productQuantity;
   const share = totalRevenue > 0 ? targetRevenue / totalRevenue : 0;
+
+  const stockHistory = useStockHistory(token, product.id, selectedVariant?.id ?? null, runwayDays);
 
   useEffect(() => {
     if (!token) return;
@@ -254,7 +270,17 @@ export const ProductDetailContent: React.FC<{
               </div>
             </div>
           </div>
-          <div className="min-w-0 p-4 flex flex-col min-h-0 gap-3">
+          <div className="min-w-0 p-4 flex flex-col min-h-0 gap-3 md:overflow-y-auto">
+            <ProductMetricStrip
+              revenue={targetRevenue}
+              soldCount={soldCount}
+              share={share}
+              views={viewDetail?.totalViews ?? null}
+              viewsLoading={viewLoading}
+              isVariant={Boolean(selectedVariant)}
+              stock={stockHistory.data}
+              stockLoading={stockHistory.loading}
+            />
             {selectedVariant && (
               <StockEditor
                 key={selectedVariant.id}
@@ -263,11 +289,33 @@ export const ProductDetailContent: React.FC<{
                 variantId={selectedVariant.id}
                 locations={getVariantStockLocations(selectedVariant)}
                 portalContainer={portalContainer}
-                onStockChange={(stockLocationId, stockCount) =>
-                  onVariantStockChange?.({ productId: product.id, variantId: selectedVariant.id, stockLocationId, stockCount })
-                }
+                velocityPerDay={stockHistory.data?.velocityPerDay ?? null}
+                onDraftTotalChange={setDraftTotal}
+                onStockChange={(stockLocationId, stockCount) => {
+                  onVariantStockChange?.({ productId: product.id, variantId: selectedVariant.id, stockLocationId, stockCount });
+                  // update-stock snapshot'ı tazeledi → geçmiş/projeksiyon yeniden okunur.
+                  stockHistory.refresh();
+                }}
               />
             )}
+            <SegmentedControl
+              aria-label="Grafik seç"
+              options={CHART_TABS}
+              value={chartTab}
+              onChange={setChartTab}
+              className="shrink-0 self-start"
+            />
+            {chartTab === 'runway' ? (
+              <StockRunwayChart
+                data={stockHistory.data}
+                loading={stockHistory.loading}
+                error={stockHistory.error}
+                draftStock={selectedVariant ? draftTotal : null}
+                days={runwayDays}
+                onDaysChange={setRunwayDays}
+                className="shrink-0"
+              />
+            ) : (
             <TrendChart
               title="Satış Grafiği"
               subtitle={selectedVariant ? getVariantName(selectedVariant) : 'Tüm Varyantlar'}
@@ -281,6 +329,7 @@ export const ProductDetailContent: React.FC<{
               layout="modal"
               portalContainer={portalContainer}
             />
+            )}
           </div>
         </div>
       </div>
