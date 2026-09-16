@@ -123,6 +123,16 @@ dev branch'ine bağlanmak yeterli. Şema değişikliğinde: `pnpm prisma migrate
 - [ ] E-postadaki tükenen/az kalan/ölü stok sayıları dashboard'la tutuyor mu
 - [ ] Günlük özet dünü, haftalık özet dünden geriye 7 günü kapsıyor (bugün dahil değil)
 
+### N) Stok geçmişi, Stok Yolu ve kural tabanlı takip (16 Eyl 2026 — hiçbiri tarayıcıda test edilmedi)
+- [ ] **Migration:** `pnpm prisma migrate deploy` (dev branch) → `StockHistory` + `TrackingRule` tabloları, `Notification.ruleId` kolonu (iki migration DB'siz schema diff'ten üretildi)
+- [ ] Ayarlar → senkron → Prisma Studio'da tüm varyantlar `StockHistory`'de `baseline`; ikinci sync yeni satır yazmıyor; ikas'ta stok değiştir → tek `sync`/`refresh` satırı
+- [ ] Ürün modal'ı → varyant seç → kalem → değer → Enter → popover "12 → 40 (+28) · ~N gün idare eder" → Onayla → toast; **ikas admin'de stok değişti mi**; "Geri Al" eski değeri yazıyor mu (ikas'ta da); Escape taslağı sıfırlıyor; popover dışına tıklamak modalı kapatmıyor; çok depoda TOPLAM satırı güncel; modal başlığı + arkadaki liste satırı anında güncel; hata → toast + düzenleme modunda kalma
+- [ ] Modal 5 kart tek satırda, 780px'te taşma yok; varyant seçince kartlar + grafik varyanta daralıyor, görüntülenme "ürün geneli"
+- [ ] Stok Yolu grafiği: geçmiş çizgi + BUGÜN + kesik projeksiyon + TÜKENİŞ/TEDARİK/KRİTİK işaretleri; 30G/90G; satışsız üründe "projeksiyon yapılamıyor"; yeni veride "Geçmiş toplanıyor"; taslak yazınca soluk ikinci projeksiyon; onay sonrası grafik + "Stok Değişimi 30G" kartı yenileniyor; "Satış" sekmesi eski grafik
+- [ ] Ayarlar → Takip kuralları: kural ekle (ürün kapsamı, stok düşüşü 24s 5 adet) → ikas'ta stoğu 5 düşür → senkron → zilde `Radar` ikonlu bildirim + kural adı; e-posta açıksa Resend'de mail; ikinci senkronda tekrar yok (cooldown); anahtarı kapat → tetiklenmez; düzenle → cümle güncel; sil → listeden düşer
+- [ ] Ürün/tedarikçi seçicide arama çalışıyor; tedarikçisiz mağazada "Tedarikçi atanmış ürün yok"
+- [ ] Cron: `curl -fsS -X POST -H "Authorization: Bearer $CRON_SECRET" localhost:3000/api/cron/rules` → `{ data: { merchants, evaluated, created, failed } }`; yanlış anahtar 401, CRON_SECRET boş 503
+
 ### K) Regresyon
 - [ ] Stok Takibi sayfası: filtreler, deep link'ler (`?filter=tukendi`, `?view=dead`, `?product=...`)
 - [ ] Ürün modal'ı: chart periyotları (24s/7g/30g/1y/özel), varyant seçince "Görüntülenme" gizlenmesi
@@ -171,6 +181,9 @@ dev branch'ine bağlanmak yeterli. Şema değişikliğinde: `pnpm prisma migrate
 - ~~Çoklu depo desteği (depo adları + transfer önerisi)~~ — ikas Admin API'sinde depo/lokasyon listeleyen bir sorgu yok (MCP list + introspect ile doğrulandı; `getMerchant` de vermiyor). Depoları "DEPO 1 / DEPO 2" diye numaralandırmaktan öteye gidemez, yarım kalır. B16'daki **veri tutarsızlığı zaten giderildi** — eksik olan sadece ürünleşme. ikas bu sorguyu eklerse yeniden açılır.
 
 **Tamamlananlar:**
+- ~~Stok değişikliğinde onay~~ → StockEditor popover onayı + toast "Geri Al" (16 Eyl 2026); optimistic liste güncellemesi (`applyVariantStockChange`)
+- ~~Ürün modal'ı metrik kartları~~ → 30G şerit + **Stok Yolu** grafiği (`src/lib/stock-history/`, `GET /api/stock-history`); kuram: uyarı yerine "kaç gün idare eder"
+- ~~Alarm & bildirim (kural tabanlı)~~ → `TrackingRule` + `src/lib/rules/` (5 metrik, kayan pencere, ürün/tedarikçi kapsamı), Ayarlar'da bölüm, `GET|POST /api/cron/rules` + `rules-cron.yml`
 - ~~Zamanlanmış özet raporu~~ → Ayarlar'da Kapalı/Günlük/Haftalık + gün/saat; `src/lib/digest/` (zamanlama, içerik, e-posta, orkestrasyon) + `GET|POST /api/cron/digest` (CRON_SECRET) + `POST /api/digest/test` (örnek gönderim). Harici zamanlayıcının saatte bir çağırması gerekir — bkz. üretim öncesi.
 - ~~Sell-through / stok devir hızı metriği~~ → Analiz sayfası + `src/lib/reports/sell-through.ts`
 
@@ -180,6 +193,7 @@ dev branch'ine bağlanmak yeterli. Şema değişikliğinde: `pnpm prisma migrate
 - [ ] `NEXT_PUBLIC_DEPLOY_URL` kalıcı domain'e sabitle (webhook + tracker bu URL'i kullanıyor)
 - [x] Resend'de doğrulanmış gönderici domain'i — kök domain eu-west-1'de verified (bkz. `RESEND-KURULUM.md`); production için ayrı sending anahtarı üretilecek
 - [ ] `CRON_SECRET` (production için ayrı) üret → Vercel env + GitHub repo secret `CRON_SECRET`; repo variable `APP_URL`. Tetikleyici `.github/workflows/digest-cron.yml` (saatte bir) — Vercel Hobby cron'u günde bir kez çalışabildiği için GitHub Actions
+- [ ] Kural cron'u: `.github/workflows/rules-cron.yml` digest ile aynı `CRON_SECRET` + `APP_URL`'i kullanır — ayrı kurulum gerekmez; deploy sonrası `workflow_dispatch` ile bir kez elle tetikle
 - [ ] Vercel env production değerleriyle; `SECRET_COOKIE_PASSWORD` yenile. Neon'u Vercel Marketplace'ten bağla (`DATABASE_URL*` otomatik); bölge Frankfurt (`vercel.json` → `fra1`)
 - [ ] ikas Partner paneli: uygulama + redirect URL'i production domain'ine çek → yeniden yetkilendir → takip scriptini yeniden kur
 - [ ] Deploy sonrası: takip scripti kurulumu (`tracker.js` fonksiyon paketinde mi — `next.config.js` `outputFileTracingIncludes`), örnek özet, cron `workflow_dispatch` ile elle tetikle
