@@ -222,3 +222,22 @@ model DigestLog {
 
   @@unique([merchantId, periodKey])
 }
+
+// Varyant stok değişim günlüğü. ProductSnapshot yalnız anlık değeri tutar;
+// "24 saatte stok ne kadar düştü" ve modal'daki Stok Yolu grafiği için
+// tarihsel seri gerekir. Yalnız değer DEĞİŞİNCE (ve ilk görüldüğünde
+// "baseline" olarak) yazılır; sync/refresh sırasında eski snapshot ile
+// karşılaştırılarak üretilir. 120 günden eski kayıtlar budanır.
+model StockHistory {
+  id         String   @id @default(cuid())
+  merchantId String
+  productId  String
+  variantId  String
+  totalStock Int
+  source     String   // "baseline" | "sync" | "refresh"
+  recordedAt DateTime @default(now())
+
+  @@index([merchantId, variantId, recordedAt])
+  @@index([merchantId, productId, recordedAt])
+  @@index([recordedAt])
+}

@@ -5,6 +5,9 @@ import { pickMainImageUrl } from '@/lib/ikas-image';
 import { fetchAllPages } from '@/lib/ikas-client/pagination';
 import { getMerchantSettings } from '@/lib/merchant-settings';
 import { prisma } from '@/lib/prisma';
+import { diffStockRows, indexStockRows } from '@/lib/stock-history/diff';
+import { pruneStockHistory } from '@/lib/stock-history/query';
+import type { StockHistorySource } from '@/lib/stock-history/types';
 import { dateKeyInTz } from '@/lib/timezone';
 import type { AuthToken } from '@/models/auth-token';
 
@@ -69,15 +72,43 @@ export async function syncProducts(merchantId: string, authToken: AuthToken): Pr
     })),
   );
 
-  // Tam değiştirme: silinen ürünler snapshot'ta kalmasın.
+  // Tam değiştirme: silinen ürünler snapshot'ta kalmasın. Silmeden önce
+  // eski stoklarla karşılaştırıp değişenleri StockHistory'ye yazıyoruz.
+  const historyWrite = await buildStockHistoryWrite(merchantId, { merchantId }, rows, 'sync', syncedAt);
   await prisma.$transaction([
     prisma.productSnapshot.deleteMany({ where: { merchantId } }),
     prisma.productSnapshot.createMany({ data: rows }),
+    ...historyWrite,
   ]);
 
   await syncMerchantCurrency(merchantId, rows.map(r => r.currencyCode));
 
   return rows.length;
+}
+
+/**
+ * Mevcut snapshot ile yeni satırları karşılaştırır; değişen varyantlar için
+ * StockHistory createMany adımını döner (transaction dizisine eklenir).
+ * Değişiklik yoksa boş dizi — geçmiş tablosu yalnız gerçek hareketle büyür.
+ */
+async function buildStockHistoryWrite(
+  merchantId: string,
+  where: { merchantId: string; productId?: string },
+  rows: ReadonlyArray<{ productId: string; variantId: string; totalStock: number }>,
+  source: Exclude<StockHistorySource, 'baseline'>,
+  recordedAt: Date,
+) {
+  const previous = await prisma.productSnapshot.findMany({
+    where,
+    select: { productId: true, variantId: true, totalStock: true },
+  });
+  const entries = diffStockRows(indexStockRows(previous), rows, source);
+  if (entries.length === 0) return [];
+  return [
+    prisma.stockHistory.createMany({
+      data: entries.map(e => ({ merchantId, ...e, recordedAt })),
+    }),
+  ];
 }
 
 /**
@@ -184,6 +215,8 @@ export async function runFullSync(merchantId: string, authToken: AuthToken): Pro
       // evaluateAlerts kendi içinde yutar). Dinamik import döngüsel bağımlılığı önler.
       const { evaluateAlerts } = await import('@/lib/alerts/evaluate');
       await evaluateAlerts(merchantId);
+      // Bakım: 120 günden eski stok geçmişini buda (hata yutulur).
+      await pruneStockHistory();
       return { productCount, salesDayCount };
     } catch (error) {
       await prisma.syncLog.create({
@@ -250,10 +283,13 @@ export async function refreshProductSnapshot(
     syncedAt,
   }));
 
-  // Ürünün eski varyant satırlarını tam listeyle değiştir (silinen varyantlar kalmasın).
+  // Ürünün eski varyant satırlarını tam listeyle değiştir (silinen varyantlar kalmasın);
+  // değişen stoklar StockHistory'ye düşer (webhook ve manuel düzenleme buradan geçer).
+  const historyWrite = await buildStockHistoryWrite(merchantId, { merchantId, productId }, rows, 'refresh', syncedAt);
   await prisma.$transaction([
     prisma.productSnapshot.deleteMany({ where: { merchantId, productId } }),
     prisma.productSnapshot.createMany({ data: rows }),
+    ...historyWrite,
   ]);
 }
 

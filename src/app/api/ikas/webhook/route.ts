@@ -115,6 +115,7 @@ export async function POST(request: NextRequest) {
         const { merchantId } = webhook;
         await prisma.$transaction([
           prisma.productSnapshot.deleteMany({ where: { merchantId } }),
+          prisma.stockHistory.deleteMany({ where: { merchantId } }),
           prisma.salesDaily.deleteMany({ where: { merchantId } }),
           prisma.syncLog.deleteMany({ where: { merchantId } }),
           prisma.productView.deleteMany({ where: { merchantId } }),
