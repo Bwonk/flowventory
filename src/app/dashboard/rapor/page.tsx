@@ -13,7 +13,7 @@ import { markReportViewed, markStoreSynced } from '@/lib/onboarding';
 import { RaporSkeleton } from './_components/RaporSkeleton';
 import { clampQty, seedBasket, type BasketState } from './_components/basket';
 import { ReportActionBar } from './_components/ReportActionBar';
-import { ReportInfoTip } from './_components/ReportInfoTip';
+import { InfoTip } from '@/components/shared/InfoTip';
 import { ReportKpiStrip } from './_components/ReportKpiStrip';
 import { VendorTabsPanel } from './_components/VendorTabsPanel';
 import type { VendorListItem } from '@/app/api/vendors/route';
@@ -242,7 +242,8 @@ export default function RaporPage() {
         // Açıklama satırı yerine başlık yanındaki "i" balonu — araç yolu açılınca
         // üstüne gelecek metin kalmaz; bilgi istendiğinde bir hover uzakta.
         titleAccessory={
-          <ReportInfoTip
+          <InfoTip
+            ariaPrefix="Rapor bilgisi"
             text={`Son ${report.salesWindowDays} günün satış hızına göre · ${generatedAt.toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' })}`}
           />
         }

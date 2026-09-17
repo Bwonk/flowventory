@@ -298,6 +298,15 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
 - **Butonlar:** [src/components/ui/button.tsx](src/components/ui/button.tsx);
   birincil = ink, ikincil = `variant="outline"` hairline; tehlikeli =
   `variant="destructive"`. Mavi buton yok.
+- **Bilgi balonu (InfoTip):** yardımcı hesap açıklamaları ("~33 gün neye
+  göre?", "hangi pencere?") metnin içine değil
+  [src/components/shared/InfoTip.tsx](src/components/shared/InfoTip.tsx)'e
+  gider: ghost `size-6` (başlık yanı, `gap-1.5`) ya da `size-4` (satır içi,
+  `gap-1`) buton + animasyonlu `InformationCircleIcon` (hover butondan,
+  `useIconHover`) + animate-ui Tooltip (ink zemin, oklu, `max-w-64`). Balon
+  `pointer-events-none` — hover-only, içinde aksiyon/link olmaz; Popover ve
+  Dialog içinde "dışarı tıklama" sayılmaz. Metin `aria-label`'da da taşınır
+  (balon DOM'a basılmaz). Emsal: rapor başlığı, stok onay popover'ı, Stok Yolu başlığı.
 - **Sidebar onboarding kartı:**
   [src/components/layout/OnboardingCard.tsx](src/components/layout/OnboardingCard.tsx);
   beyaz sidebar yüzeyi üzerinde ikinci seviye `bg-muted` zemin — çerçevesiz,

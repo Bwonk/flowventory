@@ -15,7 +15,8 @@ import type { StockHistoryApiResponse } from '@/app/api/stock-history/route';
 import { ChartContainer, type ChartConfig } from '@/components/ui/chart';
 import { SegmentedControl } from '@/components/shared/trend-chart/SegmentedControl';
 import { formatDateKey, formatNumber } from '@/lib/format';
-import { buildProjection } from '@/lib/stock-history/projection';
+import { buildProjection, VELOCITY_WINDOW_DAYS } from '@/lib/stock-history/projection';
+import { InfoTip } from '@/components/shared/InfoTip';
 import { shiftDateKey } from '@/lib/timezone';
 import { cn } from '@/lib/utils';
 import type { StockWindowDays } from './hooks/use-stock-history';
@@ -147,7 +148,16 @@ export const StockRunwayChart: React.FC<{
     <div className={cn('flex min-h-0 flex-col rounded-lg border border-hairline bg-card p-4', className)}>
       <div className="flex shrink-0 items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="text-sm font-medium text-foreground">Stok Yolu</h3>
+          <div className="flex items-center gap-1.5">
+            <h3 className="text-sm font-medium text-foreground">Stok Yolu</h3>
+            {data && (
+              <InfoTip
+                size="sm"
+                ariaPrefix="Stok Yolu"
+                text={`Projeksiyon son ${VELOCITY_WINDOW_DAYS} günün ortalama günlük satışıyla (~${data.velocityPerDay.toLocaleString('tr-TR', { maximumFractionDigits: 1 })} adet/gün) düz çizilir; satış yoksa yatay kalır.`}
+              />
+            )}
+          </div>
           <p className="mt-0.5 text-xs text-muted-foreground">
             {loading ? 'Hesaplanıyor…' : error ? 'Stok geçmişi alınamadı.' : summary}
           </p>

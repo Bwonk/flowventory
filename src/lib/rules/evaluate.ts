@@ -4,6 +4,7 @@ import { logger } from '@/lib/logger';
 import { getMerchantSettings } from '@/lib/merchant-settings';
 import { prisma } from '@/lib/prisma';
 import { sumProductPrevious } from '@/lib/stock-history/change';
+import { VELOCITY_WINDOW_DAYS } from '@/lib/stock-history/projection';
 import { getStockAtOrBefore } from '@/lib/stock-history/query';
 import { dateKeyInTz, shiftDateKey } from '@/lib/timezone';
 import { evaluateRule, windowStartDateKey, type RuleHit, type RuleTarget } from './evaluate-rule';
@@ -16,7 +17,6 @@ import {
 } from './types';
 
 const HOUR_MS = 60 * 60 * 1000;
-const VELOCITY_WINDOW_DAYS = 30;
 
 interface ProductAgg {
   productId: string;

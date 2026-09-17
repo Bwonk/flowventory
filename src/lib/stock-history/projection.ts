@@ -16,8 +16,11 @@ export interface StockPoint {
   stock: number;
 }
 
+/** Satış hızı penceresi (gün) — kartlar, grafik, kural motoru ve bilgi balonları aynı sabiti okur. */
+export const VELOCITY_WINDOW_DAYS = 30;
+
 /** 30 günlük satış adedinden günlük hız. */
-export function velocityPerDay(soldQty30: number, windowDays: number = 30): number {
+export function velocityPerDay(soldQty30: number, windowDays: number = VELOCITY_WINDOW_DAYS): number {
   if (windowDays <= 0 || soldQty30 <= 0) return 0;
   return soldQty30 / windowDays;
 }

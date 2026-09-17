@@ -286,6 +286,8 @@ function TooltipOverlay() {
         <TooltipPortal>
           <div
             ref={refs.setFloating}
+            // Hover-only balon: Radix Popover/Dialog bunu "dışarı tıklama" saymasın.
+            className="pointer-events-none"
             data-slot="tooltip-overlay"
             data-side={resolvedSide}
             data-align={rendered.data.align}

@@ -11,6 +11,7 @@ import {
   dailyStockSeries,
   daysOfCover,
   velocityPerDay,
+  VELOCITY_WINDOW_DAYS,
   type StockPoint,
 } from '@/lib/stock-history/projection';
 import { getStockAtOrBefore, getTrackedSince } from '@/lib/stock-history/query';
@@ -43,7 +44,6 @@ const querySchema = z.object({
   days: z.coerce.number().pipe(z.union([z.literal(30), z.literal(90)])).default(30),
 });
 
-const VELOCITY_WINDOW_DAYS = 30;
 const PROJECTION_MAX_DAYS = 90;
 const DAY_MS = 24 * 60 * 60 * 1000;
 

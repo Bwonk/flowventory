@@ -7,7 +7,8 @@ import { logger } from '@/lib/logger';
 import { extractErrorMessage } from '@/lib/api-error';
 import { ApiRequests } from '@/lib/api-requests';
 import type { VariantStockLocation } from '@/lib/products/product';
-import { daysOfCover } from '@/lib/stock-history/projection';
+import { daysOfCover, VELOCITY_WINDOW_DAYS } from '@/lib/stock-history/projection';
+import { InfoTip } from '@/components/shared/InfoTip';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
@@ -22,7 +23,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
  * kartı ve tablo satırı sunucuya gitmeden güncellenir).
  *
  * Satış hızı verilmişse popover "→ ~N gün idare eder" der: stok girişinin
- * etkisi sayıya dökülür (Stok Yolu kuramı).
+ * etkisi sayıya dökülür (Stok Yolu kuramı); hesabın dayanağı yanındaki
+ * bilgi balonunda (son 30 günün ortalama günlük satışı).
  *
  * Çok depolu mağaza (B16): varyant stoğu tüm depoların toplamı, ama ikas'a
  * yazarken hedef depo belli olmak zorunda. Tek depo varsa tek satır;
@@ -33,6 +35,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 const rowClass = 'flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2';
 
 const formatDelta = (delta: number) => (delta > 0 ? `+${delta}` : `${delta}`);
+const formatVelocity = (v: number) => v.toLocaleString('tr-TR', { maximumFractionDigits: 1 });
 
 /** Tek bir deponun stoğunu düzenleyen satır. */
 const LocationRow: React.FC<{
@@ -174,10 +177,16 @@ const LocationRow: React.FC<{
                 <span className="text-muted-foreground">({formatDelta(delta)})</span>
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                {cover !== null && (
-                  <>
-                    <span className="tabular-nums">→ ~{cover} gün idare eder.</span>{' '}
-                  </>
+                {cover !== null && velocityPerDay != null && (
+                  <span className="mr-1 inline-flex items-center gap-1 align-middle">
+                    <span className="tabular-nums">→ ~{cover} gün idare eder.</span>
+                    <InfoTip
+                      size="sm"
+                      side="top"
+                      ariaPrefix="Stok ömrü"
+                      text={`Son ${VELOCITY_WINDOW_DAYS} günün ortalama günlük satışına göre (~${formatVelocity(velocityPerDay)} adet/gün). Satış yoksa hesaplanamaz.`}
+                    />
+                  </span>
                 )}
                 ikas admin&apos;deki stok da güncellenir.
               </p>
