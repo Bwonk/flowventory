@@ -63,7 +63,7 @@ function KurallarContent({ token, notificationEmail }: { token: string; notifica
       <PageHeader
         eyebrow="TAKİP"
         title="Kurallar"
-        description="Koşul tanımlayın; sağlanınca zilde bildirim ya da e-posta alın. Kurallar veri yenilendikçe ve saatte bir değerlendirilir."
+        description="Koşul sağlanınca aksiyon çalıştırın: bildirim, e-posta ya da stok ekleme; aşamalarla tırmandırın. Kurallar veri yenilendikçe ve saatte bir değerlendirilir."
         actions={<NewRuleMenu notificationEmail={notificationEmail} open={menuOpen} onOpenChange={setMenuOpen} />}
       />
       <RulesList rules={rules} loading={loading} onToggle={toggle} onDelete={remove} onCreateFirst={() => setMenuOpen(true)} />

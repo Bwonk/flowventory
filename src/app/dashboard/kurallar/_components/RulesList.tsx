@@ -3,15 +3,14 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Bell, Mail, Pencil, SlidersHorizontal, Trash2 } from 'lucide-react';
+import { Pencil, SlidersHorizontal, Trash2 } from 'lucide-react';
 import type { TrackingRuleItem } from '@/app/api/rules/route';
 import { Table, type TableColumn } from '@/components/motion/table';
 import { EmptyState } from '@/components/shared/data-table/EmptyState';
 import { TableFooterNote } from '@/components/shared/data-table/TableFooterNote';
 import { TableSection } from '@/components/shared/data-table/TableSection';
-import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { CHANNEL_LABELS, DOMAIN_LABELS } from '@/lib/rules/types';
+import { ActionIcon } from './ActionIcon';
 import { DeleteRuleDialog } from './DeleteRuleDialog';
 
 const relativeFormatter = new Intl.RelativeTimeFormat('tr-TR', { numeric: 'auto' });
@@ -62,19 +61,17 @@ export function RulesList({ rules, loading, onToggle, onDelete, onCreateFirst }:
         ),
       },
       {
-        key: 'domain',
-        header: 'Alan',
-        width: '124px',
-        cell: rule => <Badge variant="outline">{DOMAIN_LABELS[rule.domain]}</Badge>,
-      },
-      {
-        key: 'channel',
-        header: 'Kanal',
-        width: '112px',
+        key: 'actions',
+        header: 'Aksiyonlar',
+        width: '220px',
         cell: rule => (
-          <span className="inline-flex items-center gap-1.5 text-sm text-foreground">
-            {rule.channel === 'email' ? <Mail className="size-3.5 text-muted-foreground" aria-hidden /> : <Bell className="size-3.5 text-muted-foreground" aria-hidden />}
-            {CHANNEL_LABELS[rule.channel]}
+          <span className="inline-flex min-w-0 items-center gap-2 text-sm text-foreground" title={rule.actionSummary}>
+            <span className="inline-flex shrink-0 items-center gap-1">
+              {rule.actionTypes.map(type => (
+                <ActionIcon key={type} type={type} />
+              ))}
+            </span>
+            <span className="truncate">{rule.actionSummary || '—'}</span>
           </span>
         ),
       },
@@ -124,7 +121,7 @@ export function RulesList({ rules, loading, onToggle, onDelete, onCreateFirst }:
             <EmptyState
               icon={SlidersHorizontal}
               message="Henüz kural yok"
-              description="Ürün, tedarikçi ya da tüm katalog için koşul tanımlayın; tetiklenince zilde ya da e-postada görün."
+              description="Koşul sağlanınca çalışacak aksiyonları tanımlayın: bildirim, e-posta ya da stok ekleme. Boş kuraldan ya da hazır şablondan başlayın."
               actionLabel="İlk kuralı oluştur"
               onAction={onCreateFirst}
             />
