@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth-helpers';
 import { logger } from '@/lib/logger';
+import { getMerchantSettings } from '@/lib/merchant-settings';
 import { prisma } from '@/lib/prisma';
 import { ruleInputSchema } from '@/lib/rules/schema';
-import { MAX_RULES_PER_MERCHANT, toRuleItem, type TrackingRuleItem } from '@/lib/rules/serialize';
+import { MAX_RULES_PER_MERCHANT, ruleDataFromInput, toRuleItem, type TrackingRuleItem } from '@/lib/rules/serialize';
 
 export type { TrackingRuleItem };
 export type RulesApiResponse = { rules: TrackingRuleItem[] };
@@ -37,19 +38,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: parsed.error.issues[0]?.message ?? 'Geçersiz istek gövdesi' }, { status: 400 });
     }
 
+    if (parsed.data.channel === 'email') {
+      const { notificationEmail } = await getMerchantSettings(user.merchantId);
+      if (!notificationEmail) {
+        return NextResponse.json({ error: 'E-posta kuralı için önce bildirim adresi kaydedin.' }, { status: 422 });
+      }
+    }
+
     const count = await prisma.trackingRule.count({ where: { merchantId: user.merchantId } });
     if (count >= MAX_RULES_PER_MERCHANT) {
       return NextResponse.json({ error: `En fazla ${MAX_RULES_PER_MERCHANT} kural tanımlayabilirsiniz` }, { status: 422 });
     }
 
-    const { targetId, targetLabel, ...rest } = parsed.data;
     const row = await prisma.trackingRule.create({
-      data: {
-        merchantId: user.merchantId,
-        ...rest,
-        targetId: rest.scope === 'all' ? null : targetId ?? null,
-        targetLabel: rest.scope === 'all' ? null : targetLabel ?? null,
-      },
+      data: { merchantId: user.merchantId, ...ruleDataFromInput(parsed.data) },
     });
     return NextResponse.json({ data: toRuleItem(row) }, { status: 201 });
   } catch (error) {

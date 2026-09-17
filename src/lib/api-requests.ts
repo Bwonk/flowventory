@@ -1,6 +1,7 @@
 import axios from 'axios';
 import type { StockHistoryApiResponse } from '@/app/api/stock-history/route';
 import type { RulesApiResponse, TrackingRuleItem } from '@/app/api/rules/route';
+import type { RuleDetailApiResponse } from '@/app/api/rules/[id]/route';
 import type { ProductOptionsApiResponse } from '@/app/api/products/options/route';
 import type { RuleInput } from '@/lib/rules/schema';
 import { GetMerchantApiResponse } from '../app/api/ikas/get-merchant/route';
@@ -160,6 +161,8 @@ export const ApiRequests = {
   },
   rules: {
     list: (token: string) => makeGetRequest<RulesApiResponse>({ url: '/api/rules', token }),
+    get: (token: string, id: string) =>
+      makeGetRequest<RuleDetailApiResponse>({ url: `/api/rules/${encodeURIComponent(id)}`, token }),
     create: (token: string, input: RuleInput) =>
       makePostRequest<TrackingRuleItem>({ url: '/api/rules', token, data: input }),
     update: (token: string, id: string, input: RuleInput | { enabled: boolean }) =>

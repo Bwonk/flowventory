@@ -3,20 +3,19 @@ import { resendErrorKind } from '@/lib/email/resend-error';
 import { logger } from '@/lib/logger';
 import { getMerchantSettings } from '@/lib/merchant-settings';
 import { prisma } from '@/lib/prisma';
+import { classifyAbc, type AbcClass } from '@/lib/reports/abc';
 import { sumProductPrevious } from '@/lib/stock-history/change';
 import { VELOCITY_WINDOW_DAYS } from '@/lib/stock-history/projection';
 import { getStockAtOrBefore } from '@/lib/stock-history/query';
 import { dateKeyInTz, shiftDateKey } from '@/lib/timezone';
-import { evaluateRule, windowStartDateKey, type RuleHit, type RuleTarget } from './evaluate-rule';
-import {
-  isRuleMetric,
-  isRuleScope,
-  isRuleWindow,
-  isThresholdUnit,
-  type TrackingRuleLike,
-} from './types';
+import { windowStartDateKey } from './catalog';
+import { evaluateRule, type RuleHit } from './evaluate-rule';
+import { toRuleLike } from './serialize';
+import type { RuleTarget, RuleWindowHours, TrackingRuleLike } from './types';
 
 const HOUR_MS = 60 * 60 * 1000;
+/** Satış verisi bu kadar geriye okunur (en geniş pencere 90 gün). */
+const SALES_LOOKBACK_DAYS = 90;
 
 interface ProductAgg {
   productId: string;
@@ -25,22 +24,24 @@ interface ProductAgg {
   variantIds: string[];
   currentStock: number;
   soldByDate: Map<string, number>;
+  revenue30: number;
 }
 
 /**
- * Merchant'ın etkin takip kurallarını değerlendirir; tetiklenenleri
- * Notification'a (type "rule") yazar, e-posta açık olanları gönderir.
+ * Merchant'ın etkin takip kurallarını değerlendirir. Her tetik
+ * TrackingRuleEvent'e yazılır (dedupe + cooldown + geçmiş); kanal
+ * "notification" ise Notification (zil), "email" ise e-posta.
  *
  * Çağrılma: runFullSync sonrası (taze veri) ve saatlik /api/cron/rules.
- * Aynı ürün+kural, kuralın penceresi içinde yeniden bildirilmez (dedupeKey
- * kovası + createdAt cooldown). Hata yutulur — sync'i/cron'u kırmaz.
+ * Aynı ürün+kural, kuralın cooldownHours'u içinde yeniden bildirilmez.
+ * Hata yutulur — sync'i/cron'u kırmaz.
  *
- * @returns oluşturulan bildirim sayısı
+ * @returns oluşturulan tetik (event) sayısı
  */
 export async function evaluateTrackingRules(merchantId: string, now: Date = new Date()): Promise<number> {
   try {
     const rows = await prisma.trackingRule.findMany({ where: { merchantId, enabled: true } });
-    const rules = rows.flatMap(toRuleLike);
+    const rules = rows.map(toRuleLike).filter((r): r is TrackingRuleLike => r !== null && r.conditions.length > 0);
     if (rules.length === 0) return 0;
 
     const settings = await getMerchantSettings(merchantId);
@@ -63,77 +64,118 @@ export async function evaluateTrackingRules(merchantId: string, now: Date = new 
         variantIds: [],
         currentStock: 0,
         soldByDate: new Map<string, number>(),
+        revenue30: 0,
       };
       p.variantIds.push(s.variantId);
       p.currentStock += s.totalStock;
       products.set(s.productId, p);
     }
 
-    // Stok düşüşü kuralları: her farklı pencere için "o kadar önce"ki stoklar.
-    const dropWindows = Array.from(new Set(rules.filter(r => r.metric === 'stock_drop').map(r => r.windowHours)));
-    const previousByWindow = new Map<number, Map<string, number>>();
+    // Stok düşüşü koşulları: her farklı pencere için "o kadar önce"ki stoklar.
+    const dropWindows = Array.from(
+      new Set(
+        rules.flatMap(r => r.conditions.flatMap(c => (c.metric === 'stock_drop' ? [c.windowHours] : []))),
+      ),
+    );
+    const previousByWindow = new Map<RuleWindowHours, Map<string, number>>();
     await Promise.all(
       dropWindows.map(async h => {
         previousByWindow.set(h, await getStockAtOrBefore(merchantId, new Date(now.getTime() - h * HOUR_MS)));
       }),
     );
 
-    // Satış: en geniş pencere ile 30 günlük hız penceresinin erkeni.
-    const maxWindowHours = Math.max(...rules.map(r => r.windowHours));
-    const salesFromKey = [windowStartDateKey(todayKey, maxWindowHours), shiftDateKey(todayKey, -(VELOCITY_WINDOW_DAYS - 1))]
-      .sort()[0];
+    // Satış: 90 gün geriye (en geniş ölçüm penceresi); ciro yalnız ABC için.
+    const velocityFromKey = shiftDateKey(todayKey, -(VELOCITY_WINDOW_DAYS - 1));
+    const salesFromKey = shiftDateKey(todayKey, -(SALES_LOOKBACK_DAYS - 1));
     const sales = await prisma.salesDaily.findMany({
       where: { merchantId, date: { gte: salesFromKey } },
-      select: { variantId: true, date: true, quantity: true },
+      select: { variantId: true, date: true, quantity: true, revenue: true },
     });
     for (const row of sales) {
       const productId = variantToProduct.get(row.variantId);
       const p = productId ? products.get(productId) : undefined;
       if (!p) continue;
       p.soldByDate.set(row.date, (p.soldByDate.get(row.date) ?? 0) + row.quantity);
+      if (row.date >= velocityFromKey) p.revenue30 += row.revenue;
     }
 
-    // Cooldown: pencere içinde zaten bildirilen (kural, ürün) çiftleri.
-    const recent = await prisma.notification.findMany({
-      where: { merchantId, type: 'rule', createdAt: { gte: new Date(now.getTime() - maxWindowHours * HOUR_MS) } },
+    // ABC yalnız ihtiyaç duyan kural varsa (mağaza geneli tek sıralama).
+    const needsAbc = rules.some(r => r.conditions.some(c => c.metric === 'abc_class_is' || c.metric === 'action_is'));
+    const abcByProduct: Map<string, AbcClass> | null = needsAbc
+      ? classifyAbc(Array.from(products.values()).map(p => ({ id: p.productId, revenue: p.revenue30 })))
+      : null;
+
+    // Cooldown: aralık içinde zaten tetiklenen (kural, ürün) çiftleri — kanal fark etmez.
+    const maxCooldown = Math.max(...rules.map(r => r.cooldownHours));
+    const recent = await prisma.trackingRuleEvent.findMany({
+      where: { merchantId, createdAt: { gte: new Date(now.getTime() - maxCooldown * HOUR_MS) } },
       select: { ruleId: true, productId: true, createdAt: true },
     });
-    const lastNotified = new Map<string, number>();
-    for (const n of recent) {
-      if (!n.ruleId || !n.productId) continue;
-      const key = `${n.ruleId}:${n.productId}`;
-      lastNotified.set(key, Math.max(lastNotified.get(key) ?? 0, n.createdAt.getTime()));
+    const lastTriggered = new Map<string, number>();
+    for (const e of recent) {
+      const key = `${e.ruleId}:${e.productId}`;
+      lastTriggered.set(key, Math.max(lastTriggered.get(key) ?? 0, e.createdAt.getTime()));
     }
 
-    const velocityFromKey = shiftDateKey(todayKey, -(VELOCITY_WINDOW_DAYS - 1));
-    const hits: Array<RuleHit & { emailEnabled: boolean }> = [];
+    const dayKeys = Array.from({ length: VELOCITY_WINDOW_DAYS }, (_, i) =>
+      shiftDateKey(todayKey, -(VELOCITY_WINDOW_DAYS - 1 - i)),
+    );
+    const targets: RuleTarget[] = Array.from(products.values()).map(p => ({
+      productId: p.productId,
+      productName: p.productName,
+      vendorId: p.vendorId,
+      currentStock: p.currentStock,
+      previousStockByWindow: new Map(
+        dropWindows.map(h => [
+          h,
+          sumProductPrevious(p.variantIds.map(v => previousByWindow.get(h)?.get(v) ?? null)),
+        ]),
+      ),
+      soldByDate: p.soldByDate,
+      soldQty30: dayKeys.reduce((sum, k) => sum + (p.soldByDate.get(k) ?? 0), 0),
+      dailyQuantities: dayKeys.map(k => p.soldByDate.get(k) ?? 0),
+      abcClass: abcByProduct?.get(p.productId) ?? null,
+      leadTimeDays: settings.leadTimeDays,
+      targetStockDays: settings.targetStockDays,
+      todayKey,
+    }));
+
+    const hits: Array<RuleHit & { rule: TrackingRuleLike }> = [];
     for (const rule of rules) {
-      const previousMap = previousByWindow.get(rule.windowHours);
-      const windowFromKey = windowStartDateKey(todayKey, rule.windowHours);
-      for (const p of products.values()) {
-        const target: RuleTarget = {
-          productId: p.productId,
-          productName: p.productName,
-          vendorId: p.vendorId,
-          currentStock: p.currentStock,
-          previousStock: previousMap
-            ? sumProductPrevious(p.variantIds.map(v => previousMap.get(v) ?? null))
-            : null,
-          soldInWindow: sumSince(p.soldByDate, windowFromKey),
-          soldQty30: sumSince(p.soldByDate, velocityFromKey),
-        };
+      for (const target of targets) {
         const hit = evaluateRule(rule, target, now);
         if (!hit) continue;
-        const last = lastNotified.get(`${rule.id}:${p.productId}`);
-        if (last !== undefined && now.getTime() - last < rule.windowHours * HOUR_MS) continue;
-        hits.push({ ...hit, emailEnabled: rule.emailEnabled });
+        const last = lastTriggered.get(`${rule.id}:${target.productId}`);
+        if (last !== undefined && now.getTime() - last < rule.cooldownHours * HOUR_MS) continue;
+        hits.push({ ...hit, rule });
       }
     }
 
-    const created: Array<RuleHit & { emailEnabled: boolean }> = [];
+    const created: Array<RuleHit & { rule: TrackingRuleLike }> = [];
     for (const hit of hits) {
       try {
-        await prisma.notification.create({
+        await prisma.trackingRuleEvent.create({
+          data: {
+            merchantId,
+            ruleId: hit.ruleId,
+            productId: hit.productId,
+            productName: hit.productName,
+            channel: hit.rule.channel,
+            body: hit.body,
+            dedupeKey: hit.dedupeKey,
+          },
+        });
+        created.push(hit);
+      } catch {
+        // Unique ihlali → bu kovada zaten tetiklendi.
+      }
+    }
+    if (created.length === 0) return 0;
+
+    // Zil: yalnız "notification" kanalı. Aynı dedupeKey — Notification tablosunda da tekildir.
+    for (const hit of created.filter(h => h.rule.channel === 'notification')) {
+      await prisma.notification
+        .create({
           data: {
             merchantId,
             type: 'rule',
@@ -143,22 +185,20 @@ export async function evaluateTrackingRules(merchantId: string, now: Date = new 
             productId: hit.productId,
             dedupeKey: hit.dedupeKey,
           },
-        });
-        created.push(hit);
-      } catch {
-        // Unique ihlali → bu kovada zaten bildirildi.
-      }
+        })
+        .catch(() => undefined);
     }
 
-    if (created.length > 0) {
-      const triggeredRuleIds = Array.from(new Set(created.map(c => c.ruleId)));
-      await prisma.trackingRule
-        .updateMany({ where: { id: { in: triggeredRuleIds } }, data: { lastTriggeredAt: now } })
-        .catch(() => undefined);
-      logger.info('Tracking rules triggered', { merchantId, count: created.length });
+    await prisma.trackingRule
+      .updateMany({ where: { id: { in: Array.from(new Set(created.map(c => c.ruleId))) } }, data: { lastTriggeredAt: now } })
+      .catch(() => undefined);
+    logger.info('Tracking rules triggered', { merchantId, count: created.length });
 
-      const emailHits = created.filter(c => c.emailEnabled);
-      if (emailHits.length > 0 && settings.notificationEmail) {
+    const emailHits = created.filter(h => h.rule.channel === 'email');
+    if (emailHits.length > 0) {
+      if (!settings.notificationEmail) {
+        logger.warn('Email rule triggered but no notification email set', { merchantId, count: emailHits.length });
+      } else {
         await sendAlertEmail(
           settings.notificationEmail,
           emailHits.map(h => ({ type: 'rule', title: h.title, body: h.body })),
@@ -174,28 +214,17 @@ export async function evaluateTrackingRules(merchantId: string, now: Date = new 
   }
 }
 
-function sumSince(byDate: Map<string, number>, fromKey: string): number {
-  let sum = 0;
-  for (const [date, qty] of byDate) if (date >= fromKey) sum += qty;
-  return sum;
+/** Kural tetik geçmişini budar (bakım; hata yutulur). */
+export async function pruneRuleEvents(olderThanDays: number = 90): Promise<number> {
+  const cutoff = new Date(Date.now() - olderThanDays * 24 * 60 * 60 * 1000);
+  try {
+    const { count } = await prisma.trackingRuleEvent.deleteMany({ where: { createdAt: { lt: cutoff } } });
+    if (count > 0) logger.info('Rule events pruned', { count, olderThanDays });
+    return count;
+  } catch (error) {
+    logger.warn('Rule events prune failed', { error });
+    return 0;
+  }
 }
 
-/** DB satırını doğrulayıp motor tipine çevirir; bozuk satır (elle yazılmış enum) atlanır. */
-function toRuleLike(row: {
-  id: string;
-  name: string;
-  scope: string;
-  targetId: string | null;
-  targetLabel: string | null;
-  metric: string;
-  threshold: number;
-  thresholdUnit: string;
-  windowHours: number;
-  emailEnabled: boolean;
-}): Array<TrackingRuleLike & { emailEnabled: boolean }> {
-  if (!isRuleScope(row.scope) || !isRuleMetric(row.metric) || !isThresholdUnit(row.thresholdUnit) || !isRuleWindow(row.windowHours)) {
-    logger.warn('Tracking rule skipped: invalid fields', { ruleId: row.id });
-    return [];
-  }
-  return [{ ...row, scope: row.scope, metric: row.metric, thresholdUnit: row.thresholdUnit, windowHours: row.windowHours }];
-}
+export { windowStartDateKey };

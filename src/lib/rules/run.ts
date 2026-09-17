@@ -3,7 +3,7 @@ import { getMerchantAuthToken } from '@/lib/merchant-auth';
 import { prisma } from '@/lib/prisma';
 import { pruneStockHistory } from '@/lib/stock-history/query';
 import { ensureFreshSync } from '@/lib/sync/ikas-sync';
-import { evaluateTrackingRules } from './evaluate';
+import { evaluateTrackingRules, pruneRuleEvents } from './evaluate';
 
 export type RulesRunResult = {
   /** Etkin kuralı olan merchant sayısı. */
@@ -41,5 +41,6 @@ export async function runTrackingRulesForAllMerchants(now: Date = new Date()): P
   }
 
   await pruneStockHistory();
+  await pruneRuleEvents();
   return result;
 }

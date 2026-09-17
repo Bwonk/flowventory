@@ -244,10 +244,11 @@ model StockHistory {
 }
 
 // Kullanıcı tanımlı takip kuralı — "24 saatte bu ürünün stoğu 50 düşerse bildir".
-// Kapsam: tüm ürünler / tek ürün / tek tedarikçi; metrik + eşik + kayan pencere.
-// Değerlendirme: sync sonrası ve saatlik cron (/api/cron/rules). Tetiklenince
-// Notification(type "rule", ruleId) yazılır; aynı ürün+kural windowHours içinde
-// yeniden bildirilmez.
+// Kapsam: tüm ürünler / tek ürün / tek tedarikçi; alan (stok / satın alma /
+// analiz) koşul kataloğunu seçer; koşullar conditionsJson'da (RuleCondition[],
+// tek bağlaç: and | or); kanal ya zil bildirimi ya e-posta. Değerlendirme:
+// sync sonrası ve saatlik cron (/api/cron/rules). Her tetik TrackingRuleEvent'e
+// yazılır; aynı ürün+kural cooldownHours içinde yeniden tetiklenmez.
 model TrackingRule {
   id              String    @id @default(cuid())
   merchantId      String
@@ -256,14 +257,34 @@ model TrackingRule {
   scope           String    // "all" | "product" | "vendor"
   targetId        String?   // productId | vendorId
   targetLabel     String?   // görüntüleme için ad (ürün/tedarikçi)
-  metric          String    // "stock_drop" | "stock_below" | "days_of_cover_below" | "sales_above" | "no_sales"
-  threshold       Int
-  thresholdUnit   String    @default("units") // "units" | "percent" | "days"
-  windowHours     Int       // 24 | 48 | 168 | 720 | 2160
-  emailEnabled    Boolean   @default(false)
+  domain          String    @default("stok")         // "stok" | "satinalma" | "analiz"
+  channel         String    @default("notification") // "notification" | "email"
+  logic           String    @default("and")          // "and" | "or"
+  conditionsJson  String    @default("[]")           // RuleCondition[] — bkz. src/lib/rules/types.ts
+  cooldownHours   Int       @default(24)             // 24 | 48 | 168 | 720 | 2160
   lastTriggeredAt DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+  events          TrackingRuleEvent[]
 
   @@index([merchantId, enabled])
+}
+
+// Kural tetik geçmişi: dedupe (dedupeKey) + cooldown + liste/detayda "son tetik".
+// E-posta kanalında Notification satırı olmadığı için tek gerçek kaynak budur.
+model TrackingRuleEvent {
+  id          String       @id @default(cuid())
+  merchantId  String
+  ruleId      String
+  rule        TrackingRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  productId   String
+  productName String
+  channel     String       // "notification" | "email"
+  body        String
+  dedupeKey   String
+  createdAt   DateTime     @default(now())
+
+  @@unique([merchantId, dedupeKey])
+  @@index([merchantId, ruleId, createdAt])
+  @@index([createdAt])
 }

@@ -5,7 +5,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/button';
 import { AyarlarSkeleton } from './_components/AyarlarSkeleton';
 import { NotificationSection } from './_components/NotificationSection';
-import { RulesSection } from './_components/rules/RulesSection';
+import { RulesLinkSection } from './_components/RulesLinkSection';
 import { SyncSection } from './_components/SyncSection';
 import { TrackingScriptSection } from './_components/TrackingScriptSection';
 import { useAyarlarData } from './hooks/use-ayarlar-data';
@@ -53,12 +53,8 @@ export default function AyarlarPage() {
                 : null
             }
           />
-          {/* Bölüm id="takip-kurallari": kullanıcı tanımlı kurallar (Ayarlar'da başlar; büyürse ayrı sayfa). */}
-          <RulesSection
-            token={token}
-            notificationEmail={settings?.notificationEmail ?? null}
-            leadTimeDays={settings?.leadTimeDays ?? 7}
-          />
+          {/* Kurallar kendi sayfasında (/dashboard/kurallar); burada yalnız yönlendirme. */}
+          <RulesLinkSection />
         </section>
       )}
     </PageContainer>
