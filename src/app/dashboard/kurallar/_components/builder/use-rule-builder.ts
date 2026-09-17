@@ -1,18 +1,25 @@
 'use client';
 
-import { useCallback, useMemo, useReducer } from 'react';
+import { useCallback, useReducer } from 'react';
 import type { TrackingRuleItem } from '@/app/api/rules/route';
-import { defaultCondition, METRICS_BY_DOMAIN } from '@/lib/rules/catalog';
+import { defaultAction, hasActionType } from '@/lib/rules/actions-catalog';
+import { defaultCondition } from '@/lib/rules/catalog';
 import { ruleInputSchema, type RuleInput } from '@/lib/rules/schema';
+import type { RuleTemplate } from '@/lib/rules/templates';
 import {
+  MAX_ACTIONS,
   MAX_CONDITIONS,
-  type RuleChannel,
+  MAX_STAGES,
+  type RuleAction,
+  type RuleActionType,
   type RuleCondition,
-  type RuleDomain,
+  type RuleGranularity,
   type RuleLogic,
   type RuleMetric,
   type RuleScope,
+  type RuleStage,
   type RuleWindowHours,
+  type RuleWorkflow,
 } from '@/lib/rules/types';
 
 export interface BuilderState {
@@ -20,20 +27,33 @@ export interface BuilderState {
   scope: RuleScope;
   targetId: string | null;
   targetLabel: string | null;
-  domain: RuleDomain;
-  channel: RuleChannel;
-  logic: RuleLogic;
+  granularity: RuleGranularity;
+  workflow: RuleWorkflow;
   cooldownHours: RuleWindowHours;
-  conditions: RuleCondition[];
+  resetHours: RuleWindowHours;
+  maxRunsPerDay: number;
   enabled: boolean;
 }
 
 type Action =
   | { type: 'patch'; patch: Partial<BuilderState> }
   | { type: 'setScope'; scope: RuleScope }
-  | { type: 'addCondition'; condition: RuleCondition }
-  | { type: 'updateCondition'; index: number; condition: RuleCondition }
-  | { type: 'removeCondition'; index: number };
+  | { type: 'addStage'; stage: RuleStage }
+  | { type: 'removeStage'; stage: number }
+  | { type: 'addCondition'; stage: number; condition: RuleCondition }
+  | { type: 'updateCondition'; stage: number; index: number; condition: RuleCondition }
+  | { type: 'setConnector'; stage: number; index: number; op: RuleLogic }
+  | { type: 'removeCondition'; stage: number; index: number }
+  | { type: 'addAction'; stage: number; action: RuleAction }
+  | { type: 'updateAction'; stage: number; index: number; action: RuleAction }
+  | { type: 'removeAction'; stage: number; index: number };
+
+function mapStage(state: BuilderState, stageIndex: number, fn: (stage: RuleStage) => RuleStage): BuilderState {
+  return {
+    ...state,
+    workflow: { stages: state.workflow.stages.map((s, i) => (i === stageIndex ? fn(s) : s)) },
+  };
+}
 
 function reducer(state: BuilderState, action: Action): BuilderState {
   switch (action.type) {
@@ -41,56 +61,92 @@ function reducer(state: BuilderState, action: Action): BuilderState {
       return { ...state, ...action.patch };
     case 'setScope':
       return { ...state, scope: action.scope, targetId: null, targetLabel: null };
+    case 'addStage':
+      if (state.workflow.stages.length >= MAX_STAGES) return state;
+      return { ...state, workflow: { stages: [...state.workflow.stages, action.stage] } };
+    case 'removeStage':
+      // Aşama 1 silinmez; sonraki aşamalar "önceki aşamaya" göre ölçer.
+      if (action.stage === 0) return state;
+      return { ...state, workflow: { stages: state.workflow.stages.filter((_, i) => i !== action.stage) } };
     case 'addCondition':
-      if (state.conditions.length >= MAX_CONDITIONS) return state;
-      return { ...state, conditions: [...state.conditions, action.condition] };
+      return mapStage(state, action.stage, s =>
+        s.conditions.length >= MAX_CONDITIONS ? s : { ...s, conditions: [...s.conditions, { op: 'and', condition: action.condition }] },
+      );
     case 'updateCondition':
-      return { ...state, conditions: state.conditions.map((c, i) => (i === action.index ? action.condition : c)) };
+      return mapStage(state, action.stage, s => ({
+        ...s,
+        conditions: s.conditions.map((n, i) => (i === action.index ? { ...n, condition: action.condition } : n)),
+      }));
+    case 'setConnector':
+      return mapStage(state, action.stage, s => ({
+        ...s,
+        conditions: s.conditions.map((n, i) => (i === action.index ? { ...n, op: action.op } : n)),
+      }));
     case 'removeCondition':
-      return { ...state, conditions: state.conditions.filter((_, i) => i !== action.index) };
+      return mapStage(state, action.stage, s => ({ ...s, conditions: s.conditions.filter((_, i) => i !== action.index) }));
+    case 'addAction':
+      return mapStage(state, action.stage, s =>
+        s.actions.length >= MAX_ACTIONS || s.actions.some(a => a.type === action.action.type)
+          ? s
+          : { ...s, actions: [...s.actions, action.action] },
+      );
+    case 'updateAction':
+      return mapStage(state, action.stage, s => ({
+        ...s,
+        actions: s.actions.map((a, i) => (i === action.index ? action.action : a)),
+      }));
+    case 'removeAction':
+      return mapStage(state, action.stage, s => ({ ...s, actions: s.actions.filter((_, i) => i !== action.index) }));
   }
 }
 
 export interface BuilderInit {
   rule: TrackingRuleItem | null;
-  channel: RuleChannel;
-  domain: RuleDomain;
+  template: RuleTemplate | null;
   leadTimeDays: number;
 }
 
-function initialState({ rule, channel, domain, leadTimeDays }: BuilderInit): BuilderState {
+function initialState({ rule, template, leadTimeDays }: BuilderInit): BuilderState {
   if (rule) {
     return {
       name: rule.name,
       scope: rule.scope,
       targetId: rule.targetId,
       targetLabel: rule.targetLabel,
-      domain: rule.domain,
-      channel: rule.channel,
-      logic: rule.logic,
+      granularity: rule.granularity,
+      workflow: rule.workflow,
       cooldownHours: rule.cooldownHours,
-      conditions: rule.conditions,
+      resetHours: rule.resetHours,
+      maxRunsPerDay: rule.maxRunsPerDay,
       enabled: rule.enabled,
     };
   }
-  const firstMetric = METRICS_BY_DOMAIN[domain][0];
+  const base = { scope: 'all' as const, targetId: null, targetLabel: null, enabled: true };
+  if (template) return { ...base, ...template.rule };
   return {
+    ...base,
     name: '',
-    scope: 'all',
-    targetId: null,
-    targetLabel: null,
-    domain,
-    channel,
-    logic: 'and',
+    granularity: 'product',
     cooldownHours: 24,
-    conditions: [defaultCondition(firstMetric, { leadTimeDays })],
-    enabled: true,
+    resetHours: 168,
+    maxRunsPerDay: 1,
+    workflow: {
+      stages: [
+        {
+          conditions: [{ op: 'and', condition: defaultCondition('stock_below', { leadTimeDays }) }],
+          actions: [defaultAction('notify')],
+        },
+      ],
+    },
   };
 }
 
+export type ToInputResult = { input: RuleInput; issue: null } | { input: null; issue: string };
+
 /**
- * Oluşturucu state'i — koşul listesi + meta. `toInput` zod ile doğrular;
- * ilk hata mesajı `issue` olarak döner (aria-live alanına yazılır).
+ * Oluşturucu state'i — aşamalar, koşul düğümleri, aksiyonlar + meta.
+ * `toInput` zod ile doğrular; ilk hata mesajı `issue` olarak döner.
+ * Stok aksiyonu varsa değerlendirme birimi zorunlu olarak varyanttır (K4).
  */
 export function useRuleBuilder(init: BuilderInit) {
   const [state, dispatch] = useReducer(reducer, init, initialState);
@@ -98,27 +154,75 @@ export function useRuleBuilder(init: BuilderInit) {
 
   const patch = useCallback((p: Partial<BuilderState>) => dispatch({ type: 'patch', patch: p }), []);
   const setScope = useCallback((scope: RuleScope) => dispatch({ type: 'setScope', scope }), []);
-  const addCondition = useCallback(
-    (metric?: RuleMetric) => {
-      const m = metric ?? METRICS_BY_DOMAIN[state.domain][0];
-      dispatch({ type: 'addCondition', condition: defaultCondition(m, { leadTimeDays }) });
-    },
-    [state.domain, leadTimeDays],
-  );
-  const updateCondition = useCallback((index: number, condition: RuleCondition) => dispatch({ type: 'updateCondition', index, condition }), []);
-  const setMetric = useCallback(
-    (index: number, metric: RuleMetric) => dispatch({ type: 'updateCondition', index, condition: defaultCondition(metric, { leadTimeDays }) }),
+
+  const addStage = useCallback(
+    () =>
+      dispatch({
+        type: 'addStage',
+        stage: {
+          conditions: [{ op: 'and', condition: defaultCondition('stock_drop_since_stage', { leadTimeDays }) }],
+          actions: [defaultAction('email')],
+        },
+      }),
     [leadTimeDays],
   );
-  const removeCondition = useCallback((index: number) => dispatch({ type: 'removeCondition', index }), []);
+  const removeStage = useCallback((stage: number) => dispatch({ type: 'removeStage', stage }), []);
 
-  const availableMetrics = useMemo(() => METRICS_BY_DOMAIN[state.domain], [state.domain]);
+  const addCondition = useCallback(
+    (stage: number) => dispatch({ type: 'addCondition', stage, condition: defaultCondition('stock_below', { leadTimeDays }) }),
+    [leadTimeDays],
+  );
+  const setMetric = useCallback(
+    (stage: number, index: number, metric: RuleMetric) =>
+      dispatch({ type: 'updateCondition', stage, index, condition: defaultCondition(metric, { leadTimeDays }) }),
+    [leadTimeDays],
+  );
+  const updateCondition = useCallback(
+    (stage: number, index: number, condition: RuleCondition) => dispatch({ type: 'updateCondition', stage, index, condition }),
+    [],
+  );
+  const setConnector = useCallback((stage: number, index: number, op: RuleLogic) => dispatch({ type: 'setConnector', stage, index, op }), []);
+  const removeCondition = useCallback((stage: number, index: number) => dispatch({ type: 'removeCondition', stage, index }), []);
 
-  const toInput = useCallback((): { input: RuleInput; issue: null } | { input: null; issue: string } => {
-    const parsed = ruleInputSchema.safeParse(state);
-    if (parsed.success) return { input: parsed.data, issue: null };
-    return { input: null, issue: parsed.error.issues[0]?.message ?? 'Formu kontrol edin' };
-  }, [state]);
+  const addAction = useCallback((stage: number, type: RuleActionType) => dispatch({ type: 'addAction', stage, action: defaultAction(type) }), []);
+  const setActionType = useCallback(
+    (stage: number, index: number, type: RuleActionType) => dispatch({ type: 'updateAction', stage, index, action: defaultAction(type) }),
+    [],
+  );
+  const updateAction = useCallback((stage: number, index: number, action: RuleAction) => dispatch({ type: 'updateAction', stage, index, action }), []);
+  const removeAction = useCallback((stage: number, index: number) => dispatch({ type: 'removeAction', stage, index }), []);
 
-  return { state, patch, setScope, addCondition, updateCondition, setMetric, removeCondition, availableMetrics, toInput };
+  const hasStockAction = hasActionType(state.workflow, 'adjust_stock');
+
+  const toInput = useCallback(
+    (stockWriteConsent: boolean): ToInputResult => {
+      const parsed = ruleInputSchema.safeParse({
+        ...state,
+        granularity: hasActionType(state.workflow, 'adjust_stock') ? 'variant' : state.granularity,
+        stockWriteConsent,
+      });
+      if (parsed.success) return { input: parsed.data, issue: null };
+      return { input: null, issue: parsed.error.issues[0]?.message ?? 'Formu kontrol edin' };
+    },
+    [state],
+  );
+
+  return {
+    state,
+    hasStockAction,
+    patch,
+    setScope,
+    addStage,
+    removeStage,
+    addCondition,
+    setMetric,
+    updateCondition,
+    setConnector,
+    removeCondition,
+    addAction,
+    setActionType,
+    updateAction,
+    removeAction,
+    toInput,
+  };
 }

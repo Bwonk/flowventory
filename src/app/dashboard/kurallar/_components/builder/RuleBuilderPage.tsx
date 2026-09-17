@@ -5,47 +5,49 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import type { TrackingRuleItem } from '@/app/api/rules/route';
-import type { RuleEventItem } from '@/lib/rules/serialize';
 import { extractErrorMessage } from '@/lib/api-error';
 import { ApiRequests } from '@/lib/api-requests';
 import { logger } from '@/lib/logger';
-import { DOMAIN_LABELS, type RuleChannel, type RuleDomain } from '@/lib/rules/types';
+import type { RuleTemplate } from '@/lib/rules/templates';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { EditableTitle } from '@/components/shared/EditableTitle';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useTargetOptions } from '../../hooks/use-target-options';
 import { FlowCanvas } from './FlowCanvas';
-import { RuleMetaPanel } from './RuleMetaPanel';
+import { StockConsentDialog } from './StockConsentDialog';
 import { useRuleBuilder } from './use-rule-builder';
 
 interface RuleBuilderPageProps {
   token: string;
   mode: 'create' | 'edit';
   rule: TrackingRuleItem | null;
-  events?: RuleEventItem[];
-  channel: RuleChannel;
-  domain: RuleDomain;
+  template: RuleTemplate | null;
   notificationEmail: string | null;
   leadTimeDays: number;
+  /** Başlık aksiyonlarının başına eklenir (düzenlemede "Geçmiş"). */
+  extraActions?: React.ReactNode;
 }
 
 /**
- * Tam sayfa kural oluşturucu: sol meta paneli + sağda akış kanvası.
+ * Tam sayfa kural oluşturucu — tek kolon kanvas (`max-w-3xl`). Ad başlıkta
+ * satır içi düzenlenir. Stok aksiyonu ilk kez kaydedilirken onay ister (K5).
  * Kaydet → create/update → listeye döner.
  */
-export function RuleBuilderPage({ token, mode, rule, events, channel, domain, notificationEmail, leadTimeDays }: RuleBuilderPageProps) {
+export function RuleBuilderPage({ token, mode, rule, template, notificationEmail, leadTimeDays, extraActions }: RuleBuilderPageProps) {
   const router = useRouter();
-  const builder = useRuleBuilder({ rule, channel, domain, leadTimeDays });
+  const builder = useRuleBuilder({ rule, template, leadTimeDays });
   const targets = useTargetOptions(token);
   const [saving, setSaving] = useState(false);
   const [issue, setIssue] = useState<string | null>(null);
+  const [consentOpen, setConsentOpen] = useState(false);
 
-  const productCountHint =
-    builder.state.scope === 'all' && !targets.loading ? `${targets.products.length} ürün izlenir` : undefined;
+  // Kayıtlı kural zaten stok yazıyorsa onay önceden verilmiştir.
+  const consentGiven = rule?.actionTypes.includes('adjust_stock') ?? false;
 
-  const save = async () => {
-    const { input, issue: validationIssue } = builder.toInput();
+  const save = async (consent: boolean) => {
+    const { input, issue: validationIssue } = builder.toInput(consent);
     if (!input) {
       setIssue(validationIssue);
       return;
@@ -61,55 +63,73 @@ export function RuleBuilderPage({ token, mode, rule, events, channel, domain, no
     } catch (error) {
       logger.error('Rule save failed', { error });
       setIssue(extractErrorMessage(error, rule ? 'Kural güncellenemedi.' : 'Kural eklenemedi.'));
+      setConsentOpen(false);
     } finally {
       setSaving(false);
     }
   };
 
+  const requestSave = () => {
+    if (builder.hasStockAction && !consentGiven) {
+      // Onaydan önce formu doğrula; hata varsa dialog açılmasın.
+      const { issue: validationIssue } = builder.toInput(true);
+      if (validationIssue) {
+        setIssue(validationIssue);
+        return;
+      }
+      setConsentOpen(true);
+      return;
+    }
+    void save(builder.hasStockAction);
+  };
+
   return (
     <PageContainer>
       <PageHeader
-        eyebrow={`TAKİP · ${DOMAIN_LABELS[builder.state.domain].toLocaleUpperCase('tr')}`}
-        title={builder.state.name.trim() || (mode === 'edit' ? 'Kuralı düzenle' : 'Yeni kural')}
+        eyebrow="TAKİP · KURAL"
+        title={builder.state.name || 'Adsız kural'}
+        titleSlot={
+          <EditableTitle
+            value={builder.state.name}
+            onChange={name => builder.patch({ name })}
+            placeholder="Adsız kural"
+            aria-label="Kural adı"
+          />
+        }
         titleAccessory={<Badge variant="outline">{mode === 'edit' ? 'Düzenleme' : 'Taslak'}</Badge>}
         actions={
           <>
+            {extraActions}
             <Button asChild variant="outline" disabled={saving}>
               <Link href="/dashboard/kurallar">Vazgeç</Link>
             </Button>
-            <Button onClick={save} disabled={saving}>
+            <Button onClick={requestSave} disabled={saving}>
               {saving ? 'Kaydediliyor…' : mode === 'edit' ? 'Kaydet' : 'Kural ekle'}
             </Button>
           </>
         }
       />
 
-      <div aria-live="polite" className="mb-4 min-h-5">
-        {issue && <p className="text-sm text-destructive">{issue}</p>}
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
-        <RuleMetaPanel
-          state={builder.state}
-          patch={builder.patch}
-          setScope={builder.setScope}
+      <div className="mx-auto max-w-3xl">
+        <div aria-live="polite" className="mb-4 min-h-5">
+          {issue && <p className="text-sm text-destructive">{issue}</p>}
+        </div>
+        <FlowCanvas
+          builder={builder}
           products={targets.products}
           vendors={targets.vendors}
           optionsLoading={targets.loading}
           notificationEmail={notificationEmail}
-          events={mode === 'edit' ? events ?? [] : undefined}
-        />
-        <FlowCanvas
-          state={builder.state}
-          availableMetrics={builder.availableMetrics}
-          productCountHint={productCountHint}
-          onLogicChange={logic => builder.patch({ logic })}
-          onAddCondition={() => builder.addCondition()}
-          onSetMetric={builder.setMetric}
-          onUpdateCondition={builder.updateCondition}
-          onRemoveCondition={builder.removeCondition}
         />
       </div>
+
+      <StockConsentDialog
+        open={consentOpen}
+        maxRunsPerDay={builder.state.maxRunsPerDay}
+        saving={saving}
+        onOpenChange={setConsentOpen}
+        onConfirm={() => void save(true)}
+      />
     </PageContainer>
   );
 }

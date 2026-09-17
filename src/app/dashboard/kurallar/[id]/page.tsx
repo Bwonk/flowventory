@@ -64,9 +64,7 @@ export default function KuralDuzenlePage() {
       token={token}
       mode="edit"
       rule={detail.rule}
-      events={detail.events}
-      channel={detail.rule.channel}
-      domain={detail.rule.domain}
+      template={null}
       notificationEmail={notificationEmail}
       leadTimeDays={leadTimeDays}
     />

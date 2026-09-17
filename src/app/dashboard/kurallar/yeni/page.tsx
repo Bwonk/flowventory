@@ -1,23 +1,19 @@
 'use client';
 
 import { Suspense, useCallback, useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { TokenHelpers } from '@/helpers/token-helpers';
 import { ApiRequests } from '@/lib/api-requests';
 import { logger } from '@/lib/logger';
-import { isRuleChannel, isRuleDomain } from '@/lib/rules/types';
+import { findTemplate } from '@/lib/rules/templates';
 import { ErrorState } from '@/components/shared/ErrorState';
 import { KurallarSkeleton } from '../_components/KurallarSkeleton';
 import { RuleBuilderPage } from '../_components/builder/RuleBuilderPage';
 
-/** /dashboard/kurallar/yeni?channel=notification|email&domain=stok|satinalma|analiz */
+/** /dashboard/kurallar/yeni[?template=<key>] — boş kural ya da şablondan taslak. */
 function YeniKuralContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const channelParam = searchParams.get('channel');
-  const domainParam = searchParams.get('domain');
-  const channel = isRuleChannel(channelParam) ? channelParam : null;
-  const domain = isRuleDomain(domainParam) ? domainParam : null;
+  const template = findTemplate(searchParams.get('template'));
 
   const [token, setToken] = useState<string | null>(null);
   const [notificationEmail, setNotificationEmail] = useState<string | null>(null);
@@ -50,12 +46,6 @@ function YeniKuralContent() {
     initialize();
   }, [initialize]);
 
-  // Menüden gelmeyen (geçersiz) parametre → listeye dön.
-  useEffect(() => {
-    if (!channel || !domain) router.replace('/dashboard/kurallar');
-  }, [channel, domain, router]);
-
-  if (!channel || !domain) return <KurallarSkeleton />;
   if (loading) return <KurallarSkeleton />;
   if (error || !token) return <ErrorState description={error ?? 'Sayfa yüklenemedi.'} onRetry={initialize} />;
 
@@ -64,8 +54,7 @@ function YeniKuralContent() {
       token={token}
       mode="create"
       rule={null}
-      channel={channel}
-      domain={domain}
+      template={template}
       notificationEmail={notificationEmail}
       leadTimeDays={leadTimeDays}
     />
