@@ -1,18 +1,17 @@
 import { logger } from '@/lib/logger';
-import { describeOutcome, describeRule } from './describe';
-import { conditionsSchema, type RuleInput } from './schema';
+import { describeActionSummary, describeRule } from './describe';
+import { storedWorkflowSchema, type RuleInput } from './schema';
 import {
-  isRuleChannel,
-  isRuleDomain,
-  isRuleLogic,
+  isRuleGranularity,
   isRuleScope,
   isRuleWindow,
-  type RuleChannel,
-  type RuleCondition,
-  type RuleDomain,
-  type RuleLogic,
+  RULE_ACTION_TYPES,
+  type RuleActionResult,
+  type RuleActionType,
+  type RuleGranularity,
   type RuleScope,
   type RuleWindowHours,
+  type RuleWorkflow,
   type TrackingRuleLike,
 } from './types';
 
@@ -26,25 +25,29 @@ export type TrackingRuleItem = {
   scope: RuleScope;
   targetId: string | null;
   targetLabel: string | null;
-  domain: RuleDomain;
-  channel: RuleChannel;
-  logic: RuleLogic;
+  granularity: RuleGranularity;
+  workflow: RuleWorkflow;
   cooldownHours: RuleWindowHours;
-  conditions: RuleCondition[];
+  resetHours: RuleWindowHours;
+  maxRunsPerDay: number;
   lastTriggeredAt: string | null;
   createdAt: string;
-  /** describeRule çıktısı — liste satırı ve bildirim aynı cümleyi kullanır. */
+  /** describeRule çıktısı — liste satırı ve önizleme aynı cümleyi kullanır. */
   sentence: string;
-  /** describeOutcome çıktısı — kanal + yeniden bildirim aralığı. */
-  outcome: string;
+  /** Liste kolonu: "Bildirim · Stok +5". */
+  actionSummary: string;
+  /** Liste ikonları için aşamalar boyunca tekrarsız aksiyon tipleri. */
+  actionTypes: RuleActionType[];
 };
 
 export type RuleEventItem = {
   id: string;
   productId: string;
+  variantId: string | null;
   productName: string;
-  channel: RuleChannel;
+  stageIndex: number;
   body: string;
+  actions: RuleActionResult[];
   createdAt: string;
 };
 
@@ -55,38 +58,39 @@ export type RuleRow = {
   scope: string;
   targetId: string | null;
   targetLabel: string | null;
-  domain: string;
-  channel: string;
-  logic: string;
-  conditionsJson: string;
+  granularity: string;
+  workflowJson: string;
   cooldownHours: number;
+  resetHours: number;
+  maxRunsPerDay: number;
   lastTriggeredAt: Date | null;
   createdAt: Date;
 };
 
-/** `conditionsJson` → doğrulanmış koşul listesi; bozuksa boş (uyarı loglanır). */
-export function parseConditions(json: string, ruleId?: string): RuleCondition[] {
+const EMPTY_WORKFLOW: RuleWorkflow = { stages: [] };
+
+/** `workflowJson` → doğrulanmış workflow; bozuksa aşamasız (uyarı loglanır). */
+export function parseWorkflow(json: string, ruleId?: string): RuleWorkflow {
   try {
-    const parsed = conditionsSchema.safeParse(JSON.parse(json));
+    const parsed = storedWorkflowSchema.safeParse(JSON.parse(json));
     if (parsed.success) return parsed.data;
-    logger.warn('Tracking rule conditions invalid', { ruleId, issue: parsed.error.issues[0]?.message });
+    logger.warn('Tracking rule workflow invalid', { ruleId, issue: parsed.error.issues[0]?.message });
   } catch (error) {
-    logger.warn('Tracking rule conditions unreadable', { ruleId, error });
+    logger.warn('Tracking rule workflow unreadable', { ruleId, error });
   }
-  return [];
+  return EMPTY_WORKFLOW;
 }
 
 /**
  * DB satırını motor tipine çevirir; enum alanı bozuksa (elle yazılmış) null.
- * Koşulları boş olan kural motorda tetiklenmez ama listede görünür.
+ * Aşaması olmayan kural motorda tetiklenmez ama listede görünür.
  */
 export function toRuleLike(row: RuleRow): TrackingRuleLike | null {
   if (
     !isRuleScope(row.scope) ||
-    !isRuleDomain(row.domain) ||
-    !isRuleChannel(row.channel) ||
-    !isRuleLogic(row.logic) ||
-    !isRuleWindow(row.cooldownHours)
+    !isRuleGranularity(row.granularity) ||
+    !isRuleWindow(row.cooldownHours) ||
+    !isRuleWindow(row.resetHours)
   ) {
     logger.warn('Tracking rule skipped: invalid fields', { ruleId: row.id });
     return null;
@@ -97,28 +101,29 @@ export function toRuleLike(row: RuleRow): TrackingRuleLike | null {
     scope: row.scope,
     targetId: row.targetId,
     targetLabel: row.targetLabel,
-    domain: row.domain,
-    channel: row.channel,
-    logic: row.logic,
+    granularity: row.granularity,
+    workflow: parseWorkflow(row.workflowJson, row.id),
     cooldownHours: row.cooldownHours,
-    conditions: parseConditions(row.conditionsJson, row.id),
+    resetHours: row.resetHours,
+    maxRunsPerDay: Math.max(1, row.maxRunsPerDay),
   };
 }
 
 /** DB satırı → API öğesi (cümle dahil). Enum alanı bozuksa güvenli varsayılanlara düşer. */
 export function toRuleItem(row: RuleRow): TrackingRuleItem {
-  const like = toRuleLike(row) ?? {
+  const like: TrackingRuleLike = toRuleLike(row) ?? {
     id: row.id,
     name: row.name,
-    scope: 'all' as const,
+    scope: 'all',
     targetId: row.targetId,
     targetLabel: row.targetLabel,
-    domain: 'stok' as const,
-    channel: 'notification' as const,
-    logic: 'and' as const,
-    cooldownHours: 24 as const,
-    conditions: [],
+    granularity: 'product',
+    workflow: EMPTY_WORKFLOW,
+    cooldownHours: 24,
+    resetHours: 168,
+    maxRunsPerDay: 1,
   };
+  const actionTypes = RULE_ACTION_TYPES.filter(t => like.workflow.stages.some(s => s.actions.some(a => a.type === t)));
   return {
     id: row.id,
     name: row.name,
@@ -126,43 +131,69 @@ export function toRuleItem(row: RuleRow): TrackingRuleItem {
     scope: like.scope,
     targetId: like.targetId,
     targetLabel: like.targetLabel,
-    domain: like.domain,
-    channel: like.channel,
-    logic: like.logic,
+    granularity: like.granularity,
+    workflow: like.workflow,
     cooldownHours: like.cooldownHours,
-    conditions: like.conditions,
+    resetHours: like.resetHours,
+    maxRunsPerDay: like.maxRunsPerDay,
     lastTriggeredAt: row.lastTriggeredAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
-    sentence: like.conditions.length > 0 ? describeRule(like) : 'Koşullar okunamadı',
-    outcome: describeOutcome(like),
+    sentence: like.workflow.stages.length > 0 ? describeRule(like) : 'Koşullar okunamadı',
+    actionSummary: describeActionSummary(like.workflow),
+    actionTypes,
   };
+}
+
+/** `actionsJson` → sonuç listesi; bozuk öğeler atlanır. */
+export function parseActionResults(json: string): RuleActionResult[] {
+  try {
+    const raw: unknown = JSON.parse(json);
+    if (!Array.isArray(raw)) return [];
+    return raw.filter(
+      (r): r is RuleActionResult =>
+        typeof r === 'object' &&
+        r !== null &&
+        (RULE_ACTION_TYPES as readonly unknown[]).includes((r as RuleActionResult).type) &&
+        typeof (r as RuleActionResult).ok === 'boolean',
+    );
+  } catch {
+    return [];
+  }
 }
 
 export function toEventItem(row: {
   id: string;
   productId: string;
+  variantId: string | null;
   productName: string;
-  channel: string;
+  stageIndex: number;
   body: string;
+  actionsJson: string;
   createdAt: Date;
 }): RuleEventItem {
   return {
     id: row.id,
     productId: row.productId,
+    variantId: row.variantId,
     productName: row.productName,
-    channel: isRuleChannel(row.channel) ? row.channel : 'notification',
+    stageIndex: row.stageIndex,
     body: row.body,
+    actions: parseActionResults(row.actionsJson),
     createdAt: row.createdAt.toISOString(),
   };
 }
 
-/** Doğrulanmış gövde → DB satırı alanları (kapsam "all" ise hedef temizlenir). */
+/**
+ * Doğrulanmış gövde → DB satırı alanları. Kapsam "all" ise hedef temizlenir;
+ * onay bayrağı saklanmaz.
+ */
 export function ruleDataFromInput(input: RuleInput) {
-  const { targetId, targetLabel, conditions, ...rest } = input;
+  const { targetId, targetLabel, workflow, stockWriteConsent: _consent, ...rest } = input;
+  void _consent;
   return {
     ...rest,
     targetId: rest.scope === 'all' ? null : targetId ?? null,
     targetLabel: rest.scope === 'all' ? null : targetLabel ?? null,
-    conditionsJson: JSON.stringify(conditions),
+    workflowJson: JSON.stringify(workflow),
   };
 }

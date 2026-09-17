@@ -243,12 +243,11 @@ model StockHistory {
   @@index([recordedAt])
 }
 
-// Kullanıcı tanımlı takip kuralı — "24 saatte bu ürünün stoğu 50 düşerse bildir".
-// Kapsam: tüm ürünler / tek ürün / tek tedarikçi; alan (stok / satın alma /
-// analiz) koşul kataloğunu seçer; koşullar conditionsJson'da (RuleCondition[],
-// tek bağlaç: and | or); kanal ya zil bildirimi ya e-posta. Değerlendirme:
-// sync sonrası ve saatlik cron (/api/cron/rules). Her tetik TrackingRuleEvent'e
-// yazılır; aynı ürün+kural cooldownHours içinde yeniden tetiklenmez.
+// Kullanıcı tanımlı takip kuralı — aksiyon aracı: "stok 10'a düşerse bildir ve
+// stoğu 5 artır; sonra 3 adet daha düşerse e-posta at". Kapsam: tüm ürünler /
+// tek ürün / tek tedarikçi. workflowJson: aşamalar (koşul düğümleri → aksiyonlar).
+// Değerlendirme: sync sonrası ve saatlik cron (/api/cron/rules). Her tetik
+// TrackingRuleEvent'e yazılır; aşama ilerlemesi TrackingRuleState'te.
 model TrackingRule {
   id              String    @id @default(cuid())
   merchantId      String
@@ -257,34 +256,56 @@ model TrackingRule {
   scope           String    // "all" | "product" | "vendor"
   targetId        String?   // productId | vendorId
   targetLabel     String?   // görüntüleme için ad (ürün/tedarikçi)
-  domain          String    @default("stok")         // "stok" | "satinalma" | "analiz"
-  channel         String    @default("notification") // "notification" | "email"
-  logic           String    @default("and")          // "and" | "or"
-  conditionsJson  String    @default("[]")           // RuleCondition[] — bkz. src/lib/rules/types.ts
-  cooldownHours   Int       @default(24)             // 24 | 48 | 168 | 720 | 2160
+  granularity     String    @default("product")        // "product" | "variant" (stok aksiyonu varsa variant)
+  workflowJson    String    @default("{\"stages\":[]}") // RuleWorkflow — bkz. src/lib/rules/types.ts
+  cooldownHours   Int       @default(24)               // aynı hedef + aşama için yeniden çalışma aralığı
+  resetHours      Int       @default(168)              // aşama ilerlemesi bu süre sonunda başa döner
+  maxRunsPerDay   Int       @default(1)                // hedef başına günlük stok yazımı üst sınırı
   lastTriggeredAt DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   events          TrackingRuleEvent[]
+  states          TrackingRuleState[]
 
   @@index([merchantId, enabled])
 }
 
-// Kural tetik geçmişi: dedupe (dedupeKey) + cooldown + liste/detayda "son tetik".
-// E-posta kanalında Notification satırı olmadığı için tek gerçek kaynak budur.
+// Kural tetik geçmişi: dedupe (dedupeKey) + cooldown + geçmiş Sheet'i.
+// actionsJson her aksiyonun sonucunu taşır; stok yazımında "Geri al" verisi dahil.
 model TrackingRuleEvent {
   id          String       @id @default(cuid())
   merchantId  String
   ruleId      String
   rule        TrackingRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
   productId   String
+  variantId   String?      // varyant düzeyi kuralda dolu
   productName String
-  channel     String       // "notification" | "email"
+  stageIndex  Int          @default(0)
   body        String
+  actionsJson String       @default("[]") // RuleActionResult[]
   dedupeKey   String
   createdAt   DateTime     @default(now())
 
   @@unique([merchantId, dedupeKey])
   @@index([merchantId, ruleId, createdAt])
   @@index([createdAt])
+}
+
+// Aşama ilerlemesi (hedef başına): sıradaki değerlendirilecek aşama ve önceki
+// aşamanın tetiklendiği andaki ölçümler ("3 adet daha düşerse" için).
+model TrackingRuleState {
+  id             String       @id @default(cuid())
+  merchantId     String
+  ruleId         String
+  rule           TrackingRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  targetKey      String       // productId ya da productId:variantId
+  stageIndex     Int          // sıradaki değerlendirilecek aşama
+  stockAtStage   Int          // önceki aşama tetiklendiğinde stok
+  soldAtStageKey String       // o anın gün anahtarı (merchant TZ)
+  soldOnStageDay Int          // o gün, tetik anına kadar satılan adet (sales_since_stage tabanı)
+  stageFiredAt   DateTime
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([ruleId, targetKey])
+  @@index([merchantId, ruleId])
 }

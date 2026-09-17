@@ -216,7 +216,7 @@ export async function runFullSync(merchantId: string, authToken: AuthToken): Pro
       const { evaluateAlerts } = await import('@/lib/alerts/evaluate');
       await evaluateAlerts(merchantId);
       const { evaluateTrackingRules } = await import('@/lib/rules/evaluate');
-      await evaluateTrackingRules(merchantId);
+      await evaluateTrackingRules(merchantId, authToken);
       // Bakım: 120 günden eski stok geçmişini buda (hata yutulur).
       await pruneStockHistory();
       return { productCount, salesDayCount };

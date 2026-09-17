@@ -125,6 +125,7 @@ export async function POST(request: NextRequest) {
           prisma.vendorContact.deleteMany({ where: { merchantId } }),
           prisma.notification.deleteMany({ where: { merchantId } }),
           prisma.trackingRuleEvent.deleteMany({ where: { merchantId } }),
+          prisma.trackingRuleState.deleteMany({ where: { merchantId } }),
           prisma.trackingRule.deleteMany({ where: { merchantId } }),
           prisma.digestLog.deleteMany({ where: { merchantId } }),
           prisma.webhookEvent.deleteMany({ where: { merchantId } }),

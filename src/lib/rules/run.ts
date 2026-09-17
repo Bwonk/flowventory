@@ -16,7 +16,7 @@ export type RulesRunResult = {
 
 /**
  * Saatlik cron turu: etkin kuralı olan her merchant için veriyi tazele
- * (30 dk staleness) ve kuralları değerlendir. Değerlendirme idempotent
+ * (30 dk staleness) ve kuralları değerlendir; token stok aksiyonuna da gider. Değerlendirme idempotent
  * (dedupe + cooldown) — sync'in kendi tetiklediği turla çakışsa da çift
  * bildirim üretmez. Sonda stok geçmişi budanır.
  */
@@ -32,7 +32,7 @@ export async function runTrackingRulesForAllMerchants(now: Date = new Date()): P
     try {
       const authToken = await getMerchantAuthToken(merchantId);
       if (authToken) await ensureFreshSync(merchantId, authToken);
-      result.created += await evaluateTrackingRules(merchantId, now);
+      result.created += await evaluateTrackingRules(merchantId, authToken ?? null, now);
       result.evaluated++;
     } catch (error) {
       result.failed++;
