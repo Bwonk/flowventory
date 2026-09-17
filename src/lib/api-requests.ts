@@ -2,6 +2,7 @@ import axios from 'axios';
 import type { StockHistoryApiResponse } from '@/app/api/stock-history/route';
 import type { RulesApiResponse, TrackingRuleItem } from '@/app/api/rules/route';
 import type { RuleDetailApiResponse } from '@/app/api/rules/[id]/route';
+import type { UndoRuleStockApiResponse } from '@/app/api/rules/[id]/events/[eventId]/undo/route';
 import type { ProductOptionsApiResponse } from '@/app/api/products/options/route';
 import type { RuleInput } from '@/lib/rules/schema';
 import { GetMerchantApiResponse } from '../app/api/ikas/get-merchant/route';
@@ -169,6 +170,12 @@ export const ApiRequests = {
       makePutRequest<TrackingRuleItem>({ url: `/api/rules/${encodeURIComponent(id)}`, token, data: input }),
     delete: (token: string, id: string) =>
       makeDeleteRequest<{ ok: boolean }>({ url: `/api/rules/${encodeURIComponent(id)}`, token }),
+    /** Kuralın stok yazımını geri alır (yalnız kuralın eklediği fark). */
+    undoStock: (token: string, id: string, eventId: string) =>
+      makePostRequest<UndoRuleStockApiResponse>({
+        url: `/api/rules/${encodeURIComponent(id)}/events/${encodeURIComponent(eventId)}/undo`,
+        token,
+      }),
   },
   products: {
     /** Seçiciler için hafif ürün listesi (snapshot). */

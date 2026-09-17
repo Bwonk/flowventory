@@ -9,8 +9,9 @@ import { logger } from '@/lib/logger';
 import { ErrorState } from '@/components/shared/ErrorState';
 import { KurallarSkeleton } from '../_components/KurallarSkeleton';
 import { RuleBuilderPage } from '../_components/builder/RuleBuilderPage';
+import { RuleHistorySheet } from '../_components/builder/RuleHistorySheet';
 
-/** /dashboard/kurallar/[id] — mevcut kuralı düzenle + tetik geçmişi. */
+/** /dashboard/kurallar/[id] — mevcut kuralı düzenle; tetik geçmişi başlıktaki Sheet'te. */
 export default function KuralDuzenlePage() {
   const params = useParams<{ id: string }>();
   const id = params?.id;
@@ -65,6 +66,14 @@ export default function KuralDuzenlePage() {
       mode="edit"
       rule={detail.rule}
       template={null}
+      extraActions={
+        <RuleHistorySheet
+          token={token}
+          ruleId={detail.rule.id}
+          events={detail.events}
+          multiStage={detail.rule.workflow.stages.length > 1}
+        />
+      }
       notificationEmail={notificationEmail}
       leadTimeDays={leadTimeDays}
     />

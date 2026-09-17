@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ACTION_CATALOG,
   computeNewStock,
+  computeUndoCount,
   defaultAction,
   describeAction,
   hasActionType,
@@ -61,5 +62,14 @@ describe('computeNewStock', () => {
   });
   it('mutlak üst sınır', () => {
     expect(computeNewStock('increase', 10, 999_995, limits)).toMatchObject({ ok: false, reason: 'Stok üst sınırı aşılıyor' });
+  });
+});
+
+describe('computeUndoCount', () => {
+  it('yalnız kuralın eklediği fark çıkarılır', () => {
+    expect(computeUndoCount(15, { previousCount: 10, newCount: 15 })).toBe(10);
+    // Yazımdan sonra 3 satış: 12 − 5 = 7 (önceki mutlak 10 değil).
+    expect(computeUndoCount(12, { previousCount: 10, newCount: 15 })).toBe(7);
+    expect(computeUndoCount(2, { previousCount: 10, newCount: 15 })).toBe(0);
   });
 });

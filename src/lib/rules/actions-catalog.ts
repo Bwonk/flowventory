@@ -126,3 +126,11 @@ export function computeNewStock(
   if (next > limits.maxStock) return { ok: false, reason: 'Stok üst sınırı aşılıyor' };
   return { ok: true, next };
 }
+
+/**
+ * "Geri al" hedefi: yazımdan sonra satış/elle değişiklik olmuş olabilir;
+ * önceki mutlak değer yerine yalnız kuralın eklediği fark çıkarılır.
+ */
+export function computeUndoCount(liveCount: number, write: { previousCount: number; newCount: number }): number {
+  return Math.max(0, liveCount - (write.newCount - write.previousCount));
+}
