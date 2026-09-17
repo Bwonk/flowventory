@@ -1,16 +1,35 @@
+import { describeAction, shortActionLabel, workflowActions } from './actions-catalog';
 import { describeCondition } from './catalog';
-import { CHANNEL_LABELS, type RuleLogic, type RuleWindowHours, type TrackingRuleLike } from './types';
+import { describeNodes, joinClauses } from './logic';
+import type { RuleStage, RuleWindowHours, RuleWorkflow, TrackingRuleLike } from './types';
 
-export { describeCondition };
+export { describeAction, describeCondition, joinClauses };
 
 /**
- * Kuralı tek cümleyle anlatır — form önizlemesi, liste satırı ve e-posta
- * aynı metni kullanır: "Tüm ürünler için 24 saat içinde stok 50 adet düşerse
- * ve stok 5 adedin altına inerse".
+ * Kuralı cümleyle anlatır — oluşturucu önizlemesi, liste satırı ve e-posta
+ * aynı metni kullanır: "Tüm ürünler için stok 10 adedin altına inerse:
+ * bildirim gönder ve stoğu 5 artır. Sonra stok 3 adet daha düşerse: e-posta gönder."
  */
-export function describeRule(rule: Pick<TrackingRuleLike, 'scope' | 'targetLabel' | 'logic' | 'conditions'>): string {
-  if (rule.conditions.length === 0) return `${describeScope(rule)} koşul tanımlanmadı`;
-  return `${describeScope(rule)} ${joinClauses(rule.conditions.map(describeCondition), rule.logic)}`;
+export function describeRule(rule: Pick<TrackingRuleLike, 'scope' | 'targetLabel' | 'workflow'>): string {
+  const stages = rule.workflow.stages.filter(s => s.conditions.length > 0);
+  if (stages.length === 0) return `${describeScope(rule)} koşul tanımlanmadı`;
+  return stages
+    .map((stage, i) => (i === 0 ? `${describeScope(rule)} ${describeStage(stage)}` : `Sonra ${describeStage(stage)}`))
+    .join(' ');
+}
+
+/** "stok 10 adedin altına inerse: bildirim gönder." */
+export function describeStage(stage: RuleStage): string {
+  const when = describeStageConditions(stage);
+  if (stage.actions.length === 0) return `${when}: aksiyon seçilmedi.`;
+  return `${when}: ${joinClauses(stage.actions.map(describeAction), 'and')}.`;
+}
+
+export function describeStageConditions(stage: Pick<RuleStage, 'conditions'>): string {
+  return describeNodes(
+    stage.conditions,
+    stage.conditions.map(n => describeCondition(n.condition)),
+  );
 }
 
 export function describeScope(rule: Pick<TrackingRuleLike, 'scope' | 'targetLabel'>): string {
@@ -24,16 +43,13 @@ export function describeScope(rule: Pick<TrackingRuleLike, 'scope' | 'targetLabe
   }
 }
 
-/** "A", "A ve B", "A, B ve C" / "A ya da B", "A, B ya da C". */
-export function joinClauses(clauses: readonly string[], logic: RuleLogic): string {
-  if (clauses.length === 0) return '';
-  if (clauses.length === 1) return clauses[0];
-  const conj = logic === 'and' ? 've' : 'ya da';
-  return `${clauses.slice(0, -1).join(', ')} ${conj} ${clauses[clauses.length - 1]}`;
+/** Liste kolonu: "Bildirim · Stok +5 · E-posta" — aşamalar boyunca, tekrarsız. */
+export function describeActionSummary(workflow: RuleWorkflow): string {
+  return Array.from(new Set(workflowActions(workflow).map(shortActionLabel))).join(' · ');
 }
 
-/** "24 saatte", "7 günde" — yeniden bildirim aralığı için bulunma hâli. */
-const COOLDOWN_LOCATIVE: Record<RuleWindowHours, string> = {
+/** "24 saatte", "7 günde" — aralıklar için bulunma hâli. */
+const WINDOW_LOCATIVE: Record<RuleWindowHours, string> = {
   24: '24 saatte',
   48: '48 saatte',
   168: '7 günde',
@@ -41,11 +57,8 @@ const COOLDOWN_LOCATIVE: Record<RuleWindowHours, string> = {
   2160: '90 günde',
 };
 
-/** Sonuç kartı / liste: "Bildirim zilde · aynı ürün için en fazla 24 saatte bir". */
-export function describeOutcome(rule: Pick<TrackingRuleLike, 'channel' | 'cooldownHours'>): string {
-  const where = rule.channel === 'email' ? 'E-posta gönderilir' : 'Bildirim zilde';
-  const every = COOLDOWN_LOCATIVE[rule.cooldownHours] ?? `${rule.cooldownHours} saatte`;
-  return `${where} · aynı ürün için en fazla ${every} bir`;
+/** Çalışma ayarları özeti: "aynı varyant için en fazla 24 saatte bir". */
+export function describeCadence(rule: Pick<TrackingRuleLike, 'cooldownHours' | 'granularity'>): string {
+  const every = WINDOW_LOCATIVE[rule.cooldownHours] ?? `${rule.cooldownHours} saatte`;
+  return `aynı ${rule.granularity === 'variant' ? 'varyant' : 'ürün'} için en fazla ${every} bir`;
 }
-
-export const channelLabel = (rule: Pick<TrackingRuleLike, 'channel'>) => CHANNEL_LABELS[rule.channel];

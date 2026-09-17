@@ -5,6 +5,7 @@ import {
   evaluateCondition,
   METRIC_CATALOG,
   METRICS_BY_DOMAIN,
+  STAGE_METRICS,
 } from '@/lib/rules/catalog';
 import { RULE_METRICS, type RuleTarget } from '@/lib/rules/types';
 
@@ -18,6 +19,7 @@ function target(stock: number, perDay: number, overrides: Partial<RuleTarget> = 
   }
   return {
     productId: 'p1',
+    variantId: null,
     productName: 'Ürün',
     vendorId: null,
     currentStock: stock,
@@ -35,8 +37,10 @@ function target(stock: number, perDay: number, overrides: Partial<RuleTarget> = 
 
 describe('katalog bütünlüğü', () => {
   it('her metrik alanına göre listelenir ve etiketlidir', () => {
-    const listed = [...METRICS_BY_DOMAIN.stok, ...METRICS_BY_DOMAIN.satinalma, ...METRICS_BY_DOMAIN.analiz];
+    const listed = [...METRICS_BY_DOMAIN.stok, ...METRICS_BY_DOMAIN.satinalma, ...METRICS_BY_DOMAIN.analiz, ...STAGE_METRICS];
+    expect(listed).toHaveLength(RULE_METRICS.length);
     expect(new Set(listed)).toEqual(new Set(RULE_METRICS));
+    expect(STAGE_METRICS).toEqual(['stock_drop_since_stage', 'sales_since_stage']);
     for (const m of RULE_METRICS) expect(METRIC_CATALOG[m].label.length).toBeGreaterThan(0);
   });
   it('defaultCondition şemaya uyan koşul üretir', () => {
@@ -117,5 +121,29 @@ describe('analiz metrikleri', () => {
   it('describe cümleleri', () => {
     expect(describeCondition({ metric: 'action_is', value: 'siparis-ver' })).toBe("aksiyon 'Sipariş ver' ise");
     expect(describeCondition({ metric: 'aging_bucket_is', value: '180+' })).toBe('yaşlandırma 180+ gün ise');
+  });
+});
+
+describe('aşamadan beri metrikleri', () => {
+  const stage = { stockAtStage: 20, soldSinceStage: 6 };
+  it('stock_drop_since_stage: önceki aşamadaki stoğa göre düşüş', () => {
+    expect(evaluateCondition({ metric: 'stock_drop_since_stage', threshold: 3 }, target(17, 1, { stage }))).toBe(
+      'Önceki aşamadan beri stok 20 → 17 (−3 adet).',
+    );
+    expect(evaluateCondition({ metric: 'stock_drop_since_stage', threshold: 3 }, target(18, 1, { stage }))).toBeNull();
+  });
+  it('aşama bağlamı yoksa (aşama 1) tetiklenmez', () => {
+    expect(evaluateCondition({ metric: 'stock_drop_since_stage', threshold: 1 }, target(0, 1))).toBeNull();
+    expect(evaluateCondition({ metric: 'sales_since_stage', threshold: 1 }, target(0, 1))).toBeNull();
+  });
+  it('sales_since_stage eşiği', () => {
+    expect(evaluateCondition({ metric: 'sales_since_stage', threshold: 5 }, target(10, 1, { stage }))).toBe(
+      'Önceki aşamadan beri 6 adet satıldı (eşik 5).',
+    );
+    expect(evaluateCondition({ metric: 'sales_since_stage', threshold: 7 }, target(10, 1, { stage }))).toBeNull();
+  });
+  it('describe cümleleri', () => {
+    expect(describeCondition({ metric: 'stock_drop_since_stage', threshold: 3 })).toBe('stok 3 adet daha düşerse');
+    expect(describeCondition({ metric: 'sales_since_stage', threshold: 5 })).toBe('5 adet daha satılırsa');
   });
 });

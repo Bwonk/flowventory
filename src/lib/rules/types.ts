@@ -1,9 +1,10 @@
 /**
  * Kural tabanlı takip — sabitler ve tipler (istemci + sunucu ortak, saf).
  *
- * v2 (17 Eyl 2026): kural = kapsam + alan + kanal + [koşullar] (tek bağlaç) +
- * yeniden bildirim aralığı. Koşul tanımları `catalog.ts`'te; bu dosya
- * yalnız tipleri ve sabitleri taşır (katalog buradan import eder — döngü yok).
+ * v3 (17 Eyl 2026): kural = kapsam + aşamalı workflow. Aşama = koşullar
+ * (koşul başına VE/VEYA; VE önce bağlanır) → aksiyonlar (bildirim, e-posta,
+ * stok yazımı). Koşul tanımları `catalog.ts`'te, aksiyonlar
+ * `actions-catalog.ts`'te; bu dosya yalnız tipleri ve sabitleri taşır.
  */
 
 import type { AbcClass, AgingBucketKey } from '@/lib/reports/abc';
@@ -14,17 +15,20 @@ export const RULE_SCOPES = ['all', 'product', 'vendor'] as const;
 export type RuleScope = (typeof RULE_SCOPES)[number];
 export const SCOPE_LABELS: Record<RuleScope, string> = { all: 'Tüm ürünler', product: 'Ürün', vendor: 'Tedarikçi' };
 
+/** Koşul seçicide grup başlığı — kuralın tipi değil. */
 export const RULE_DOMAINS = ['stok', 'satinalma', 'analiz'] as const;
 export type RuleDomain = (typeof RULE_DOMAINS)[number];
 export const DOMAIN_LABELS: Record<RuleDomain, string> = { stok: 'Stok Takibi', satinalma: 'Satın Alma', analiz: 'Analiz' };
 
-export const RULE_CHANNELS = ['notification', 'email'] as const;
-export type RuleChannel = (typeof RULE_CHANNELS)[number];
-export const CHANNEL_LABELS: Record<RuleChannel, string> = { notification: 'Bildirim', email: 'E-posta' };
-
+/** Koşul bağlacı — düğümün kendinden önceki koşula bağlanışı. */
 export const RULE_LOGICS = ['and', 'or'] as const;
 export type RuleLogic = (typeof RULE_LOGICS)[number];
-export const LOGIC_LABELS: Record<RuleLogic, string> = { and: 'VE · hepsi', or: 'VEYA · herhangi biri' };
+export const LOGIC_LABELS: Record<RuleLogic, string> = { and: 'VE', or: 'VEYA' };
+
+/** Değerlendirme birimi: ürün toplamı ya da varyant (stok aksiyonu varyant ister). */
+export const RULE_GRANULARITIES = ['product', 'variant'] as const;
+export type RuleGranularity = (typeof RULE_GRANULARITIES)[number];
+export const GRANULARITY_LABELS: Record<RuleGranularity, string> = { product: 'Ürün', variant: 'Varyant' };
 
 export const RULE_WINDOWS = [24, 48, 168, 720, 2160] as const;
 export type RuleWindowHours = (typeof RULE_WINDOWS)[number];
@@ -39,8 +43,14 @@ export const WINDOW_LABELS: Record<RuleWindowHours, string> = {
 export const THRESHOLD_UNITS = ['units', 'percent', 'days'] as const;
 export type ThresholdUnit = (typeof THRESHOLD_UNITS)[number];
 
-/** Bir kuralda en fazla bu kadar koşul (form + şema + motor aynı sınırı okur). */
+/** Sınırlar — form + şema + motor aynı değerleri okur. */
+export const MAX_STAGES = 3;
 export const MAX_CONDITIONS = 5;
+export const MAX_ACTIONS = 4;
+/** Stok aksiyonu emniyeti (K5): tek yazımda en fazla bu kadar artış. */
+export const MAX_STOCK_STEP = 1_000;
+export const MAX_STOCK = 1_000_000;
+export const MAX_RUNS_PER_DAY_LIMIT = 10;
 
 export const RULE_METRICS = [
   // stok
@@ -59,6 +69,9 @@ export const RULE_METRICS = [
   'aging_bucket_is',
   'abc_class_is',
   'action_is',
+  // aşama ≥ 2 — önceki aşamanın tetiklendiği andan beri
+  'stock_drop_since_stage',
+  'sales_since_stage',
 ] as const;
 export type RuleMetric = (typeof RULE_METRICS)[number];
 
@@ -76,9 +89,40 @@ export type RuleCondition =
   | { metric: 'sell_through_band_is'; value: SellThroughBand }
   | { metric: 'aging_bucket_is'; value: AgingBucketKey }
   | { metric: 'abc_class_is'; value: AbcClass }
-  | { metric: 'action_is'; value: ActionKey };
+  | { metric: 'action_is'; value: ActionKey }
+  | { metric: 'stock_drop_since_stage'; threshold: number }
+  | { metric: 'sales_since_stage'; threshold: number };
 
 export type ConditionOf<M extends RuleMetric> = Extract<RuleCondition, { metric: M }>;
+
+/** Koşul düğümü: `op` kendinden önceki koşula bağlanış; ilk düğümün op'u yok sayılır. */
+export interface ConditionNode {
+  op: RuleLogic;
+  condition: RuleCondition;
+}
+
+export const RULE_ACTION_TYPES = ['notify', 'email', 'adjust_stock'] as const;
+export type RuleActionType = (typeof RULE_ACTION_TYPES)[number];
+
+export const STOCK_ADJUST_MODES = ['increase', 'set'] as const;
+export type StockAdjustMode = (typeof STOCK_ADJUST_MODES)[number];
+
+/** Aksiyon — tipe göre ayrışan gövde. `email` kayıtlı bildirim adresine gider. */
+export type RuleAction =
+  | { type: 'notify' }
+  | { type: 'email' }
+  | { type: 'adjust_stock'; mode: StockAdjustMode; amount: number };
+
+export type ActionOf<T extends RuleActionType> = Extract<RuleAction, { type: T }>;
+
+export interface RuleStage {
+  conditions: ConditionNode[];
+  actions: RuleAction[];
+}
+
+export interface RuleWorkflow {
+  stages: RuleStage[];
+}
 
 /** Motorun ve açıklamanın ihtiyaç duyduğu kural alt kümesi (DB satırı veya form taslağı). */
 export interface TrackingRuleLike {
@@ -87,17 +131,45 @@ export interface TrackingRuleLike {
   scope: RuleScope;
   targetId: string | null;
   targetLabel: string | null;
-  domain: RuleDomain;
-  channel: RuleChannel;
-  logic: RuleLogic;
-  /** Aynı ürün + kural için yeniden bildirim aralığı; dedupe kovası da bu. */
+  granularity: RuleGranularity;
+  workflow: RuleWorkflow;
+  /** Aynı hedef + aşama için yeniden çalışma aralığı; dedupe kovası da bu. */
   cooldownHours: RuleWindowHours;
-  conditions: RuleCondition[];
+  /** Aşama ilerlemesi bu süre dolunca başa döner. */
+  resetHours: RuleWindowHours;
+  /** Hedef başına günlük stok yazımı üst sınırı. */
+  maxRunsPerDay: number;
 }
 
-/** Motorun bir ürün için gördüğü tek veri yüzeyi (DB'den toplanır, koşullar buradan okur). */
+/** Bir aksiyonun çalışma sonucu — `TrackingRuleEvent.actionsJson` öğesi. */
+export interface RuleActionResult {
+  type: RuleActionType;
+  ok: boolean;
+  detail: string;
+  /** Yalnız başarılı stok yazımında: "Geri al" için gereken her şey. */
+  stock?: {
+    stockLocationId: string;
+    previousCount: number;
+    newCount: number;
+    undoneAt?: string;
+  };
+}
+
+/** Önceki aşamanın tetiklendiği andan bu yana ölçümler (yalnız aşama ≥ 2). */
+export interface StageContext {
+  stockAtStage: number;
+  soldSinceStage: number;
+}
+
+/**
+ * Motorun bir hedef (ürün ya da varyant) için gördüğü tek veri yüzeyi
+ * (DB'den toplanır, koşullar buradan okur).
+ */
 export interface RuleTarget {
   productId: string;
+  /** Varyant düzeyinde değerlendirmede dolu; ürün düzeyinde null. */
+  variantId: string | null;
+  /** Görünen ad — varyantta "Ürün · Kırmızı / M". */
   productName: string;
   vendorId: string | null;
   currentStock: number;
@@ -115,6 +187,8 @@ export interface RuleTarget {
   targetStockDays: number;
   /** Bugünün gün anahtarı (merchant TZ) — pencere hesapları için. */
   todayKey: string;
+  /** Aşama ≥ 2 değerlendirilirken motor doldurur. */
+  stage?: StageContext;
 }
 
 export function isRuleScope(v: unknown): v is RuleScope {
@@ -123,8 +197,8 @@ export function isRuleScope(v: unknown): v is RuleScope {
 export function isRuleDomain(v: unknown): v is RuleDomain {
   return typeof v === 'string' && (RULE_DOMAINS as readonly string[]).includes(v);
 }
-export function isRuleChannel(v: unknown): v is RuleChannel {
-  return typeof v === 'string' && (RULE_CHANNELS as readonly string[]).includes(v);
+export function isRuleGranularity(v: unknown): v is RuleGranularity {
+  return typeof v === 'string' && (RULE_GRANULARITIES as readonly string[]).includes(v);
 }
 export function isRuleLogic(v: unknown): v is RuleLogic {
   return typeof v === 'string' && (RULE_LOGICS as readonly string[]).includes(v);

@@ -1,72 +1,67 @@
 import { describe, expect, it } from 'vitest';
-import { describeOutcome, describeRule, joinClauses } from '@/lib/rules/describe';
-import { ruleInputSchema } from '@/lib/rules/schema';
+import { describeActionSummary, describeCadence, describeRule, describeStage } from '@/lib/rules/describe';
+import type { RuleWorkflow } from '@/lib/rules/types';
+
+const escalate: RuleWorkflow = {
+  stages: [
+    {
+      conditions: [{ op: 'and', condition: { metric: 'stock_below', threshold: 10 } }],
+      actions: [{ type: 'notify' }, { type: 'adjust_stock', mode: 'increase', amount: 5 }],
+    },
+    {
+      conditions: [{ op: 'and', condition: { metric: 'stock_drop_since_stage', threshold: 3 } }],
+      actions: [{ type: 'email' }],
+    },
+  ],
+};
 
 describe('describeRule', () => {
-  it('kapsam + koşulları tek cümlede birleştirir', () => {
-    expect(describeRule({ scope: 'all', targetLabel: null, logic: 'and', conditions: [{ metric: 'stock_drop', threshold: 50, thresholdUnit: 'units', windowHours: 24 }] }))
-      .toBe('Tüm ürünler için 24 saat içinde stok 50 adet düşerse');
-    expect(describeRule({
-      scope: 'vendor', targetLabel: 'Acme', logic: 'or',
-      conditions: [{ metric: 'reorder_point_reached' }, { metric: 'below_safety_stock' }],
-    })).toBe('Acme ürünlerinde yeniden sipariş noktasına gelirse ya da emniyet stoğunun altına inerse');
-    expect(describeRule({
-      scope: 'product', targetLabel: 'Kırmızı Tişört', logic: 'and',
-      conditions: [{ metric: 'abc_class_is', value: 'C' }, { metric: 'aging_bucket_is', value: '180+' }, { metric: 'no_sales', windowHours: 720 }],
-    })).toBe('Kırmızı Tişört için ABC sınıfı C ise, yaşlandırma 180+ gün ise ve 30 gün boyunca satış olmazsa');
+  it('çok aşamalı cümle: kapsam, aşamalar "Sonra" ile', () => {
+    expect(describeRule({ scope: 'all', targetLabel: null, workflow: escalate })).toBe(
+      'Tüm ürünler için stok 10 adedin altına inerse: bildirim gönder ve stoğu 5 artır. Sonra stok 3 adet daha düşerse: e-posta gönder.',
+    );
+  });
+  it('koşul başına bağlaç, VE önceliğiyle', () => {
+    const workflow: RuleWorkflow = {
+      stages: [
+        {
+          conditions: [
+            { op: 'and', condition: { metric: 'reorder_point_reached' } },
+            { op: 'and', condition: { metric: 'abc_class_is', value: 'A' } },
+            { op: 'or', condition: { metric: 'below_safety_stock' } },
+          ],
+          actions: [{ type: 'email' }],
+        },
+      ],
+    };
+    expect(describeRule({ scope: 'vendor', targetLabel: 'Acme', workflow })).toBe(
+      'Acme ürünlerinde yeniden sipariş noktasına gelirse ve ABC sınıfı A ise ya da emniyet stoğunun altına inerse: e-posta gönder.',
+    );
   });
   it('koşulsuz kuralı açıkça söyler', () => {
-    expect(describeRule({ scope: 'all', targetLabel: null, logic: 'and', conditions: [] })).toBe('Tüm ürünler için koşul tanımlanmadı');
+    expect(describeRule({ scope: 'product', targetLabel: 'Tişört', workflow: { stages: [] } })).toBe('Tişört için koşul tanımlanmadı');
   });
 });
 
-describe('joinClauses', () => {
-  it('1/2/3 koşul, ve / ya da', () => {
-    expect(joinClauses(['A'], 'and')).toBe('A');
-    expect(joinClauses(['A', 'B'], 'and')).toBe('A ve B');
-    expect(joinClauses(['A', 'B', 'C'], 'or')).toBe('A, B ya da C');
+describe('describeStage', () => {
+  it('aksiyonsuz aşama', () => {
+    expect(describeStage({ conditions: [{ op: 'and', condition: { metric: 'stock_below', threshold: 5 } }], actions: [] })).toBe(
+      'stok 5 adedin altına inerse: aksiyon seçilmedi.',
+    );
   });
 });
 
-describe('describeOutcome', () => {
-  it('kanal + aralık', () => {
-    expect(describeOutcome({ channel: 'notification', cooldownHours: 24 })).toBe('Bildirim zilde · aynı ürün için en fazla 24 saatte bir');
-    expect(describeOutcome({ channel: 'email', cooldownHours: 168 })).toBe('E-posta gönderilir · aynı ürün için en fazla 7 günde bir');
+describe('describeActionSummary', () => {
+  it('aşamalar boyunca tekrarsız kısa etiketler', () => {
+    expect(describeActionSummary(escalate)).toBe('Bildirim · Stok +5 · E-posta');
+    const twiceNotify: RuleWorkflow = { stages: [escalate.stages[0], { ...escalate.stages[1], actions: [{ type: 'notify' }] }] };
+    expect(describeActionSummary(twiceNotify)).toBe('Bildirim · Stok +5');
   });
 });
 
-describe('ruleInputSchema', () => {
-  const valid = {
-    name: 'Test', domain: 'stok', channel: 'notification', logic: 'and', scope: 'all', cooldownHours: 24,
-    conditions: [{ metric: 'stock_drop', threshold: 5, thresholdUnit: 'units', windowHours: 24 }],
-  };
-
-  it('geçerli gövdeyi varsayılanlarla kabul eder', () => {
-    const r = ruleInputSchema.safeParse(valid);
-    expect(r.success).toBe(true);
-    if (r.success) expect(r.data.enabled).toBe(true);
-  });
-  it('kapsam ürün/tedarikçi ise hedef ister', () => {
-    expect(ruleInputSchema.safeParse({ ...valid, scope: 'product' }).success).toBe(false);
-    expect(ruleInputSchema.safeParse({ ...valid, scope: 'product', targetId: 'p1' }).success).toBe(true);
-  });
-  it('alan dışı metriği reddeder', () => {
-    const r = ruleInputSchema.safeParse({ ...valid, domain: 'analiz' });
-    expect(r.success).toBe(false);
-    if (!r.success) expect(r.error.issues[0]?.message).toContain('bu alanda kullanılamaz');
-  });
-  it('en az 1, en fazla 5 koşul', () => {
-    expect(ruleInputSchema.safeParse({ ...valid, conditions: [] }).success).toBe(false);
-    const six = Array.from({ length: 6 }, () => ({ metric: 'stock_below', threshold: 5 }));
-    expect(ruleInputSchema.safeParse({ ...valid, conditions: six }).success).toBe(false);
-  });
-  it('yüzde eşiği 1–100, enum değerleri doğrulanır', () => {
-    expect(ruleInputSchema.safeParse({ ...valid, conditions: [{ metric: 'stock_drop', threshold: 150, thresholdUnit: 'percent', windowHours: 24 }] }).success).toBe(false);
-    expect(ruleInputSchema.safeParse({ ...valid, domain: 'analiz', conditions: [{ metric: 'abc_class_is', value: 'D' }] }).success).toBe(false);
-    expect(ruleInputSchema.safeParse({ ...valid, domain: 'analiz', conditions: [{ metric: 'abc_class_is', value: 'A' }] }).success).toBe(true);
-  });
-  it('bilinmeyen pencere ve kanalı reddeder', () => {
-    expect(ruleInputSchema.safeParse({ ...valid, cooldownHours: 12 }).success).toBe(false);
-    expect(ruleInputSchema.safeParse({ ...valid, channel: 'sms' }).success).toBe(false);
+describe('describeCadence', () => {
+  it('birim + aralık', () => {
+    expect(describeCadence({ cooldownHours: 24, granularity: 'product' })).toBe('aynı ürün için en fazla 24 saatte bir');
+    expect(describeCadence({ cooldownHours: 168, granularity: 'variant' })).toBe('aynı varyant için en fazla 7 günde bir');
   });
 });

@@ -1,6 +1,6 @@
 /**
  * Metrik katalogu — form, açıklama cümlesi ve motor aynı kaynaktan beslenir.
- * Her metrik: hangi alanda yaşar, ne girdi ister, nasıl anlatılır, nasıl
+ * Her metrik: hangi grupta listelenir, ne girdi ister, nasıl anlatılır, nasıl
  * değerlendirilir. Yeni koşul eklemek = buraya bir kayıt eklemek.
  */
 
@@ -46,6 +46,8 @@ export interface MetricDef<M extends RuleMetric = RuleMetric> {
   input: MetricInput;
   /** 'measure' → koşulun kendi ölçüm penceresi var (windowHours). */
   window: 'measure' | 'none';
+  /** Önceki aşamaya göre ölçer — yalnız aşama ≥ 2'de seçilebilir. */
+  stageOnly?: true;
   describe: (c: ConditionOf<M>) => string;
   /** Koşul sağlanıyorsa bildirim gövdesi (cümle), değilse null. */
   evaluate: (c: ConditionOf<M>, t: RuleTarget) => string | null;
@@ -296,6 +298,36 @@ export const METRIC_CATALOG: { [M in RuleMetric]: MetricDef<M> } = {
       return action === c.value ? `Aksiyon: ${ACTION_LABELS[action]}.` : null;
     },
   },
+  stock_drop_since_stage: {
+    metric: 'stock_drop_since_stage',
+    domain: 'stok',
+    label: 'Stok daha da düştü',
+    hint: 'Önceki aşamanın tetiklendiği andaki stoğa göre düşüş.',
+    input: { kind: 'number', units: ['units'], min: 1, max: 1_000_000, defaultValue: () => 3 },
+    window: 'none',
+    stageOnly: true,
+    describe: c => `stok ${fmt(c.threshold)} adet daha düşerse`,
+    evaluate: (c, t) => {
+      if (!t.stage) return null;
+      const drop = t.stage.stockAtStage - t.currentStock;
+      if (drop < c.threshold) return null;
+      return `Önceki aşamadan beri stok ${fmt(t.stage.stockAtStage)} → ${fmt(t.currentStock)} (−${fmt(drop)} adet).`;
+    },
+  },
+  sales_since_stage: {
+    metric: 'sales_since_stage',
+    domain: 'stok',
+    label: 'Satış sürdü',
+    hint: 'Önceki aşamanın tetiklendiği günden beri satılan adet (gün çözünürlüğü).',
+    input: { kind: 'number', units: ['units'], min: 1, max: 1_000_000, defaultValue: () => 5 },
+    window: 'none',
+    stageOnly: true,
+    describe: c => `${fmt(c.threshold)} adet daha satılırsa`,
+    evaluate: (c, t) => {
+      if (!t.stage || t.stage.soldSinceStage < c.threshold) return null;
+      return `Önceki aşamadan beri ${fmt(t.stage.soldSinceStage)} adet satıldı (eşik ${fmt(c.threshold)}).`;
+    },
+  },
 };
 
 function labelOf<T extends string>(options: ReadonlyArray<{ value: T; label: string }>, value: T | null): string {
@@ -306,11 +338,21 @@ export const METRIC_LABELS: Record<RuleMetric, string> = Object.fromEntries(
   RULE_METRICS.map(m => [m, METRIC_CATALOG[m].label]),
 ) as Record<RuleMetric, string>;
 
+const isStageOnly = (m: RuleMetric) => METRIC_CATALOG[m].stageOnly === true;
+
+/** Koşul seçicideki grup başlıkları; "aşamadan beri" metrikleri ayrı grupta. */
 export const METRICS_BY_DOMAIN: Record<RuleDomain, readonly RuleMetric[]> = {
-  stok: RULE_METRICS.filter(m => METRIC_CATALOG[m].domain === 'stok'),
-  satinalma: RULE_METRICS.filter(m => METRIC_CATALOG[m].domain === 'satinalma'),
-  analiz: RULE_METRICS.filter(m => METRIC_CATALOG[m].domain === 'analiz'),
+  stok: RULE_METRICS.filter(m => METRIC_CATALOG[m].domain === 'stok' && !isStageOnly(m)),
+  satinalma: RULE_METRICS.filter(m => METRIC_CATALOG[m].domain === 'satinalma' && !isStageOnly(m)),
+  analiz: RULE_METRICS.filter(m => METRIC_CATALOG[m].domain === 'analiz' && !isStageOnly(m)),
 };
+
+/** Yalnız aşama ≥ 2'de seçilebilen metrikler ("Önceki aşamadan beri"). */
+export const STAGE_METRICS: readonly RuleMetric[] = RULE_METRICS.filter(isStageOnly);
+
+export function isStageOnlyMetric(metric: RuleMetric): boolean {
+  return isStageOnly(metric);
+}
 
 /** Metrik seçilince makul başlangıç koşulu (form). */
 export function defaultCondition(metric: RuleMetric, ctx: DefaultContext): RuleCondition {
@@ -322,6 +364,8 @@ export function defaultCondition(metric: RuleMetric, ctx: DefaultContext): RuleC
     case 'stock_below':
     case 'days_of_cover_below':
     case 'suggested_qty_above':
+    case 'stock_drop_since_stage':
+    case 'sales_since_stage':
       return { metric, threshold: numberDefault(def.input, ctx) };
     case 'sales_above':
       return { metric, threshold: numberDefault(def.input, ctx), windowHours: 168 };
