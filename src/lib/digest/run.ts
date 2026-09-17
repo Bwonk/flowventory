@@ -5,7 +5,8 @@ import { getMerchantSettings } from '@/lib/merchant-settings';
 import { prisma } from '@/lib/prisma';
 import { buildPurchaseReport } from '@/lib/reports/purchase-report';
 import { dateKeyInTz, shiftDateKey } from '@/lib/timezone';
-import { EmailNotConfiguredError } from '@/lib/vendors/purchase-email';
+import { EmailNotConfiguredError } from '@/lib/email/resend';
+import { resendErrorKind } from '@/lib/email/resend-error';
 import type { AuthToken } from '@/models/auth-token';
 import { computeDigest, DEAD_STOCK_WINDOW_DAYS } from './compute';
 import { renderDigestEmail, sendDigestEmail } from './email';
@@ -147,7 +148,7 @@ export async function runDueDigests(now: Date = new Date()): Promise<DigestRunRe
       logger.info('Digest sent', { merchantId, periodKey });
     } catch (error) {
       result.failed++;
-      logger.error('Digest failed', { merchantId, periodKey, error });
+      logger.error('Digest failed', { merchantId, periodKey, kind: resendErrorKind(error), error });
       await prisma.digestLog
         .delete({ where: { merchantId_periodKey: { merchantId, periodKey } } })
         .catch(() => undefined);

@@ -1,4 +1,5 @@
 import { sendAlertEmail } from '@/lib/alerts/email';
+import { resendErrorKind } from '@/lib/email/resend-error';
 import { logger } from '@/lib/logger';
 import { getMerchantSettings } from '@/lib/merchant-settings';
 import { prisma } from '@/lib/prisma';
@@ -161,8 +162,8 @@ export async function evaluateTrackingRules(merchantId: string, now: Date = new 
         await sendAlertEmail(
           settings.notificationEmail,
           emailHits.map(h => ({ type: 'rule', title: h.title, body: h.body })),
-          { heading: 'Takip Kuralı Uyarıları' },
-        ).catch(error => logger.error('Rule email failed', { merchantId, error }));
+          { heading: 'Takip Kuralı Uyarıları', subject: `Flowventory: ${emailHits.length} kural uyarısı` },
+        ).catch(error => logger.error('Rule email failed', { merchantId, kind: resendErrorKind(error), error }));
       }
     }
 

@@ -1,4 +1,4 @@
-import { Resend } from 'resend';
+import { getResendConfig, sendViaResend } from '@/lib/email/resend';
 import { logger } from '@/lib/logger';
 
 /**
@@ -22,8 +22,10 @@ export interface AlertEmailItem {
 }
 
 export interface AlertEmailOptions {
-  /** Başlık ve konu için; varsayılan "Stok Uyarıları". */
+  /** E-posta başlığı; varsayılan "Stok Uyarıları". */
   heading?: string;
+  /** Konu satırı; varsayılan "Flowventory: N stok uyarısı". */
+  subject?: string;
 }
 
 export async function sendAlertEmail(
@@ -32,12 +34,10 @@ export async function sendAlertEmail(
   options: AlertEmailOptions = {},
 ): Promise<void> {
   const heading = options.heading ?? 'Stok Uyarıları';
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
+  if (!getResendConfig().apiKey) {
     logger.warn('RESEND_API_KEY not set, skipping alert email');
     return;
   }
-  const from = process.env.RESEND_FROM || 'Flowventory <onboarding@resend.dev>';
 
   const items = alerts
     .map(
@@ -60,12 +60,9 @@ export async function sendAlertEmail(
       </p>
     </div>`;
 
-  const resend = new Resend(apiKey);
-  const { error } = await resend.emails.send({
-    from,
+  await sendViaResend({
     to,
-    subject: `Flowventory: ${alerts.length} ${options.heading ? 'kural uyarısı' : 'stok uyarısı'}`,
+    subject: options.subject ?? `Flowventory: ${alerts.length} stok uyarısı`,
     html,
   });
-  if (error) throw new Error(`Resend error: ${error.message}`);
 }

@@ -1,5 +1,8 @@
-import { Resend } from 'resend';
+import { sendViaResend } from '@/lib/email/resend';
 import type { PurchaseReportVendor } from '@/lib/reports/purchase-report';
+
+// Geriye dönük import yolu: hata sınıfı artık lib/email/resend'de yaşar.
+export { EmailNotConfiguredError } from '@/lib/email/resend';
 
 /**
  * Tedarikçiye satın alma siparişi e-postası (Resend).
@@ -10,13 +13,6 @@ import type { PurchaseReportVendor } from '@/lib/reports/purchase-report';
  * (onboarding@resend.dev), Resend yalnızca hesap sahibinin adresine teslim
  * eder; gerçek tedarikçi gönderimi doğrulanmış domain ister.
  */
-
-export class EmailNotConfiguredError extends Error {
-  constructor() {
-    super('RESEND_API_KEY is not set');
-    this.name = 'EmailNotConfiguredError';
-  }
-}
 
 function escapeHtml(value: string): string {
   return value
@@ -31,10 +27,6 @@ export async function sendVendorOrderEmail(
   vendor: PurchaseReportVendor,
   currencyCode: string,
 ): Promise<void> {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) throw new EmailNotConfiguredError();
-  const from = process.env.RESEND_FROM || 'Flowventory <onboarding@resend.dev>';
-
   const price = new Intl.NumberFormat('tr-TR', { style: 'currency', currency: currencyCode });
 
   const cell = 'padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:13px;color:#212121';
@@ -76,12 +68,9 @@ export async function sendVendorOrderEmail(
       <p style="font-size:12px;color:#93939f;margin-top:16px">Bu sipariş listesi Flowventory ile oluşturuldu.</p>
     </div>`;
 
-  const resend = new Resend(apiKey);
-  const { error } = await resend.emails.send({
-    from,
+  await sendViaResend({
     to,
     subject: `Satın alma siparişi — ${vendor.vendorName} (${vendor.lines.length} kalem)`,
     html,
   });
-  if (error) throw new Error(`Resend error: ${error.message}`);
 }

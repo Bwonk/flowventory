@@ -3,6 +3,7 @@ import { getUserFromRequest } from '@/lib/auth-helpers';
 import { getMerchantSettings } from '@/lib/merchant-settings';
 import { prisma } from '@/lib/prisma';
 import { buildPurchaseReport } from '@/lib/reports/purchase-report';
+import { ResendSendError } from '@/lib/email/resend-error';
 import { EmailNotConfiguredError, sendVendorOrderEmail } from '@/lib/vendors/purchase-email';
 import { AuthTokenManager } from '@/models/auth-token/manager';
 import { NextRequest, NextResponse } from 'next/server';
@@ -95,6 +96,10 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     if (error instanceof EmailNotConfiguredError) {
       return NextResponse.json({ error: 'E-posta servisi yapılandırılmamış.' }, { status: 503 });
+    }
+    if (error instanceof ResendSendError) {
+      logger.error('Send vendor report rejected', { kind: error.kind, resendName: error.resendName, statusCode: error.statusCode });
+      return NextResponse.json({ error: error.userMessage }, { status: 502 });
     }
     logger.error('Send vendor report error', { error });
     return NextResponse.json({ error: 'Gönderilemedi' }, { status: 500 });

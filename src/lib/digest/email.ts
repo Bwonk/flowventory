@@ -1,6 +1,5 @@
-import { Resend } from 'resend';
+import { sendViaResend } from '@/lib/email/resend';
 import { formatDateKey, formatMoneyRounded, formatNumber } from '@/lib/format';
-import { EmailNotConfiguredError } from '@/lib/vendors/purchase-email';
 import type { DigestContent } from './compute';
 
 /**
@@ -146,11 +145,5 @@ export function renderDigestEmail(
 }
 
 export async function sendDigestEmail(to: string, email: { subject: string; html: string }): Promise<void> {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) throw new EmailNotConfiguredError();
-  const from = process.env.RESEND_FROM || 'Flowventory <onboarding@resend.dev>';
-
-  const resend = new Resend(apiKey);
-  const { error } = await resend.emails.send({ from, to, subject: email.subject, html: email.html });
-  if (error) throw new Error(`Resend error: ${error.message}`);
+  await sendViaResend({ to, subject: email.subject, html: email.html });
 }

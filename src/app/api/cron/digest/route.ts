@@ -1,10 +1,12 @@
 import { isCronAuthorized } from '@/lib/cron-auth';
 import { runDueDigests } from '@/lib/digest/run';
 import { logger } from '@/lib/logger';
-import { EmailNotConfiguredError } from '@/lib/vendors/purchase-email';
+import { EmailNotConfiguredError } from '@/lib/email/resend';
 import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
+/** Merchant başına sync + gönderim; Hobby üst sınırı. */
+export const maxDuration = 60;
 
 /**
  * GET|POST /api/cron/digest

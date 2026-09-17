@@ -4,6 +4,8 @@ import { logger } from '@/lib/logger';
 import { runTrackingRulesForAllMerchants } from '@/lib/rules/run';
 
 export const dynamic = 'force-dynamic';
+/** Merchant başına sync + değerlendirme; Hobby üst sınırı. */
+export const maxDuration = 60;
 
 /**
  * GET|POST /api/cron/rules

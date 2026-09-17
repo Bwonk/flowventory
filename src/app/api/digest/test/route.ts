@@ -4,10 +4,14 @@ import { sendDigestEmail } from '@/lib/digest/email';
 import { logger } from '@/lib/logger';
 import { getMerchantSettings } from '@/lib/merchant-settings';
 import { checkRateLimit } from '@/lib/rate-limit';
-import { EmailNotConfiguredError } from '@/lib/vendors/purchase-email';
+import { EmailNotConfiguredError } from '@/lib/email/resend';
+import { ResendSendError } from '@/lib/email/resend-error';
 import { AuthTokenManager } from '@/models/auth-token/manager';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+
+/** İstek içinde tam ikas sync'i tetikleyebilir; Hobby üst sınırı. */
+export const maxDuration = 60;
 
 const bodySchema = z.object({ frequency: z.enum(['daily', 'weekly']) });
 
@@ -54,6 +58,11 @@ export async function POST(request: NextRequest) {
     }
     if (error instanceof DigestNoDataError) {
       return NextResponse.json({ error: 'Henüz senkronize edilmiş ürün yok.' }, { status: 422 });
+    }
+    if (error instanceof ResendSendError) {
+      // Resend reddetti (geçersiz anahtar, doğrulanmamış domain, kota…): env sorunu, kod değil.
+      logger.error('Digest test send rejected', { kind: error.kind, resendName: error.resendName, statusCode: error.statusCode });
+      return NextResponse.json({ error: error.userMessage }, { status: 502 });
     }
     logger.error('Digest test send error', { error });
     return NextResponse.json({ error: 'Gönderilemedi' }, { status: 500 });

@@ -1,3 +1,4 @@
+import { resendErrorKind } from '@/lib/email/resend-error';
 import { logger } from '@/lib/logger';
 import { getMerchantSettings } from '@/lib/merchant-settings';
 import { prisma } from '@/lib/prisma';
@@ -127,7 +128,7 @@ export async function evaluateAlerts(merchantId: string): Promise<number> {
       logger.info('Alerts created', { merchantId, count: created.length });
       if (settings.emailNotifications && settings.notificationEmail) {
         await sendAlertEmail(settings.notificationEmail, created).catch(error => {
-          logger.error('Alert email failed', { merchantId, error });
+          logger.error('Alert email failed', { merchantId, kind: resendErrorKind(error), error });
         });
       }
     }

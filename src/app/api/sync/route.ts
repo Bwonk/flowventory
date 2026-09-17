@@ -4,6 +4,9 @@ import { runFullSync } from '@/lib/sync/ikas-sync';
 import { AuthTokenManager } from '@/models/auth-token/manager';
 import { NextRequest, NextResponse } from 'next/server';
 
+/** Tam ikas sync'i; Hobby üst sınırı. */
+export const maxDuration = 60;
+
 export type SyncApiResponse = {
   productCount: number;
   salesDayCount: number;
