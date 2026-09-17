@@ -1,6 +1,9 @@
 # Kurallar v3 — Aksiyon odaklı, aşamalı workflow
 
-> Durum: **plan** (17 Eyl 2026). Uygulamaya yeni bir sohbette başlanacak.
+> Durum: **uygulandı** (17 Eyl 2026, §8 adım 1–7 ayrı commit'ler; deploy edilmedi). K1/K2/K4/K5 önerilen seçeneklerle onaylandı.
+> Plandan sapmalar: `TrackingRuleState.soldOnStageDay` eklendi (tetik günü öncesi satış düşülür); `email_vendor` (v3.1) eklenmedi;
+> "Geri al" önceki mutlak değeri değil kuralın eklediği farkı geri alır (`POST /api/rules/:id/events/:eventId/undo`);
+> stok onayı gövdede `stockWriteConsent` (saklanmaz); "ayarla" modu stoğu azaltmaz.
 > Önceki turlar: v1 (Ayarlar'da tek koşullu dialog, 16 Eyl) → v2 (ayrı Kurallar sayfası, tip/alan menüsü,
 > düz VE/VEYA, tek kanal, 17 Eyl — commit `0f2fb82`, `bb455f3`, `1ac908b`). v2 yayında:
 > https://flowventory-khaki.vercel.app (ikas panelinden açılır).

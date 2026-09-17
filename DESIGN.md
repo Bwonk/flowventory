@@ -309,14 +309,30 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   (balon DOM'a basılmaz). Emsal: rapor başlığı, stok onay popover'ı, Stok Yolu başlığı.
 - **Akış kartları (workflow):** kural oluşturucu
   ([src/app/dashboard/kurallar/_components/builder/](src/app/dashboard/kurallar/_components/builder/))
-  dikey bir zincirdir: tetikleyici → bağlaç → koşul kartları → sonuç. Kartlar
-  olağan hairline kart (`rounded-lg border border-hairline bg-card p-4`);
-  aralarında `w-px h-4 bg-hairline` bağlantı çizgisi ve bağlaç rozeti
-  (`Badge variant="outline"`, mono uppercase "VE"/"VEYA"). Yeni bağımlılık
-  yok (xyflow/kanvas değil); sürükleme yok, sıra ekleme sırasıdır. Ekle
-  butonu kesikli hairline kart; kart giriş/çıkışı `AnimatePresence` +
-  `layout`, 200ms easeOut, `useReducedMotion`'da anlık. Sol meta panel +
-  sağ kanvas `lg:grid-cols-[320px_1fr]`, mobilde tek kolon.
+  **tek kolon** dikey zincirdir (`mx-auto max-w-3xl`, sol panel yok):
+  tetikleyici kartı → aşama blokları → "+ Aşama ekle" → çalışma ayarları →
+  önizleme cümlesi. Kartlar olağan hairline kart
+  (`rounded-lg border border-hairline bg-card p-4`); aralarında
+  `w-px h-4 bg-hairline` bağlantı çizgisi. Aşamalar arası rozet "SONRA"
+  (`Badge variant="outline"`, mono uppercase); tek aşamada "AŞAMA n" başlığı
+  gizli. Koşullar arası bağlaç **tıklanabilir rozet** (`ConnectorToggle`:
+  Badge görünümlü buton, VE ⇄ VEYA); VE önce bağlandığı için birden fazla
+  koşullu VE zinciri ince `rounded-lg border border-hairline p-2` küme
+  çerçevesiyle sarılır, kümeler arası VEYA. Koşullardan sonra "→" rozeti ve
+  **aksiyon kartları** (tip seçici + girdiler); dışarı yazan aksiyonda
+  (stok) kart içinde `bg-muted` uyarı satırı, ilk kayıtta onay dialogu.
+  Tetikleyici kartı kapsamı cümle olarak gösterir, "Değiştir" kart içinde
+  açılır. Çalışma ayarları ayrı yüzey değil `bg-muted rounded-lg` satır.
+  Yeni bağımlılık yok (xyflow/kanvas değil); sürükleme yok, sıra ekleme
+  sırasıdır. Ekle butonları kesikli hairline kart; kart giriş/çıkışı
+  `AnimatePresence` + `layout`, 200ms easeOut, `useReducedMotion`'da anlık.
+  Geçmiş başlıkta "Geçmiş" butonu → sağ `Sheet`.
+- **Satır içi başlık (`EditableTitle`):**
+  [src/components/shared/EditableTitle.tsx](src/components/shared/EditableTitle.tsx),
+  `PageHeader.titleSlot` ile. h1 tipografisi aynen kalır; hover/odakta sağda
+  soluk kalem (`opacity-0 group-hover:opacity-100`); tıkla → aynı
+  tipografide input (`ring-1 ring-hairline`), Enter/blur kaydeder, Esc geri
+  alır; boşken placeholder `text-muted-foreground`. Ayrı "ad" alanı açma.
 - **Sidebar onboarding kartı:**
   [src/components/layout/OnboardingCard.tsx](src/components/layout/OnboardingCard.tsx);
   beyaz sidebar yüzeyi üzerinde ikinci seviye `bg-muted` zemin — çerçevesiz,

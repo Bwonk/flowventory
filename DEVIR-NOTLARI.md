@@ -147,6 +147,21 @@ dev branch'ine bağlanmak yeterli. Şema değişikliğinde: `pnpm prisma migrate
 - [ ] Sil → tetik geçmişi cascade; Ayarlar'daki "Kuralları yönet" linki
 - [ ] Deploy notu: migration eski kuralları dönüştürür (`emailEnabled` → kanal e-posta, zile düşmez)
 
+### P) Kurallar v3 — aksiyon odaklı, aşamalı workflow (17 Eyl 2026 — tarayıcıda test edilmedi)
+Plan: `docs/plans/kurallar-v3-aksiyon-workflow.md` (K1 VE önceliği, K2 hedef başına aşama durumu, K4 varyant düzeyi stok yazımı, K5 tam emniyet — kullanıcı onayladı).
+- [ ] **Deploy/migration:** Vercel build logunda `20260917160000_rule_workflow` uygulandı; sonra `SELECT id, "workflowJson" FROM "TrackingRule"` — v2 kuralı tek aşama (`op` = eski bağlaç, aksiyon = eski kanal). Dönüşüm SELECT'i canlıdaki tek v2 kuralında salt okunur denendi (17 Eyl), DB'ye uygulanmadı
+- [ ] Liste: "Aksiyonlar" kolonu ikon + "Bildirim · Stok +5"; eski kural satırı açılıyor
+- [ ] "Yeni kural ekle" → Boş kural / 3 şablon; bildirim adresi yoksa "Hızlı eriyen ürün" pasif
+- [ ] Başlık: hover'da kalem; tıkla → input; Enter ve blur kaydeder, Esc geri alır; boş ad → "Adsız kural" + kayıtta "Kural adı gerekli"
+- [ ] Tetikleyici kartı: "Değiştir" → kapsam/hedef/birim; stok aksiyonu eklenince birim "Varyant"a kilitleniyor
+- [ ] Bağlaçlar: rozete tıklayınca VE ⇄ VEYA; VE zinciri çerçeveli küme; önizleme cümlesi "A ve B ya da C"
+- [ ] Koşul seçici grup başlıklı (Stok Takibi / Satın Alma / Analiz); aşama 2'de en üstte "Önceki aşamadan beri"
+- [ ] İki aşamalı kural (şablon "Hızlı eriyen ürün"): ikas'ta stoğu 10 düşür → senkron → zilde bildirim (başlıkta "aşama 1"); 3 daha düşür → senkron → e-posta; Geçmiş'te iki satır, aşama no; aşama 1 koşulu bozulunca (24s penceresi geçince) akış başa dönüyor
+- [ ] `auto-restock` şablonu: kayıtta onay dialogu; stok 10 altına in → senkron → **ikas admin'de ilk depoda +5**, zilde "stoğu X → Y yaptı"; aynı gün ikinci senkronda yazım yok (günlük sınır, Geçmiş'te ✕ "Günlük üst sınır doldu" ya da cooldown); Geçmiş → "Geri al" → ikas'ta −5 (arada satış olduysa korunur), satır "Geri alındı", tekrar geri alınamıyor
+- [ ] Cron bağlamında (token `getMerchantAuthToken`) stok aksiyonu çalışıyor; token yoksa Geçmiş'te ✕ "auth token yok", bildirim yine geliyor
+- [ ] Kural düzenle + kaydet → aşama durumu sıfırlanır (`TrackingRuleState` satırı silinir)
+- [ ] Uninstall webhook'u `TrackingRuleState`'i de temizliyor
+
 ### K) Regresyon
 - [ ] Stok Takibi sayfası: filtreler, deep link'ler (`?filter=tukendi`, `?view=dead`, `?product=...`)
 - [ ] Ürün modal'ı: chart periyotları (24s/7g/30g/1y/özel), varyant seçince "Görüntülenme" gizlenmesi
