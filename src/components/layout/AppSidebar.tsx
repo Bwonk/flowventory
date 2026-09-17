@@ -6,6 +6,7 @@ import { Store } from 'lucide-react';
 import { BrandLogo } from '@/components/shared/BrandLogo';
 import { NotificationBell } from './NotificationBell';
 import { OnboardingCard } from './OnboardingCard';
+import { AdjustmentsHorizontalIcon } from '@/components/ui/icons/adjustments-horizontal';
 import { ClipboardDocumentListIcon } from '@/components/ui/icons/clipboard-document-list';
 import { Cog6ToothIcon } from '@/components/ui/icons/cog-6-tooth';
 import { CubeIcon } from '@/components/ui/icons/cube';
@@ -40,6 +41,7 @@ const NAV_ITEMS: ReadonlyArray<NavItem> = [
   { label: 'Stok Takibi', href: '/dashboard/stok', icon: CubeIcon },
   { label: 'Satın Alma', href: '/dashboard/rapor', icon: ClipboardDocumentListIcon },
   { label: 'Analiz', href: '/dashboard/analiz', icon: PresentationChartLineIcon },
+  { label: 'Kurallar', href: '/dashboard/kurallar', icon: AdjustmentsHorizontalIcon },
   { label: 'Ayarlar', href: '/dashboard/ayarlar', icon: Cog6ToothIcon },
 ];
 
