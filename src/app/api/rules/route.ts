@@ -3,6 +3,7 @@ import { getUserFromRequest } from '@/lib/auth-helpers';
 import { logger } from '@/lib/logger';
 import { getMerchantSettings } from '@/lib/merchant-settings';
 import { prisma } from '@/lib/prisma';
+import { hasActionType } from '@/lib/rules/actions-catalog';
 import { ruleInputSchema } from '@/lib/rules/schema';
 import { MAX_RULES_PER_MERCHANT, ruleDataFromInput, toRuleItem, type TrackingRuleItem } from '@/lib/rules/serialize';
 
@@ -38,10 +39,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: parsed.error.issues[0]?.message ?? 'Geçersiz istek gövdesi' }, { status: 400 });
     }
 
-    if (parsed.data.channel === 'email') {
+    if (hasActionType(parsed.data.workflow, 'email')) {
       const { notificationEmail } = await getMerchantSettings(user.merchantId);
       if (!notificationEmail) {
-        return NextResponse.json({ error: 'E-posta kuralı için önce bildirim adresi kaydedin.' }, { status: 422 });
+        return NextResponse.json({ error: 'E-posta aksiyonu için önce bildirim adresi kaydedin.' }, { status: 422 });
       }
     }
 

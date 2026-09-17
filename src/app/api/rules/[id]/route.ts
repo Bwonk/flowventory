@@ -4,6 +4,7 @@ import { getUserFromRequest } from '@/lib/auth-helpers';
 import { logger } from '@/lib/logger';
 import { getMerchantSettings } from '@/lib/merchant-settings';
 import { prisma } from '@/lib/prisma';
+import { hasActionType } from '@/lib/rules/actions-catalog';
 import { ruleInputSchema } from '@/lib/rules/schema';
 import { ruleDataFromInput, toEventItem, toRuleItem, type RuleEventItem, type TrackingRuleItem } from '@/lib/rules/serialize';
 
@@ -48,6 +49,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     const body: unknown = await request.json().catch(() => null);
     const toggle = toggleSchema.safeParse(body);
     let data: Record<string, unknown>;
+    let workflowChanged = false;
     if (toggle.success) {
       data = toggle.data;
     } else {
@@ -55,18 +57,22 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       if (!parsed.success) {
         return NextResponse.json({ error: parsed.error.issues[0]?.message ?? 'Geçersiz istek gövdesi' }, { status: 400 });
       }
-      if (parsed.data.channel === 'email') {
+      if (hasActionType(parsed.data.workflow, 'email')) {
         const { notificationEmail } = await getMerchantSettings(user.merchantId);
         if (!notificationEmail) {
-          return NextResponse.json({ error: 'E-posta kuralı için önce bildirim adresi kaydedin.' }, { status: 422 });
+          return NextResponse.json({ error: 'E-posta aksiyonu için önce bildirim adresi kaydedin.' }, { status: 422 });
         }
       }
       data = ruleDataFromInput(parsed.data);
+      workflowChanged = true;
     }
 
     // Sahiplik: id başka merchant'a aitse count 0 → 404 (var/yok sızdırmaz).
     const { count } = await prisma.trackingRule.updateMany({ where: { id, merchantId: user.merchantId }, data });
     if (count === 0) return NextResponse.json({ error: 'Kural bulunamadı' }, { status: 404 });
+
+    // Tam güncellemede aşamalar değişmiş olabilir: aşama ilerlemesi baştan başlar.
+    if (workflowChanged) await prisma.trackingRuleState.deleteMany({ where: { ruleId: id, merchantId: user.merchantId } });
 
     const row = await prisma.trackingRule.findUnique({ where: { id } });
     if (!row) return NextResponse.json({ error: 'Kural bulunamadı' }, { status: 404 });
@@ -77,7 +83,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
   }
 }
 
-/** DELETE /api/rules/:id — tetik geçmişi cascade ile silinir. */
+/** DELETE /api/rules/:id — tetik geçmişi ve aşama durumları cascade ile silinir. */
 export async function DELETE(request: NextRequest, context: RouteContext) {
   try {
     const user = getUserFromRequest(request);
