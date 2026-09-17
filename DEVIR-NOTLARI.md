@@ -133,6 +133,20 @@ dev branch'ine bağlanmak yeterli. Şema değişikliğinde: `pnpm prisma migrate
 - [ ] Ürün/tedarikçi seçicide arama çalışıyor; tedarikçisiz mağazada "Tedarikçi atanmış ürün yok"
 - [ ] Cron: `curl -fsS -X POST -H "Authorization: Bearer $CRON_SECRET" localhost:3000/api/cron/rules` → `{ data: { merchants, evaluated, created, failed } }`; yanlış anahtar 401, CRON_SECRET boş 503
 
+### O) Bilgi balonu, e-posta hatası, Kurallar sayfası (17 Eyl 2026 — tarayıcıda test edilmedi)
+- [ ] **Resend (kullanıcı adımı, kod dışı):** Resend → API Keys → `flowventory-prod` (Sending access, domain `yigitlabs.com`) → Vercel Production env `RESEND_API_KEY` + `RESEND_FROM = Flowventory <bildirim@yigitlabs.com>` → redeploy. Prod loglarındaki kök sebep: `Resend error: API key is invalid` (16 Eyl).
+- [ ] Ayarlar → "Örnek özet gönder": başarı; yanlış anahtarla artık 500 "Gönderilemedi" değil 502 + "API anahtarı geçersiz…" mesajı; Vercel loglarında `Digest test send rejected` + `kind`
+- [ ] Ürün modal'ı → stok onay popover'ında "~N gün idare eder" yanında "i": balon popover'ın üstünde açılıyor, popover kapanmıyor, Onayla/Vazgeç çalışıyor; satışsız üründe ikon yok; Stok Yolu başlığı ve rapor başlığı "i" regresyonsuz; Tab ile odak → balon
+- [ ] Sidebar "Kurallar" → liste; boş durumda "İlk kuralı oluştur" menüyü açıyor
+- [ ] "Yeni kural ekle" → Bildirim ▸ (Stok / Satın Alma / Analiz), E-posta ▸ … (adres yoksa pasif) → 6 kombinasyon oluşturucuya gidiyor
+- [ ] Oluşturucu: koşul ekle/sil (en fazla 5), VE/VEYA önizleme cümlesi, alan dışı metrik listelenmiyor, yüzde eşiği 1–100, kanal e-posta adres yoksa seçilemiyor, Kaydet → listede satır
+- [ ] Düzenleme (`/dashboard/kurallar/[id]`): eski (migration'dan gelen) kural tek koşulla yükleniyor; "Son tetiklenmeler" bölümü
+- [ ] E-posta kanallı kural: sync sonrası zilde YOK, listede "son tetik" dolu, `[id]` geçmişinde satır, Resend'de mail
+- [ ] Bildirim kanallı kural: zilde `Radar` ikonlu satır; aynı ürün cooldown içinde tekrar tetiklenmiyor
+- [ ] Analiz alanı: ABC / aksiyon koşulu olan kural tetikleniyor (ürün cirosuna göre); satın alma alanı: yeniden sipariş noktası koşulu
+- [ ] Sil → tetik geçmişi cascade; Ayarlar'daki "Kuralları yönet" linki
+- [ ] Deploy notu: migration eski kuralları dönüştürür (`emailEnabled` → kanal e-posta, zile düşmez)
+
 ### K) Regresyon
 - [ ] Stok Takibi sayfası: filtreler, deep link'ler (`?filter=tukendi`, `?view=dead`, `?product=...`)
 - [ ] Ürün modal'ı: chart periyotları (24s/7g/30g/1y/özel), varyant seçince "Görüntülenme" gizlenmesi
@@ -183,7 +197,8 @@ dev branch'ine bağlanmak yeterli. Şema değişikliğinde: `pnpm prisma migrate
 **Tamamlananlar:**
 - ~~Stok değişikliğinde onay~~ → StockEditor popover onayı + toast "Geri Al" (16 Eyl 2026); optimistic liste güncellemesi (`applyVariantStockChange`)
 - ~~Ürün modal'ı metrik kartları~~ → 30G şerit + **Stok Yolu** grafiği (`src/lib/stock-history/`, `GET /api/stock-history`); kuram: uyarı yerine "kaç gün idare eder"
-- ~~Alarm & bildirim (kural tabanlı)~~ → `TrackingRule` + `src/lib/rules/` (5 metrik, kayan pencere, ürün/tedarikçi kapsamı), Ayarlar'da bölüm, `GET|POST /api/cron/rules` + `rules-cron.yml`
+- ~~Alarm & bildirim (kural tabanlı)~~ → v2 (17 Eyl 2026): ayrı **Kurallar** sayfası (`src/app/dashboard/kurallar/`), tip (Bildirim/E-posta) + alan (Stok/Satın Alma/Analiz) menüsü, akış kartlı VE/VEYA oluşturucu; `src/lib/rules/catalog.ts` 13 metrik tek kaynak; `TrackingRuleEvent` tetik geçmişi; `GET|POST /api/cron/rules` + `rules-cron.yml`
+- ~~E-posta hata sınıflandırması~~ → `src/lib/email/` (sendViaResend, ResendSendError kind); digest test / tedarikçi gönderimi 502 + anlaşılır mesaj
 - ~~Zamanlanmış özet raporu~~ → Ayarlar'da Kapalı/Günlük/Haftalık + gün/saat; `src/lib/digest/` (zamanlama, içerik, e-posta, orkestrasyon) + `GET|POST /api/cron/digest` (CRON_SECRET) + `POST /api/digest/test` (örnek gönderim). Harici zamanlayıcının saatte bir çağırması gerekir — bkz. üretim öncesi.
 - ~~Sell-through / stok devir hızı metriği~~ → Analiz sayfası + `src/lib/reports/sell-through.ts`
 
