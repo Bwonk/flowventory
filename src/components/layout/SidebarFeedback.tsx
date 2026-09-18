@@ -33,8 +33,15 @@ const PANEL_HEIGHT = 168;
 const SIDEBAR_TRANSITION_MS = 400;
 const SUCCESS_HOLD_MS = 2500;
 const EMPTY_HINT_MS = 2500;
-/** Panelin çıkış animasyonunun (spring 350/35) görsel olarak oturma süresi. */
-const PANEL_CLOSE_MS = 350;
+/**
+ * Kapanış eğrisi — sidebar'ın kendi genişlik geçişiyle birebir aynı
+ * (bkz. animate-ui sidebar: `duration-400 ease-[cubic-bezier(0.7,-0.15,0.25,1.15)]`).
+ * BAŞLARKEN kartı sidebar'la birlikte bu eğriyle "zıplayarak" açılıyor; panel
+ * de aynı hisle kapansın diye: önce hafif geri çekilir, sonunda hedefi biraz aşar.
+ */
+const PANEL_CLOSE_MS = 400;
+const BOUNCY_CLOSE = { duration: PANEL_CLOSE_MS / 1000, ease: [0.7, -0.15, 0.25, 1.15] as const };
+const OPEN_SPRING = { type: 'spring' as const, stiffness: 350, damping: 35 };
 
 /**
  * Sidebar footer'ında "Geri Bildirim" satırı — Bildirimler'in hemen altında,
@@ -149,10 +156,11 @@ export function SidebarFeedback() {
       className="relative"
       initial={false}
       animate={{ height: open ? PANEL_HEIGHT : TRIGGER_HEIGHT }}
-      transition={reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 350, damping: 35 }}
+      transition={reduceMotion ? { duration: 0 } : open ? OPEN_SPRING : BOUNCY_CLOSE}
     >
       <PopoverForm
         className="h-full"
+        closeTransition={BOUNCY_CLOSE}
         title="Geri Bildirim"
         open={open}
         setOpen={handleOpenChange}

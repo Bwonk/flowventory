@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, type ReactNode, type RefObject } from 'react';
 import { ChevronUp, Loader } from 'lucide-react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { AnimatePresence, motion, useReducedMotion, type Transition } from 'motion/react';
 import { CheckIcon, type CheckIconHandle } from '@/components/ui/icons/check';
 import { cn } from '@/lib/utils';
 
@@ -39,6 +39,12 @@ type PopoverFormProps = {
   triggerClassName?: string;
   /** Panelin konumu — ör. yukarı açılmak için `absolute bottom-0 left-0`. */
   panelClassName?: string;
+  /**
+   * Kapanış morph'unun geçişi (panel → tetikleyici). Shared-layout'ta kapanışı
+   * geride kalan eleman, yani tetikleyici sürer; bu yüzden onun `transition`'ına
+   * bağlanır. Verilmezse açılışla aynı spring.
+   */
+  closeTransition?: Transition;
 };
 
 export function PopoverForm({
@@ -55,6 +61,7 @@ export function PopoverForm({
   className,
   triggerClassName,
   panelClassName,
+  closeTransition,
 }: PopoverFormProps) {
   const ref = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -65,6 +72,7 @@ export function PopoverForm({
   useClickOutside([ref, triggerRef], () => setOpen(false));
 
   const layoutTransition = reduceMotion ? { duration: 0 } : SPRING;
+  const triggerTransition = reduceMotion ? { duration: 0 } : (closeTransition ?? SPRING);
 
   return (
     <div key={title} className={cn('relative', className)}>
@@ -72,7 +80,7 @@ export function PopoverForm({
         ref={triggerRef}
         type="button"
         layoutId={`${title}-wrapper`}
-        transition={layoutTransition}
+        transition={triggerTransition}
         onClick={() => setOpen(true)}
         aria-haspopup="dialog"
         aria-expanded={open}
