@@ -13,6 +13,7 @@ import {
   PopoverFormSeparator,
   PopoverFormSuccess,
 } from '@/components/ui/popover-form';
+import { AlertTip } from '@/components/shared/AlertTip';
 import { ShimmerButton } from '@/components/ui/shimmer-button';
 import { EnvelopeIcon } from '@/components/ui/icons/envelope';
 import { useIconHover } from '@/components/ui/icons/use-icon-hover';
@@ -30,6 +31,7 @@ const PANEL_HEIGHT = 168;
 /** Sidebar'ın kendi genişlik geçişi (bkz. sidebar primitive: duration-400). */
 const SIDEBAR_TRANSITION_MS = 400;
 const SUCCESS_HOLD_MS = 2500;
+const EMPTY_HINT_MS = 2500;
 
 /**
  * Sidebar footer'ında "Geri Bildirim" satırı — Bildirimler'in hemen altında,
@@ -43,6 +45,9 @@ export function SidebarFeedback() {
   const [open, setOpen] = useState(false);
   const [formState, setFormState] = useState<FormState>('idle');
   const [message, setMessage] = useState('');
+  // Boş gönderim uyarısı — tarayıcının yerel `required` balonu yerine AlertTip.
+  const [emptyHint, setEmptyHint] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const pathname = usePathname();
   const { state, setOpen: setSidebarOpen } = useSidebar();
   const { ref: iconRef, hoverProps } = useIconHover();
@@ -82,7 +87,12 @@ export function SidebarFeedback() {
 
   const submit = useCallback(async () => {
     const trimmed = message.trim();
-    if (!trimmed) return;
+    if (!trimmed) {
+      setEmptyHint(true);
+      textareaRef.current?.focus();
+      schedule(() => setEmptyHint(false), EMPTY_HINT_MS);
+      return;
+    }
 
     setFormState('loading');
     try {
@@ -167,12 +177,15 @@ export function SidebarFeedback() {
             }}
           >
             <textarea
+              ref={textareaRef}
               autoFocus
-              required
               maxLength={MAX_LENGTH}
               placeholder="Neyi daha iyi yapabiliriz?"
               value={message}
-              onChange={event => setMessage(event.target.value)}
+              onChange={event => {
+                setMessage(event.target.value);
+                if (emptyHint) setEmptyHint(false);
+              }}
               aria-label="Geri bildirim mesajı"
               className="block min-h-0 w-full flex-1 resize-none rounded-t-lg bg-card p-3 text-sm text-foreground outline-none placeholder:text-muted-foreground"
             />
@@ -186,18 +199,20 @@ export function SidebarFeedback() {
               </div>
               {/* Yarıçap varsayılanı `var(--radius-md)` — paneldeki diğer
                   kontrollerle (rounded-md) aynı değer. */}
-              <ShimmerButton
-                type="submit"
-                disabled={formState !== 'idle'}
-                shimmerDuration="2.5s"
-                className="ml-auto h-6 px-3 py-0 text-xs font-medium"
-              >
-                {formState === 'loading' ? (
-                  <Loader className="size-3 animate-spin" aria-hidden />
-                ) : (
-                  'Gönder'
-                )}
-              </ShimmerButton>
+              <AlertTip open={emptyHint} text="Önce bir şeyler yaz." side="top" className="ml-auto">
+                <ShimmerButton
+                  type="submit"
+                  disabled={formState !== 'idle'}
+                  shimmerDuration="2.5s"
+                  className="h-6 px-3 py-0 text-xs font-medium"
+                >
+                  {formState === 'loading' ? (
+                    <Loader className="size-3 animate-spin" aria-hidden />
+                  ) : (
+                    'Gönder'
+                  )}
+                </ShimmerButton>
+              </AlertTip>
             </div>
           </form>
         }
