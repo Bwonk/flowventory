@@ -93,7 +93,9 @@ export function PopoverForm({
         {/* Başlık span'i bilinçli olarak `layoutId` taşımıyor: panelde eşi
             yok. Motion, layoutId'li elemanı geçiş sırasında yukarı kaldırdığı
             için panelin içinde formun üstüne binip hayalet yazı üretiyordu. */}
-        <span>{triggerChildren ?? title}</span>
+        {/* `min-w-0`: flex çocuğu içerik genişliğinde kalmasın — dar kapta
+            içerideki `truncate` ancak böyle devreye girer. */}
+        <span className="min-w-0">{triggerChildren ?? title}</span>
       </motion.button>
 
       <AnimatePresence>

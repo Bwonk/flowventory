@@ -168,9 +168,9 @@ export function SidebarFeedback() {
         width="100%"
         height={`${PANEL_HEIGHT}px`}
         panelClassName="bottom-0 left-0 z-50"
-        triggerClassName="relative h-9 w-full rounded-lg border-0 bg-transparent px-3 text-sm font-normal text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
+        triggerClassName="relative h-9 w-full overflow-hidden rounded-lg border-0 bg-transparent px-3 text-sm font-normal text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
         triggerChildren={
-          <span className="flex items-center" {...hoverProps}>
+          <span className="flex min-w-0 items-center" {...hoverProps}>
             <EnvelopeIcon
               ref={iconRef}
               size={16}
