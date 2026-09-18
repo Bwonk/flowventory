@@ -82,9 +82,10 @@ export function PopoverForm({
           triggerClassName,
         )}
       >
-        <motion.span layoutId={`${title}-title`} transition={layoutTransition}>
-          {triggerChildren ?? title}
-        </motion.span>
+        {/* Başlık span'i bilinçli olarak `layoutId` taşımıyor: panelde eşi
+            yok. Motion, layoutId'li elemanı geçiş sırasında yukarı kaldırdığı
+            için panelin içinde formun üstüne binip hayalet yazı üretiyordu. */}
+        <span>{triggerChildren ?? title}</span>
       </motion.button>
 
       <AnimatePresence>
@@ -101,19 +102,6 @@ export function PopoverForm({
             ref={ref}
             style={{ borderRadius: 10, width, height }}
           >
-            {/* Panelde düz `title` — `triggerChildren` içindeki ref'li ikon
-                iki kez mount olsa tek ref'i iki eleman paylaşırdı. Morph
-                sırasında zaten formun altında kalır. */}
-            <motion.span
-              aria-hidden
-              className="absolute left-4 top-[17px] text-sm text-muted-foreground data-[success=true]:text-transparent"
-              layoutId={`${title}-title`}
-              transition={layoutTransition}
-              data-success={showSuccess}
-            >
-              {title}
-            </motion.span>
-
             {showCloseButton && (
               <div className="absolute -top-[5px] left-1/2 z-20 flex h-[26px] w-[12px] -translate-x-1/2 transform items-center justify-center">
                 <button

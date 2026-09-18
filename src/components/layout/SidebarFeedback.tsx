@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
+import { motion, useReducedMotion } from 'motion/react';
 import { toast } from 'sonner';
 import { useSidebar } from '@/components/animate-ui/components/radix/sidebar';
 import {
@@ -22,6 +23,9 @@ import { logger } from '@/lib/logger';
 type FormState = 'idle' | 'loading' | 'success';
 
 const MAX_LENGTH = 2000;
+/** Kapalı yükseklik (tetikleyici satırı, h-9) ve açık panel yüksekliği. */
+const TRIGGER_HEIGHT = 36;
+const PANEL_HEIGHT = 168;
 /** Sidebar'ın kendi genişlik geçişi (bkz. sidebar primitive: duration-400). */
 const SIDEBAR_TRANSITION_MS = 400;
 const SUCCESS_HOLD_MS = 2500;
@@ -41,6 +45,7 @@ export function SidebarFeedback() {
   const pathname = usePathname();
   const { state, setOpen: setSidebarOpen } = useSidebar();
   const { ref: iconRef, hoverProps } = useIconHover();
+  const reduceMotion = useReducedMotion();
 
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   useEffect(() => {
@@ -111,59 +116,73 @@ export function SidebarFeedback() {
   }, [open]);
 
   return (
-    <PopoverForm
-      title="Geri Bildirim"
-      open={open}
-      setOpen={handleOpenChange}
-      showSuccess={formState === 'success'}
-      width="100%"
-      height="168px"
-      panelClassName="bottom-0 left-0 z-50"
-      triggerClassName="relative h-9 w-full rounded-lg border-0 bg-transparent px-3 text-sm font-normal text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
-      triggerChildren={
-        <span className="flex items-center" {...hoverProps}>
-          <EnvelopeIcon
-            ref={iconRef}
-            size={16}
-            className="mr-3 flex shrink-0 group-data-[collapsible=icon]:mr-0"
-            aria-hidden
-          />
-          <span className="truncate group-data-[collapsible=icon]:hidden">Geri Bildirim</span>
-        </span>
-      }
-      openChild={
-        <form
-          onSubmit={event => {
-            event.preventDefault();
-            if (formState !== 'idle') return;
-            submit();
-          }}
-        >
-          <textarea
-            autoFocus
-            required
-            maxLength={MAX_LENGTH}
-            placeholder="Neyi daha iyi yapabiliriz?"
-            value={message}
-            onChange={event => setMessage(event.target.value)}
-            aria-label="Geri bildirim mesajı"
-            className="h-28 w-full resize-none rounded-t-lg bg-card p-3 text-sm text-foreground outline-none placeholder:text-muted-foreground"
-          />
-          <div className="relative flex h-12 items-center px-[10px]">
-            <PopoverFormSeparator />
-            <div className="absolute left-0 top-0 -translate-x-[1.5px] -translate-y-1/2">
-              <PopoverFormCutOutLeftIcon />
+    /*
+     * Açılınca panel kadar yer kaplar; SidebarContent `flex-1` olduğu için
+     * footer büyüdükçe üst kenarı yukarı kayar ve OnboardingCard panelin
+     * altında kalmak yerine yukarı itilir. Onboarding tamamlanmışsa kart
+     * zaten render edilmiyor (OnboardingCard `return null`), davranış aynı.
+     */
+    <motion.div
+      className="relative"
+      initial={false}
+      animate={{ height: open ? PANEL_HEIGHT : TRIGGER_HEIGHT }}
+      transition={reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 350, damping: 35 }}
+    >
+      <PopoverForm
+        className="h-full"
+        title="Geri Bildirim"
+        open={open}
+        setOpen={handleOpenChange}
+        showSuccess={formState === 'success'}
+        width="100%"
+        height={`${PANEL_HEIGHT}px`}
+        panelClassName="bottom-0 left-0 z-50"
+        triggerClassName="relative h-9 w-full rounded-lg border-0 bg-transparent px-3 text-sm font-normal text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
+        triggerChildren={
+          <span className="flex items-center" {...hoverProps}>
+            <EnvelopeIcon
+              ref={iconRef}
+              size={16}
+              className="mr-3 flex shrink-0 group-data-[collapsible=icon]:mr-0"
+              aria-hidden
+            />
+            <span className="truncate group-data-[collapsible=icon]:hidden">Geri Bildirim</span>
+          </span>
+        }
+        openChild={
+          <form
+            onSubmit={event => {
+              event.preventDefault();
+              if (formState !== 'idle') return;
+              submit();
+            }}
+          >
+            <textarea
+              autoFocus
+              required
+              maxLength={MAX_LENGTH}
+              placeholder="Neyi daha iyi yapabiliriz?"
+              value={message}
+              onChange={event => setMessage(event.target.value)}
+              aria-label="Geri bildirim mesajı"
+              className="h-28 w-full resize-none rounded-t-lg bg-card p-3 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+            />
+            <div className="relative flex h-12 items-center px-[10px]">
+              <PopoverFormSeparator />
+              <div className="absolute left-0 top-0 -translate-x-[1.5px] -translate-y-1/2">
+                <PopoverFormCutOutLeftIcon />
+              </div>
+              <div className="absolute right-0 top-0 translate-x-[1.5px] -translate-y-1/2 rotate-180">
+                <PopoverFormCutOutRightIcon />
+              </div>
+              <PopoverFormButton loading={formState === 'loading'} text="Gönder" />
             </div>
-            <div className="absolute right-0 top-0 translate-x-[1.5px] -translate-y-1/2 rotate-180">
-              <PopoverFormCutOutRightIcon />
-            </div>
-            <PopoverFormButton loading={formState === 'loading'} text="Gönder" />
-          </div>
-        </form>
-      }
-      successChild={
-        <PopoverFormSuccess title="Teşekkürler" description="Geri bildirimin bize ulaştı." />
-      }
-    />
+          </form>
+        }
+        successChild={
+          <PopoverFormSuccess title="Teşekkürler" description="Geri bildirimin bize ulaştı." />
+        }
+      />
+    </motion.div>
   );
 }
