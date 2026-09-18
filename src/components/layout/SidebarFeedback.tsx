@@ -14,6 +14,7 @@ import {
   PopoverFormSuccess,
 } from '@/components/ui/popover-form';
 import { AlertTip } from '@/components/shared/AlertTip';
+import { useSidebarCollapseGuard } from './sidebar-collapse-guard';
 import { ShimmerButton } from '@/components/ui/shimmer-button';
 import { EnvelopeIcon } from '@/components/ui/icons/envelope';
 import { useIconHover } from '@/components/ui/icons/use-icon-hover';
@@ -32,6 +33,8 @@ const PANEL_HEIGHT = 168;
 const SIDEBAR_TRANSITION_MS = 400;
 const SUCCESS_HOLD_MS = 2500;
 const EMPTY_HINT_MS = 2500;
+/** Panelin çıkış animasyonunun (spring 350/35) görsel olarak oturma süresi. */
+const PANEL_CLOSE_MS = 350;
 
 /**
  * Sidebar footer'ında "Geri Bildirim" satırı — Bildirimler'in hemen altında,
@@ -84,6 +87,15 @@ export function SidebarFeedback() {
     },
     [state, setSidebarOpen, schedule, formState],
   );
+
+  // Sidebar daralmadan önce panel kendi animasyonuyla kapansın; yoksa genişliği
+  // sidebar'a bağlı olduğu için daralmayla birlikte ezilerek kayboluyordu.
+  useSidebarCollapseGuard(() => {
+    if (!open) return 0;
+    setEmptyHint(false);
+    setOpen(false);
+    return PANEL_CLOSE_MS;
+  });
 
   const submit = useCallback(async () => {
     const trimmed = message.trim();
