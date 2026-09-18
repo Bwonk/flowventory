@@ -151,7 +151,15 @@ export function SidebarFeedback() {
           </span>
         }
         openChild={
+          /*
+           * `h-full` + flex: textarea kalan yeri doldurur, aksiyon satırı tam
+           * dibe oturur. Sabit `h-28` ile panelin kenarlık payı yüzünden 2px
+           * taşıyordu; ayrıca textarea inline-block olduğu için satır kutusunda
+           * ~7px baseline boşluğu bırakıp satırı aşağı itiyordu. Flex çocuğu
+           * blok seviyesine geçtiği için o boşluk da ortadan kalkar.
+           */
           <form
+            className="flex h-full flex-col"
             onSubmit={event => {
               event.preventDefault();
               if (formState !== 'idle') return;
@@ -166,9 +174,9 @@ export function SidebarFeedback() {
               value={message}
               onChange={event => setMessage(event.target.value)}
               aria-label="Geri bildirim mesajı"
-              className="h-28 w-full resize-none rounded-t-lg bg-card p-3 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+              className="block min-h-0 w-full flex-1 resize-none rounded-t-lg bg-card p-3 text-sm text-foreground outline-none placeholder:text-muted-foreground"
             />
-            <div className="relative flex h-12 items-center px-[10px]">
+            <div className="relative flex h-12 shrink-0 items-center px-[10px]">
               <PopoverFormSeparator />
               <div className="absolute left-0 top-0 -translate-x-[1.5px] -translate-y-1/2">
                 <PopoverFormCutOutLeftIcon />
