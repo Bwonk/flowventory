@@ -8,7 +8,8 @@ import { cn } from '@/lib/utils';
 
 /**
  * cult-ui "popover-form" (https://cult-ui.com/docs/components/popover-form) —
- * küçük bir tetikleyiciden panele shared-layout morph ile açılan form.
+ * küçük bir tetikleyiciden panele büyüyerek açılan form. (Upstream bunu
+ * shared-layout morph ile yapar; burada açık yükseklik animasyonu — aşağıda.)
  *
  * Kaynak dosya upstream'den alındı, sonra DESIGN.md sözleşmesine çevrildi:
  * arbitrary hex ve `dark:` varyantları `bg-card`/token'lara, mavi gradient
@@ -39,12 +40,14 @@ type PopoverFormProps = {
   triggerClassName?: string;
   /** Panelin konumu — ör. yukarı açılmak için `absolute bottom-0 left-0`. */
   panelClassName?: string;
-  /**
-   * Kapanış morph'unun geçişi (panel → tetikleyici). Shared-layout'ta kapanışı
-   * geride kalan eleman, yani tetikleyici sürer; bu yüzden onun `transition`'ına
-   * bağlanır. Verilmezse açılışla aynı spring.
-   */
+  /** Kapanışta panel yüksekliğinin geçişi. Verilmezse açılışla aynı spring. */
   closeTransition?: Transition;
+  /**
+   * Panelin açılırken çıktığı / kapanırken çöktüğü yükseklik (px) — tetikleyici
+   * satırının yüksekliği. Panel alt kenarından sabitse (`bottom-0`) kapanış
+   * aşağı doğru akar ve satırın tam üstünde biter.
+   */
+  collapsedHeight?: number;
 };
 
 export function PopoverForm({
@@ -62,6 +65,7 @@ export function PopoverForm({
   triggerClassName,
   panelClassName,
   closeTransition,
+  collapsedHeight = 36,
 }: PopoverFormProps) {
   const ref = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -72,37 +76,60 @@ export function PopoverForm({
   useClickOutside([ref, triggerRef], () => setOpen(false));
 
   const layoutTransition = reduceMotion ? { duration: 0 } : SPRING;
-  const triggerTransition = reduceMotion ? { duration: 0 } : (closeTransition ?? SPRING);
+
+  // Kapanış: yükseklik `closeTransition` ile çöker; panel, sürenin son
+  // bölümünde şeffaflaşıp altındaki tetikleyici satırını ortaya çıkarır.
+  const closeHeight: Transition = closeTransition ?? SPRING;
+  const closeDuration = typeof closeHeight.duration === 'number' ? closeHeight.duration : 0.3;
+  const FADE = 0.16;
+  const panelHidden = reduceMotion ? { opacity: 0 } : { height: collapsedHeight, opacity: 0 };
 
   return (
     <div key={title} className={cn('relative', className)}>
-      <motion.button
+      {/*
+        Upstream'deki shared-layout (`layoutId`) morph'u bilinçli olarak yok:
+        kapanışta geride kalan tetikleyici, panelin kutusundan kendi kutusuna
+        ölçeklenerek dönüyor (yazı esniyor), panel içeriği ise tek karede
+        kayboluyordu. Yerine açık yükseklik animasyonu var — panel satırdan
+        büyür, satıra çöker; tetikleyici hiç dönüşmez, panel solunca altından
+        olduğu gibi çıkar.
+      */}
+      <button
         ref={triggerRef}
         type="button"
-        layoutId={`${title}-wrapper`}
-        transition={triggerTransition}
         onClick={() => setOpen(true)}
         aria-haspopup="dialog"
         aria-expanded={open}
-        style={{ borderRadius: 8 }}
         className={cn(
-          'flex h-9 items-center border border-hairline bg-card px-3 text-sm font-medium outline-none',
+          'flex h-9 items-center rounded-lg border border-hairline bg-card px-3 text-sm font-medium outline-none',
           triggerClassName,
         )}
       >
-        {/* Başlık span'i bilinçli olarak `layoutId` taşımıyor: panelde eşi
-            yok. Motion, layoutId'li elemanı geçiş sırasında yukarı kaldırdığı
-            için panelin içinde formun üstüne binip hayalet yazı üretiyordu. */}
         {/* `min-w-0`: flex çocuğu içerik genişliğinde kalmasın — dar kapta
             içerideki `truncate` ancak böyle devreye girer. */}
         <span className="min-w-0">{triggerChildren ?? title}</span>
-      </motion.button>
+      </button>
 
       <AnimatePresence>
         {open && (
           <motion.div
-            layoutId={`${title}-wrapper`}
-            transition={layoutTransition}
+            initial={panelHidden}
+            animate={
+              reduceMotion
+                ? { opacity: 1 }
+                : { height, opacity: 1, transition: { height: SPRING, opacity: { duration: 0.12 } } }
+            }
+            exit={
+              reduceMotion
+                ? { opacity: 0 }
+                : {
+                    ...panelHidden,
+                    transition: {
+                      height: closeHeight,
+                      opacity: { duration: FADE, delay: Math.max(0, closeDuration - FADE) },
+                    },
+                  }
+            }
             role="dialog"
             aria-label={title}
             className={cn(
@@ -110,7 +137,8 @@ export function PopoverForm({
               panelClassName,
             )}
             ref={ref}
-            style={{ borderRadius: 10, width, height }}
+            // Yüksekliği motion sürer; statik stil yalnız reduced-motion'da gerekir.
+            style={{ borderRadius: 10, width, ...(reduceMotion ? { height } : null) }}
           >
             {showCloseButton && (
               <div className="absolute -top-[5px] left-1/2 z-20 flex h-[26px] w-[12px] -translate-x-1/2 transform items-center justify-center">
@@ -133,6 +161,7 @@ export function PopoverForm({
                   key="success"
                   initial={reduceMotion ? { opacity: 0 } : { y: -32, opacity: 0, filter: 'blur(4px)' }}
                   animate={reduceMotion ? { opacity: 1 } : { y: 0, opacity: 1, filter: 'blur(0px)' }}
+                  exit={reduceMotion ? { opacity: 0 } : { y: 16, opacity: 0, filter: 'blur(4px)' }}
                   transition={layoutTransition}
                   className="flex h-full flex-col items-center justify-center"
                 >
@@ -141,7 +170,7 @@ export function PopoverForm({
               ) : (
                 <motion.div
                   key="open-child"
-                  exit={reduceMotion ? { opacity: 0 } : { y: 8, opacity: 0, filter: 'blur(4px)' }}
+                  exit={reduceMotion ? { opacity: 0 } : { y: 16, opacity: 0, filter: 'blur(4px)' }}
                   transition={layoutTransition}
                   style={{ borderRadius: 10 }}
                   className="z-20 h-full border border-hairline bg-card"

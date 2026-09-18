@@ -42,6 +42,11 @@ const EMPTY_HINT_MS = 2500;
 const PANEL_CLOSE_MS = 400;
 const BOUNCY_CLOSE = { duration: PANEL_CLOSE_MS / 1000, ease: [0.7, -0.15, 0.25, 1.15] as const };
 const OPEN_SPRING = { type: 'spring' as const, stiffness: 350, damping: 35 };
+/**
+ * Sidebar'ın daralmadan önce bekleyeceği süre: kapanış + panelin DOM'dan
+ * kalkması için bir-iki karelik pay (ölçüm: animasyon 400ms, kalkış ~450ms).
+ */
+const COLLAPSE_WAIT_MS = PANEL_CLOSE_MS + 60;
 
 /**
  * Sidebar footer'ında "Geri Bildirim" satırı — Bildirimler'in hemen altında,
@@ -101,7 +106,7 @@ export function SidebarFeedback() {
     if (!open) return 0;
     setEmptyHint(false);
     setOpen(false);
-    return PANEL_CLOSE_MS;
+    return COLLAPSE_WAIT_MS;
   });
 
   const submit = useCallback(async () => {
@@ -159,8 +164,11 @@ export function SidebarFeedback() {
       transition={reduceMotion ? { duration: 0 } : open ? OPEN_SPRING : BOUNCY_CLOSE}
     >
       <PopoverForm
-        className="h-full"
+        // Tetikleyici sarmalayıcının dibine sabit: alt kenar kapanışta yerinde
+        // kaldığı için panel tam satırın üstüne çöker ve solunca satır çıkar.
+        className="flex h-full flex-col justify-end"
         closeTransition={BOUNCY_CLOSE}
+        collapsedHeight={TRIGGER_HEIGHT}
         title="Geri Bildirim"
         open={open}
         setOpen={handleOpenChange}

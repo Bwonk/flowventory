@@ -359,9 +359,10 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   onboarding kartının slayt geçişinde
   ([src/components/layout/OnboardingCard.tsx](src/components/layout/OnboardingCard.tsx)),
   `motion/swipeable-list` sürükleme jestinde (repodaki tek `drag` kullanımı) ve
-  `PopoverForm`'un shared-layout morph'unda
+  `PopoverForm`'un büyüme/çökme geçişinde
   ([src/components/ui/popover-form.tsx](src/components/ui/popover-form.tsx) —
-  repodaki tek `layoutId` kullanımı, sidebar geri bildirim paneli);
+  sidebar geri bildirim paneli: satırdan yukarı büyür, kapanışta aşağı çöküp
+  satıra solar; upstream'deki `layoutId` morph'u yazıyı ölçeklediği için yok);
   ikisi bilinçli olarak birlikte yaşar — yeni animasyon için önce mevcut
   utility'ye bak.
 - **Slayt (carousel) motifi** — onboarding kartı emsaldir: yön farkındalıklı
