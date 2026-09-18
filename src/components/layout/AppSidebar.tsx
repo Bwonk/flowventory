@@ -6,6 +6,7 @@ import { Store } from 'lucide-react';
 import { BrandLogo } from '@/components/shared/BrandLogo';
 import { NotificationBell } from './NotificationBell';
 import { OnboardingCard } from './OnboardingCard';
+import { SidebarFeedback } from './SidebarFeedback';
 import { AdjustmentsHorizontalIcon } from '@/components/ui/icons/adjustments-horizontal';
 import { ClipboardDocumentListIcon } from '@/components/ui/icons/clipboard-document-list';
 import { Cog6ToothIcon } from '@/components/ui/icons/cog-6-tooth';
@@ -104,6 +105,7 @@ export function AppSidebar({ storeName }: AppSidebarProps) {
       <SidebarFooter className="border-t border-sidebar-border">
         <OnboardingCard />
         <NotificationBell />
+        <SidebarFeedback />
         <div className="flex items-center gap-2 overflow-hidden px-2 pb-1">
           <Store className="size-4 shrink-0 text-muted-foreground" />
           <span

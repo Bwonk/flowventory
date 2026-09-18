@@ -24,6 +24,7 @@ import { VendorsApiResponse, VendorListItem, DeleteVendorApiResponse } from '../
 import { SendVendorReportApiResponse } from '../app/api/vendors/send-report/route';
 import { SyncApiResponse } from '../app/api/sync/route';
 import { DigestTestApiResponse } from '../app/api/digest/test/route';
+import { FeedbackApiResponse } from '../app/api/feedback/route';
 
 export async function makePostRequest<T>({ url, data, token }: { url: string; data?: Record<string, unknown>; token?: string }) {
   return axios.post<ApiResponseType<T>>(url, data, {
@@ -187,6 +188,11 @@ export const ApiRequests = {
   digest: {
     sendTest: (token: string, input: { frequency: 'daily' | 'weekly' }) =>
       makePostRequest<DigestTestApiResponse>({ url: '/api/digest/test', token, data: input }),
+  },
+  feedback: {
+    /** Sidebar geri bildirim paneli — mesajı e-postaya çevirir, kayıt tutmaz. */
+    send: (token: string, input: { message: string; path?: string }) =>
+      makePostRequest<FeedbackApiResponse>({ url: '/api/feedback', token, data: input }),
   },
   merchantSettings: {
     get: (token: string) =>

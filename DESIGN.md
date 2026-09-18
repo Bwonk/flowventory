@@ -357,8 +357,11 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   (dialog, popover, sheet). `motion` yalnızca animate-ui bileşenlerinde,
   `src/components/ui/icons/` altındaki animasyonlu ikonlarda ve sidebar
   onboarding kartının slayt geçişinde
-  ([src/components/layout/OnboardingCard.tsx](src/components/layout/OnboardingCard.tsx))
-  ve `motion/swipeable-list` sürükleme jestinde (repodaki tek `drag` kullanımı);
+  ([src/components/layout/OnboardingCard.tsx](src/components/layout/OnboardingCard.tsx)),
+  `motion/swipeable-list` sürükleme jestinde (repodaki tek `drag` kullanımı) ve
+  `PopoverForm`'un shared-layout morph'unda
+  ([src/components/ui/popover-form.tsx](src/components/ui/popover-form.tsx) —
+  repodaki tek `layoutId` kullanımı, sidebar geri bildirim paneli);
   ikisi bilinçli olarak birlikte yaşar — yeni animasyon için önce mevcut
   utility'ye bak.
 - **Slayt (carousel) motifi** — onboarding kartı emsaldir: yön farkındalıklı
