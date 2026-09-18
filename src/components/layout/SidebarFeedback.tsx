@@ -5,14 +5,15 @@ import { usePathname } from 'next/navigation';
 import { motion, useReducedMotion } from 'motion/react';
 import { toast } from 'sonner';
 import { useSidebar } from '@/components/animate-ui/components/radix/sidebar';
+import { Loader } from 'lucide-react';
 import {
   PopoverForm,
-  PopoverFormButton,
   PopoverFormCutOutLeftIcon,
   PopoverFormCutOutRightIcon,
   PopoverFormSeparator,
   PopoverFormSuccess,
 } from '@/components/ui/popover-form';
+import { ShimmerButton } from '@/components/ui/shimmer-button';
 import { EnvelopeIcon } from '@/components/ui/icons/envelope';
 import { useIconHover } from '@/components/ui/icons/use-icon-hover';
 import { TokenHelpers } from '@/helpers/token-helpers';
@@ -175,7 +176,20 @@ export function SidebarFeedback() {
               <div className="absolute right-0 top-0 translate-x-[1.5px] -translate-y-1/2 rotate-180">
                 <PopoverFormCutOutRightIcon />
               </div>
-              <PopoverFormButton loading={formState === 'loading'} text="Gönder" />
+              {/* Yarıçap varsayılanı `var(--radius-md)` — paneldeki diğer
+                  kontrollerle (rounded-md) aynı değer. */}
+              <ShimmerButton
+                type="submit"
+                disabled={formState !== 'idle'}
+                shimmerDuration="2.5s"
+                className="ml-auto h-6 px-3 py-0 text-xs font-medium"
+              >
+                {formState === 'loading' ? (
+                  <Loader className="size-3 animate-spin" aria-hidden />
+                ) : (
+                  'Gönder'
+                )}
+              </ShimmerButton>
             </div>
           </form>
         }
