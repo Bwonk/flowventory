@@ -199,7 +199,7 @@ export function SidebarFeedback() {
               </div>
               {/* Yarıçap varsayılanı `var(--radius-md)` — paneldeki diğer
                   kontrollerle (rounded-md) aynı değer. */}
-              <AlertTip open={emptyHint} text="Önce bir şeyler yaz." side="top" className="ml-auto">
+              <AlertTip open={emptyHint} text="Önce bir şey yaz." side="left" className="ml-auto">
                 <ShimmerButton
                   type="submit"
                   disabled={formState !== 'idle'}
