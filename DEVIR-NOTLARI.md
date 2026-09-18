@@ -32,6 +32,7 @@ pnpm install
 | `MERCHANT_TIMEZONE` | `Europe/Istanbul` (opsiyonel, varsayılan bu) |
 | `RESEND_API_KEY` / `RESEND_FROM` | Opsiyonel — e-posta alarmı / özet raporu istenirse resend.com'dan |
 | `CRON_SECRET` | Opsiyonel — zamanlanmış özet raporu için (`openssl rand -hex 32`); boşsa `/api/cron/digest` kapalı (503) |
+| `FEEDBACK_TO_EMAIL` | Opsiyonel — sidebar geri bildirim panelinin hedef adresi; boşsa `/api/feedback` kapalı (503). Gönderim `RESEND_API_KEY` üzerinden |
 
 ```bash
 pnpm prisma migrate deploy  # Neon dev branch'ine migration'ları uygular (zaten güncelse no-op)
@@ -225,7 +226,9 @@ Plan: `docs/plans/kurallar-v3-aksiyon-workflow.md` (K1 VE önceliği, K2 hedef b
 - [ ] `CRON_SECRET` (production için ayrı) üret → Vercel env + GitHub repo secret `CRON_SECRET`; repo variable `APP_URL`. Tetikleyici `.github/workflows/digest-cron.yml` (saatte bir) — Vercel Hobby cron'u günde bir kez çalışabildiği için GitHub Actions
 - [ ] Kural cron'u: `.github/workflows/rules-cron.yml` digest ile aynı `CRON_SECRET` + `APP_URL`'i kullanır — ayrı kurulum gerekmez; deploy sonrası `workflow_dispatch` ile bir kez elle tetikle
 - [ ] Vercel env production değerleriyle; `SECRET_COOKIE_PASSWORD` yenile. Neon'u Vercel Marketplace'ten bağla (`DATABASE_URL*` otomatik); bölge Frankfurt (`vercel.json` → `fra1`)
-- [ ] ikas Partner paneli: uygulama + redirect URL'i production domain'ine çek → yeniden yetkilendir → takip scriptini yeniden kur
+- [x] ikas Partner paneli: kurulum + yönlendirme adresi production domain'inde (`https://flowventory-khaki.vercel.app`, callback `/api/oauth/callback/ikas`) — canlı authorize çıktısıyla birebir eşleştiği doğrulandı 18 Eyl 2026
+- [ ] Panel güncellendikten sonra: uygulamayı yeniden yetkilendir → takip scriptini yeniden kur
+- [ ] `FEEDBACK_TO_EMAIL` Vercel env'e (sidebar geri bildirim paneli); değişken eklendikten sonra redeploy şart — Vercel env'leri build'e bağlanır
 - [ ] Deploy sonrası: takip scripti kurulumu (`tracker.js` fonksiyon paketinde mi — `next.config.js` `outputFileTracingIncludes`), örnek özet, cron `workflow_dispatch` ile elle tetikle
 
 ---
