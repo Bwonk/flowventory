@@ -1,17 +1,15 @@
 'use client';
 
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ExclamationTriangleIcon } from '@/components/ui/icons/exclamation-triangle';
-import { TrashIcon } from '@/components/ui/icons/trash';
 import { useIconHover } from '@/components/ui/icons/use-icon-hover';
 import { Dropdown, OptionButton } from '@/components/shared/filters/Dropdown';
 import { SegmentedTrack } from '@/components/shared/tool-track';
 import { ACTION_CATALOG, STOCK_MODE_LABELS } from '@/lib/rules/actions-catalog';
 import { MAX_STOCK, MAX_STOCK_STEP, RULE_ACTION_TYPES, STOCK_ADJUST_MODES, type RuleAction, type RuleActionType } from '@/lib/rules/types';
 import { ActionIcon } from '../ActionIcon';
-import { CARD, Eyebrow } from './flow-primitives';
+import { CARD, Eyebrow, RemoveButton } from './flow-primitives';
 
 const MODE_OPTIONS = STOCK_ADJUST_MODES.map(m => ({ value: m, label: STOCK_MODE_LABELS[m] }));
 
@@ -33,7 +31,6 @@ interface ActionCardProps {
  */
 export function ActionCard({ index, action, usedTypes, removable, notificationEmail, onSetType, onChange, onRemove }: ActionCardProps) {
   const def = ACTION_CATALOG[action.type];
-  const trash = useIconHover();
   const typeIcon = useIconHover();
   const warning = useIconHover();
   const choices = RULE_ACTION_TYPES.filter(t => t === action.type || !usedTypes.includes(t));
@@ -43,16 +40,7 @@ export function ActionCard({ index, action, usedTypes, removable, notificationEm
       <div className="flex items-start justify-between gap-3">
         <Eyebrow>Aksiyon {index + 1}</Eyebrow>
         {removable && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="-mr-2 -mt-2 size-7 text-muted-foreground hover:text-destructive"
-            aria-label={`Aksiyon ${index + 1} kaldır`}
-            onClick={onRemove}
-            {...trash.hoverProps}
-          >
-            <TrashIcon ref={trash.ref} size={14} className="flex shrink-0 [&>svg]:size-3.5!" aria-hidden />
-          </Button>
+          <RemoveButton label={`Aksiyon ${index + 1} kaldır`} tip="Aksiyonu kaldır" onClick={onRemove} className="-mr-2 -mt-2" />
         )}
       </div>
 

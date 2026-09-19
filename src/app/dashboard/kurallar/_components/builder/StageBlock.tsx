@@ -2,9 +2,7 @@
 
 import { Fragment } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { Button } from '@/components/ui/button';
 import { PlusIcon } from '@/components/ui/icons/plus';
-import { TrashIcon } from '@/components/ui/icons/trash';
 import { useIconHover } from '@/components/ui/icons/use-icon-hover';
 import { GooPopover, GooPopoverContent, GooPopoverTrigger } from '@/components/motion/goo-popover';
 import { GooMenuItem } from '@/components/motion/goo-popover/menu';
@@ -25,7 +23,7 @@ import { cn } from '@/lib/utils';
 import { ActionIcon } from '../ActionIcon';
 import { ActionCard } from './ActionCard';
 import { ConditionCard, ConnectorToggle } from './ConditionCard';
-import { DASHED_ADD, DashedAddButton, Eyebrow, FlowConnector } from './flow-primitives';
+import { DASHED_ADD, DashedAddButton, Eyebrow, FlowConnector, RemoveButton } from './flow-primitives';
 
 export interface StageHandlers {
   onAddCondition: () => void;
@@ -61,7 +59,6 @@ export function StageBlock({ stage, stageIndex, stageCount, notificationEmail, .
   const addableTypes = RULE_ACTION_TYPES.filter(t => !usedTypes.includes(t));
   const canAddAction = stage.actions.length < MAX_ACTIONS && addableTypes.length > 0;
 
-  const trash = useIconHover();
   const plus = useIconHover();
   const motionProps = {
     layout: !reduceMotion,
@@ -74,19 +71,16 @@ export function StageBlock({ stage, stageIndex, stageCount, notificationEmail, .
   return (
     <section aria-label={`Aşama ${stageIndex + 1}`} className="flex flex-col">
       {stageCount > 1 && (
-        <div className="mb-2 flex items-center justify-between gap-3">
+        // `px-px`: kartların 1px kenarlığı kadar — çöp ikonu alttaki kartlardakiyle aynı dikey hizada.
+        <div className="mb-2 flex items-center justify-between gap-3 px-px">
           <Eyebrow>Aşama {stageIndex + 1}</Eyebrow>
           {stageIndex > 0 && (
-            <Button
-              variant="ghost"
-              size="xs"
-              className="text-muted-foreground hover:text-destructive"
+            <RemoveButton
+              label={`Aşama ${stageIndex + 1} kaldır`}
+              tip="Aşamayı kaldır — koşulları ve aksiyonlarıyla birlikte"
               onClick={h.onRemoveStage}
-              {...trash.hoverProps}
-            >
-              <TrashIcon ref={trash.ref} size={12} className="flex shrink-0 [&>svg]:size-3!" aria-hidden />
-              Aşamayı kaldır
-            </Button>
+              className="-my-1 mr-2"
+            />
           )}
         </div>
       )}

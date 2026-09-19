@@ -361,7 +361,17 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   Tetikleyici kartı kapsamı cümle olarak gösterir, "Değiştir" kart içinde
   açılır. Çalışma ayarları ayrı yüzey değil `bg-muted rounded-lg` satır.
   Yeni bağımlılık yok (xyflow/kanvas değil); sürükleme yok, sıra ekleme
-  sırasıdır. Ekle butonları kesikli hairline kart; kart giriş/çıkışı
+  sırasıdır. **Kaldır tek kalıptır** (`RemoveButton`,
+  [flow-primitives.tsx](src/app/dashboard/kurallar/_components/builder/flow-primitives.tsx)):
+  yalnız hareketli çöp ikonu, 28px ghost buton, dinlenirken muted, üzerine
+  gelince `text-destructive`. "X'i kaldır" yazılı buton yok; ne yapacağını
+  bilgi balonuyla aynı ink balon söyler (solda açılır) ve **sonucu da
+  anlatır**: koşul/aksiyonda "Koşulu kaldır", aşamada "Aşamayı kaldır —
+  koşulları ve aksiyonlarıyla birlikte". Taslakta "kaldır", kalıcı silmede
+  ("Sil" — kural listesi, onay diyaloğu) "sil" denir. Ad `aria-label`'da
+  (balon DOM'a basılmaz). Kaldırılan şeyin başlık satırının sağında durur: kartta
+  `-mr-2 -mt-2`, kutusuz aşama başlığında `mr-2` (+ satırda `px-px`) ile tüm
+  çöp ikonları aynı dikey hizaya oturur. Ekle butonları kesikli hairline kart; kart giriş/çıkışı
   `AnimatePresence` + `layout`, 200ms easeOut, `useReducedMotion`'da anlık.
   Geçmiş başlıkta "Geçmiş" butonu → sağ `Sheet`.
 - **Satır içi başlık (`EditableTitle`):**
