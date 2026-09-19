@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { Input } from '@/components/ui/input';
+import { NumberStepper } from '@/components/shared/NumberStepper';
 import { ExclamationTriangleIcon } from '@/components/ui/icons/exclamation-triangle';
 import { useIconHover } from '@/components/ui/icons/use-icon-hover';
 import { Dropdown, OptionButton } from '@/components/shared/filters/Dropdown';
@@ -81,14 +82,13 @@ export function ActionCard({ index, action, usedTypes, removable, notificationEm
               onChange={mode => onChange({ ...action, mode })}
               aria-label="Stok işlemi"
             />
-            <Input
-              type="number"
+            <NumberStepper
+              size="md"
               min={1}
               max={action.mode === 'increase' ? MAX_STOCK_STEP : MAX_STOCK}
               value={action.amount}
-              aria-label={action.mode === 'increase' ? 'Artış adedi' : 'Hedef stok'}
-              onChange={e => onChange({ ...action, amount: Math.max(0, Math.floor(Number(e.target.value) || 0)) })}
-              className="w-24 tabular-nums"
+              label={action.mode === 'increase' ? 'Artış adedi' : 'Hedef stok'}
+              onChange={amount => onChange({ ...action, amount })}
             />
             <span className="text-sm text-muted-foreground">adet</span>
           </div>

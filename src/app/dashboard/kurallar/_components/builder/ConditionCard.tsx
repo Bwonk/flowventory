@@ -2,6 +2,7 @@
 
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/animate-ui/components/animate/tooltip';
 import { Input } from '@/components/ui/input';
+import { NumberStepper } from '@/components/shared/NumberStepper';
 import { Dropdown, OptionButton } from '@/components/shared/filters/Dropdown';
 import { SegmentedTrack } from '@/components/shared/tool-track';
 import { METRIC_CATALOG, METRICS_BY_DOMAIN, STAGE_METRICS, UNIT_LABELS, type MetricInput } from '@/lib/rules/catalog';
@@ -112,14 +113,13 @@ export function ConditionCard({ stageIndex, index, condition, removable, onSetMe
 
         {input.kind === 'number' && 'threshold' in condition && (
           <div className="flex items-center gap-2">
-            <Input
-              type="number"
+            <NumberStepper
+              size="md"
               min={input.min}
               max={'thresholdUnit' in condition && condition.thresholdUnit === 'percent' ? 100 : input.max}
               value={condition.threshold}
-              aria-label="Eşik"
-              onChange={e => onChange({ ...condition, threshold: Math.max(0, Math.floor(Number(e.target.value) || 0)) })}
-              className="w-24 tabular-nums"
+              label="Eşik"
+              onChange={threshold => onChange({ ...condition, threshold })}
             />
             {condition.metric === 'stock_drop' ? (
               <SegmentedTrack

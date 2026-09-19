@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useStockThreshold, DEFAULT_STOCK_THRESHOLD } from '@/lib/stock-threshold';
 import { Dropdown } from '@/components/shared/filters/Dropdown';
+import { NumberStepper } from '@/components/shared/NumberStepper';
 
 /**
  * Stok eşiği kontrolü: tetikleyici dropdown + geçici (temp) kritik/az kalan girişleri.
@@ -37,31 +38,21 @@ export const ThresholdControl: React.FC = () => {
         <div className="w-72 p-4">
           <p className="mb-3 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">STOK EŞİĞİ</p>
 
-          <label className="mb-1 text-sm font-medium text-primary">Kritik seviye</label>
+          <p className="mb-1 text-sm font-medium text-primary">Kritik seviye</p>
           <p className="mb-2 text-xs text-muted-foreground">Bu adet ve altı → Kritik (kırmızı)</p>
           <div className="mb-3 flex items-center gap-2">
             <span className="text-muted-foreground">{'≤'}</span>
-            <input
-              type="number"
-              value={tempCritical}
-              onChange={e => setTempCritical(e.target.value === '' ? 0 : Number(e.target.value))}
-              className="w-20 rounded-lg border border-border px-3 py-1.5 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-            />
+            <NumberStepper min={0} max={9999} value={tempCritical} label="Kritik seviye" onChange={setTempCritical} />
             <span className="text-xs text-muted-foreground">adet</span>
           </div>
 
           <div className="my-3 border-t border-muted" />
 
-          <label className="mb-1 text-sm font-medium text-primary">Az kalan seviye</label>
+          <p className="mb-1 text-sm font-medium text-primary">Az kalan seviye</p>
           <p className="mb-2 text-xs text-muted-foreground">Bu adet ve altı → Az Kalan (sarı)</p>
           <div className="mb-3 flex items-center gap-2">
             <span className="text-muted-foreground">{'≤'}</span>
-            <input
-              type="number"
-              value={tempWarning}
-              onChange={e => setTempWarning(e.target.value === '' ? 0 : Number(e.target.value))}
-              className="w-20 rounded-lg border border-border px-3 py-1.5 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-            />
+            <NumberStepper min={0} max={9999} value={tempWarning} label="Az kalan seviye" onChange={setTempWarning} />
             <span className="text-xs text-muted-foreground">adet</span>
           </div>
 

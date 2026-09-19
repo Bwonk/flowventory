@@ -7,8 +7,10 @@ import { logger } from '@/lib/logger';
 import { extractErrorMessage } from '@/lib/api-error';
 import { ApiRequests } from '@/lib/api-requests';
 import type { VariantStockLocation } from '@/lib/products/product';
+import { MAX_STOCK } from '@/lib/rules/types';
 import { daysOfCover, VELOCITY_WINDOW_DAYS } from '@/lib/stock-history/projection';
 import { InfoTip } from '@/components/shared/InfoTip';
+import { NumberStepper } from '@/components/shared/NumberStepper';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
@@ -138,22 +140,20 @@ const LocationRow: React.FC<{
       </p>
       {editing ? (
         <>
-          <input
-            type="number"
-            min={0}
-            value={draft}
+          <NumberStepper
             autoFocus
+            min={0}
+            max={MAX_STOCK}
+            value={draft}
+            label={`${label} stok adedi`}
             disabled={saving}
-            aria-label={`${label} stok adedi`}
-            onChange={e => updateDraft(Math.max(0, Math.floor(Number(e.target.value) || 0)))}
-            onKeyDown={e => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                requestConfirm();
-              }
-              if (e.key === 'Escape' && !confirmOpen) stopEditing();
+            onChange={updateDraft}
+            onEnter={next => {
+              if (next !== currentStock && !saving) setConfirmOpen(true);
             }}
-            className="w-20 rounded-md border border-border px-2 py-1 text-sm tabular-nums outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-60"
+            onEscape={() => {
+              if (!confirmOpen) stopEditing();
+            }}
           />
           <Popover open={confirmOpen} onOpenChange={next => !saving && setConfirmOpen(next)}>
             <PopoverTrigger asChild>

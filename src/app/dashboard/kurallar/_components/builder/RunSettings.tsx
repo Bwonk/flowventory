@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { Input } from '@/components/ui/input';
+import { NumberStepper } from '@/components/shared/NumberStepper';
 import { SegmentedTrack } from '@/components/shared/tool-track';
 import { describeCadence } from '@/lib/rules/describe';
 import { MAX_RUNS_PER_DAY_LIMIT, RULE_WINDOWS, WINDOW_LABELS, type RuleWindowHours } from '@/lib/rules/types';
@@ -57,14 +57,12 @@ export function RunSettings({ state, hasStockAction, onPatch }: RunSettingsProps
         {hasStockAction && (
           <Setting label="Günlük stok yazımı üst sınırı" hint="Varyant başına, son 24 saatte.">
             <div className="flex items-center gap-2">
-              <Input
-                type="number"
+              <NumberStepper
                 min={1}
                 max={MAX_RUNS_PER_DAY_LIMIT}
                 value={state.maxRunsPerDay}
-                aria-label="Günlük stok yazımı üst sınırı"
-                onChange={e => onPatch({ maxRunsPerDay: Math.max(0, Math.floor(Number(e.target.value) || 0)) })}
-                className="h-8 w-20 bg-card tabular-nums"
+                label="Günlük stok yazımı üst sınırı"
+                onChange={maxRunsPerDay => onPatch({ maxRunsPerDay })}
               />
               <span className="text-sm text-muted-foreground">kez / gün</span>
             </div>

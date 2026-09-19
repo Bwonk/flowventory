@@ -393,6 +393,18 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   çöp ikonları aynı dikey hizaya oturur. Ekle butonları kesikli hairline kart; kart giriş/çıkışı
   `AnimatePresence` + `layout`, 200ms easeOut, `useReducedMotion`'da anlık.
   Geçmiş başlıkta "Geçmiş" butonu → sağ `Sheet`.
+- **Sayı alanı (`NumberStepper`):**
+  [src/components/shared/NumberStepper.tsx](src/components/shared/NumberStepper.tsx) —
+  uygulamadaki **tek** sayı girişi kalıbı; `<Input type="number">` kullanılmaz
+  (tarayıcı okları platforma göre değişiyor ve animasyonsuzdu). Hairline kutu,
+  −/+ butonları, ortada `AnimatedNumber` (§6 "Sayı geçişi" — yön farkındalıklı
+  kayar). Sayıya tıklayınca yerinde giriş açılır; blur/Enter kaydeder, Esc geri
+  alır, geçersiz giriş önceki değere döner. İki boy: `sm` 24px (liste satırı —
+  sepet), `md` 36px (form alanı, `Input` yüksekliğiyle aynı). Sınırda uç buton
+  pasifleşir; `onRemove` verilirse `min`'in altına inmek satırı kaldırır
+  (sepet). Satır içi düzenlemede `autoFocus` + `onEnter(value)` + `onEscape`
+  (stok düzenleyici); `onEnter` kaydedilen değeri taşır, çünkü `onChange`
+  henüz state'e işlememiştir.
 - **Satır içi başlık (`EditableTitle`):**
   [src/components/shared/EditableTitle.tsx](src/components/shared/EditableTitle.tsx),
   `PageHeader.titleSlot` ile. h1 tipografisi aynen kalır. Tek kabuk iki halde
@@ -494,7 +506,7 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   rozet sayacı) yön farkındalıklı kayar — artışta yeni değer alttan gelir,
   azalışta üstten; giren/çıkan aynı spring 350/35, `popLayout`, ilk
   boyamada ve reduced-motion'da anlık. −/+ kontrolü
-  [src/components/shared/QtyStepper.tsx](src/components/shared/QtyStepper.tsx):
+  [src/components/shared/NumberStepper.tsx](src/components/shared/NumberStepper.tsx):
   sayıya tıklayınca yerinde giriş açılır.
 - Hover/press geçişleri: `transition-colors duration-150`; asla
   `transition-all`. Basma geri bildirimi `active:scale-[0.99]`'u geçmez.

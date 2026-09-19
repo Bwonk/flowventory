@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AnimatedNumber } from '@/components/shared/AnimatedNumber';
 import { RowActions } from '@/components/shared/data-table/RowActions';
-import { QtyStepper } from '@/components/shared/QtyStepper';
+import { NumberStepper } from '@/components/shared/NumberStepper';
 import { ShoppingCartIcon } from '@/components/ui/icons/shopping-cart';
 import { TrashIcon } from '@/components/ui/icons/trash';
 import { useIconHover } from '@/components/ui/icons/use-icon-hover';
@@ -193,11 +193,11 @@ export function BasketSheet({
                             <p className="truncate text-xs text-muted-foreground">{line.variantName}</p>
                           )}
                         </div>
-                        <QtyStepper
-                          qty={qty}
+                        <NumberStepper
+                          value={qty}
                           onChange={next => onLineQtyChange(line.variantId, next)}
                           onRemove={() => onLineQtyChange(line.variantId, null)}
-                          label={line.productName}
+                          label={`${line.productName} adedi`}
                         />
                         <p
                           className="w-14 shrink-0 text-right text-xs font-medium tabular-nums text-foreground"

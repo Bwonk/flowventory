@@ -5,7 +5,7 @@ import { useState, type ReactNode } from 'react';
 import { AdjustmentsHorizontalIcon } from '@/components/ui/icons/adjustments-horizontal';
 import { useIconHover } from '@/components/ui/icons/use-icon-hover';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { NumberStepper } from '@/components/shared/NumberStepper';
 import {
   Popover,
   PopoverContent,
@@ -84,32 +84,28 @@ export function ReportParamsPopover({ leadTimeDays, targetStockDays, onApply, tr
         </PopoverHeader>
         <div className="mt-2 space-y-2.5">
           <div>
-            <label htmlFor="params-lead-time" className="mb-1 block text-xs text-muted-foreground">
+            <p className="mb-1 text-xs text-muted-foreground">
               Tedarik süresi (gün)
-            </label>
-            <Input
-              id="params-lead-time"
-              type="number"
+            </p>
+            <NumberStepper
               min={0}
               max={365}
               value={leadDraft}
-              onChange={e => setLeadDraft(Math.max(0, Number(e.target.value) || 0))}
-              className="h-8 text-sm"
+              label="Tedarik süresi (gün)"
+              onChange={setLeadDraft}
               disabled={saving}
             />
           </div>
           <div>
-            <label htmlFor="params-target-days" className="mb-1 block text-xs text-muted-foreground">
+            <p className="mb-1 text-xs text-muted-foreground">
               Hedef stok (gün)
-            </label>
-            <Input
-              id="params-target-days"
-              type="number"
+            </p>
+            <NumberStepper
               min={1}
               max={365}
               value={targetDraft}
-              onChange={e => setTargetDraft(Math.max(1, Number(e.target.value) || 1))}
-              className="h-8 text-sm"
+              label="Hedef stok (gün)"
+              onChange={setTargetDraft}
               disabled={saving}
             />
           </div>
