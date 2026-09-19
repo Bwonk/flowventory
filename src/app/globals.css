@@ -111,7 +111,7 @@
   /* kontroller */
   --border: #e4e4e7;
   --input: #e4e4e7;
-  --ring: #1863dc; /* accent mavi — tek mavi */
+  --ring: #18181b; /* ink — odak halkası siyah (DESIGN.md §1); mavi yalnız nav/link/grafik */
   /* grafikler — chart-1 accent, kalanlar nötr gri rampası.
      chart-3/4 daha önce --status-healthy/--status-warning ile birebir aynıydı;
      dolu bir yeşil seri "sağlıklı" durum sinyali gibi okunuyordu. Durum rengi
@@ -129,7 +129,7 @@
   --sidebar-accent: #f4f4f5;
   --sidebar-accent-foreground: #18181b;
   --sidebar-border: #e4e4e7;
-  --sidebar-ring: #1863dc;
+  --sidebar-ring: #18181b; /* --ring ile aynı: odak halkası ink */
   /* data-ink çekirdeği */
   --ink: #18181b;
   --hairline: #e4e4e7;
@@ -157,6 +157,10 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+  /* Seçili metin: tarayıcı mavisi yerine nötr ink tonu — odak halkasıyla aynı dil. */
+  ::selection {
+    background-color: color-mix(in srgb, var(--foreground) 15%, transparent);
   }
 }
 

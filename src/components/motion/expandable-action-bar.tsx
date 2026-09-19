@@ -442,7 +442,8 @@ export function ExpandableActionBar({
                 {...item.hoverProps}
                 className={cn(
                   'relative isolate inline-flex h-[30px] min-w-[30px] shrink-0 items-center justify-center overflow-hidden rounded-md px-[9px] text-sm font-medium whitespace-nowrap outline-none transition-[color,background-color] duration-150',
-                  'focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50',
+                  // Halka ink; birincil (ink zeminli) segmentte görünsün diye zeminden 2px ayrılır.
+                  'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-muted disabled:pointer-events-none disabled:opacity-50',
                   VARIANT_CLASS[variant],
                   isHighlighted && 'text-foreground',
                   classNames?.item,

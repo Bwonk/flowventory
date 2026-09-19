@@ -14,8 +14,8 @@ dekor gelmez.
 > (beyaz) + `border border-hairline rounded-lg`, gölge yok. Başlıklar
 > `tracking-tight`, eyebrow'lar `font-mono text-[10px] uppercase
 > tracking-wider text-muted-foreground`. Accent tek: derin mavi (`--primary`
-> değil — `--accent-blue`/`--ring` #1863dc) ve yalnızca aktif nav, link,
-> birincil veri serisi, focus ring'de. Durum sinyalleri sadece
+> değil — `--accent-blue` #1863dc) ve yalnızca aktif nav, link, birincil veri
+> serisinde; odak halkası ve metin seçimi ink (`--ring` #18181b). Durum sinyalleri sadece
 > `--status-healthy/warning/critical` üçlüsünden. Asla: arbitrary hex, ikinci
 > accent, `transition-all`, gölgeli kart yığını.
 
@@ -52,15 +52,24 @@ gelir. **Arbitrary hex yasak**; tek istisna print-only siyah/beyaz düzeltmeleri
 | Birincil metin | `text-foreground` (ink #18181b) |
 | İkincil metin | `text-muted-foreground` (#71717a) |
 | Birincil aksiyon (buton) | `bg-primary` (ink) + `text-primary-foreground` |
-| Accent (tek mavi) | `--accent-blue` #1863dc — `text-accent-blue`, `--ring`, `--chart-1` |
+| Accent (tek mavi) | `--accent-blue` #1863dc — `text-accent-blue`, `--chart-1` |
+| Odak halkası + metin seçimi | `--ring` / `--sidebar-ring` #18181b (ink); seçim `::selection` ink %15 |
 | Hairline ayraç | `border-hairline` (#e4e4e7) |
 | Durum: sağlıklı / uyarı / kritik | `bg-status-healthy` #059669 / `bg-status-warning` #d97706 / `bg-status-critical` #dc2626 |
 | Rozet kritik zemin/metin | `--critical` #fef2f2 / `--critical-foreground` #b91c1c (success/warning/info çiftlerinin dördüncüsü; `bg-destructive/10` türetmesi kaldırıldı) |
 | Yıkıcı aksiyon | `bg-destructive` — yalnız yıkıcı butonlar ve solid sayaç pili (bildirim sayacı) |
 
 **Accent bütçesi: sayfa başına tek mavi ailesi.** Mavi yalnızca: aktif nav
-öğesi, link, birincil grafik serisi, focus ring. Butonlar mavi DEĞİL —
-birincil buton ink (`bg-primary`).
+öğesi, link, birincil grafik serisi. Butonlar mavi DEĞİL — birincil buton ink
+(`bg-primary`).
+
+**Odak halkası ink'tir, mavi değil** (kullanıcı kararı, 19 Eyl 2026 — kural adı
+alanında yan yana denendi): her yerde `focus-visible:ring-2 ring-ring`, 2px
+siyah. Kenarlıklı alanlarda (input, select, takvim) `border-ring` + `ring-1`
+= yine 2px. İnk zeminli olabilen kontrollerde (Button, Switch, araç yolundaki
+birincil segment) halka `ring-offset-2` ile zeminden ayrılır — yoksa siyah
+butonda görünmez. Seçili metnin zemini tarayıcı mavisi değil ink %15
+(`globals.css` `::selection`); bileşene özel `selection:` sınıfı yazılmaz.
 
 **Durum rengi bütçesi:** durum sinyali (dot, bar, badge) yalnızca `--status-*`
 üçlüsünden; başka yeşil/sarı/kırmızı türetilmez.
@@ -501,8 +510,8 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
       genişliği yok
 - [ ] `src/` altında arbitrary hex yok (print istisnası hariç); tüm renkler
       token sınıflarından
-- [ ] Mavi yalnızca aktif nav / link / birincil seri / focus ring'de; buton
-      mavisi yok
+- [ ] Mavi yalnızca aktif nav / link / birincil seride; buton mavisi ve mavi
+      odak halkası yok (halka `ring-ring` = ink)
 - [ ] Durum sinyalleri yalnızca `bg-status-*` / `text-status-*`
 - [ ] Eyebrow ve tablo başlıkları `font-mono uppercase tracking-wider`;
       tüm değişken sayılar `tabular-nums`
