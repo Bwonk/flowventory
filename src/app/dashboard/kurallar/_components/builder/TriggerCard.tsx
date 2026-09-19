@@ -3,7 +3,9 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { BoltIcon } from '@/components/ui/icons/bolt';
+import { PencilIcon } from '@/components/ui/icons/pencil';
 import { useIconHover } from '@/components/ui/icons/use-icon-hover';
+import { XMarkIcon } from '@/components/ui/icons/x-mark';
 import { SegmentedTrack } from '@/components/shared/tool-track';
 import { describeScope } from '@/lib/rules/describe';
 import { GRANULARITY_LABELS, SCOPE_LABELS, type RuleGranularity, type RuleScope } from '@/lib/rules/types';
@@ -38,6 +40,7 @@ interface TriggerCardProps {
 export function TriggerCard({ state, hasStockAction, products, vendors, optionsLoading, onScopeChange, onPatch }: TriggerCardProps) {
   const [open, setOpen] = useState(state.scope !== 'all' && !state.targetId);
   const bolt = useIconHover();
+  const toggle = useIconHover();
   const granularity = hasStockAction ? 'variant' : state.granularity;
   const countHint =
     state.scope === 'all' && !optionsLoading && products.length > 0
@@ -57,13 +60,20 @@ export function TriggerCard({ state, hasStockAction, products, vendors, optionsL
           <p className="mt-1 text-sm text-foreground">{describeScope(state)}</p>
           {countHint && <p className="mt-0.5 text-xs text-muted-foreground">{countHint}</p>}
         </div>
+        {/* İkincil buton (hairline) + ikon: ghost hali düz yazı gibi duruyordu. */}
         <Button
-          variant="ghost"
+          variant="outline"
           size="sm"
-          className="-mr-2 -mt-1 shrink-0"
+          className="shrink-0"
           aria-expanded={open}
           onClick={() => setOpen(o => !o)}
+          {...toggle.hoverProps}
         >
+          {open ? (
+            <XMarkIcon ref={toggle.ref} size={14} className="flex shrink-0 [&>svg]:size-3.5!" aria-hidden />
+          ) : (
+            <PencilIcon ref={toggle.ref} size={14} className="flex shrink-0 [&>svg]:size-3.5!" aria-hidden />
+          )}
           {open ? 'Kapat' : 'Değiştir'}
         </Button>
       </div>
