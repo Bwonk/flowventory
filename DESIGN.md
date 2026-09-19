@@ -197,8 +197,8 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   spring 350/35, üçlü başlık), `onSelectionChange(ids, {added, removed})`.
   Satır aksiyonları bir `actions` kolonunda `RowActions` içinde: yeri hep
   ayrılı (layout kaymaz), satır hover/focus-within'de ve içindeki popover
-  açıkken görünür, dokunmatikte kalıcı; `rowMenu`/`columnMenu` "…" menüleri
-  `DropdownMenu`'dür (yıkıcı öğe `text-destructive`). **Başlıklar sabittir:** kolon
+  açıkken görünür, dokunmatikte kalıcı; `rowMenu`/`columnMenu` "…" menüleri goo
+  panelidir (§5 "Goo açılır panel"; yıkıcı öğe `text-destructive`). **Başlıklar sabittir:** kolon
   genişletme (`resizable`, tutamaç `hover:bg-border` / `active:bg-foreground`)
   ve kolon sırası değiştirme (`reorderable`) bileşende hazır ama hiçbir
   listede açılmaz — kullanıcı
@@ -278,7 +278,9 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   `DropdownMenuItem` ile aynı görünüm, seçince kapanır). Tetikleyici panelden
   genişse (tam genişlikte kesikli "ekle" kartı) morph, hizaya göre panel
   genişliğindeki bir dilimden başlar; `rounded-lg` tetikleyicide
-  `triggerRadius={8}`. Tablo satır/kolon "…" menüleri `DropdownMenu` kalır. Dinlenme hali standart açılır yüzeydir (`rounded-lg` +
+  `triggerRadius={8}`. Tablo satır/kolon "…" menüleri de goo'dur (`TableMenu`);
+  panel portallı olsa da React olayı satıra kabardığı için tetikleyici ve panel
+  satır tıklamasını yutar (`GooPopoverContent onClick`). Dinlenme hali standart açılır yüzeydir (`rounded-lg` +
   `border-hairline` + `bg-popover` + `shadow-md`) — goo yalnız geçiştir:
   oturunca filtre ve clip kapanır. Akarken kontur, gövdenin 1px dışında kalan
   `bg-hairline` goo katmanıdır. Yarıçap 8 (panel) / 6 (tetikleyici), boyun 8px,

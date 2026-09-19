@@ -17,6 +17,7 @@ import {
   createContext,
   isValidElement,
   type KeyboardEvent,
+  type MouseEventHandler,
   type MutableRefObject,
   type PointerEvent,
   type ReactElement,
@@ -380,9 +381,14 @@ export interface GooPopoverContentProps {
   children: ReactNode;
   className?: string;
   'aria-label'?: string;
+  /**
+   * Panel body'ye portallanır ama React olayları ağaçtan yukarı kabarır; panel
+   * tıklanabilir bir atanın (tablo satırı) içindeyse burada durdurulur.
+   */
+  onClick?: MouseEventHandler<HTMLDivElement>;
 }
 
-export function GooPopoverContent({ children, className, 'aria-label': ariaLabel }: GooPopoverContentProps) {
+export function GooPopoverContent({ children, className, 'aria-label': ariaLabel, onClick }: GooPopoverContentProps) {
   const ctx = useGooPopoverContext('GooPopoverContent');
   const {
     side,
@@ -582,6 +588,7 @@ export function GooPopoverContent({ children, className, 'aria-label': ariaLabel
             role="dialog"
             aria-label={ariaLabel}
             tabIndex={-1}
+            onClick={onClick}
             onKeyDown={onKeyDown}
             {...hoverHandlers}
             style={{
