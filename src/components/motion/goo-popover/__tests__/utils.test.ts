@@ -7,6 +7,7 @@ import {
   growRect,
   nextFocusIndex,
   rectAtProgress,
+  resolveAlign,
   resolveShiftX,
   resolveSide,
   triggerCutout,
@@ -154,21 +155,54 @@ describe('resolveSide', () => {
 });
 
 describe('resolveShiftX', () => {
+  const viewport = { left: 0, right: 1200 };
+
   it('sığıyorsa kaydırma yok', () => {
-    expect(resolveShiftX(100, 0, 320, 1200)).toBe(0);
+    expect(resolveShiftX(100, 0, 320, viewport)).toBe(0);
   });
 
   it('sağdan taşan panel içeri çekilir', () => {
-    expect(resolveShiftX(1000, 0, 320, 1200)).toBe(-128);
+    expect(resolveShiftX(1000, 0, 320, viewport)).toBe(-128);
   });
 
   it('soldan taşan panel (end hizası) içeri itilir', () => {
-    expect(resolveShiftX(100, -200, 320, 1200)).toBe(108);
+    expect(resolveShiftX(100, -200, 320, viewport)).toBe(108);
   });
 
-  it('viewport panelden darsa sol kenar kazanır', () => {
-    expect(resolveShiftX(20, 0, 400, 360)).toBe(-12);
+  it('sınır panelden darsa sol kenar kazanır', () => {
+    expect(resolveShiftX(20, 0, 400, { left: 0, right: 360 })).toBe(-12);
   });
+
+  it('sınır sidebar bitiminde başlar: panel sayfa gövdesinde kalır', () => {
+    expect(resolveShiftX(280, -138, 288, { left: 256, right: 1384 })).toBe(122);
+  });
+});
+
+describe('resolveAlign', () => {
+  const page = { left: 256, right: 1384 };
+
+  it('sığıyorsa tercih korunur', () => {
+    expect(resolveAlign('end', 1200, 150, 288, page)).toBe('end');
+    expect(resolveAlign('start', 300, 150, 288, page)).toBe('start');
+  });
+
+  it('sola sarmış butonda end paneli sidebar üstüne taşırır → start', () => {
+    expect(resolveAlign('end', 280, 150, 288, page)).toBe('start');
+  });
+
+  it('sağ kenardaki butonda start taşar → end', () => {
+    expect(resolveAlign('start', 1220, 150, 288, page)).toBe('end');
+  });
+
+  it('center taşarsa taşmayan kenar hizasına geçer', () => {
+    expect(resolveAlign('center', 270, 100, 288, page)).toBe('start');
+  });
+
+  it('hiçbiri sığmıyorsa en az taşıran', () => {
+    // end 176px, start 116px, center 104px taşar.
+    expect(resolveAlign('end', 20, 100, 288, { left: 0, right: 200 })).toBe('center');
+  });
+
 });
 
 describe('arrowNavigatesFrom', () => {

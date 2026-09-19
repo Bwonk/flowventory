@@ -7,7 +7,7 @@
 // kaynakta kenarlık/gölge yoktu ve filtre dinlenirken köşeleri fazla yuvarlıyordu;
 // akarken konturu gövdenin 1px dışında kalan ikinci bg-hairline goo katmanı çizer.
 // Panel yalnız açıkken/kapanırken mount edilir (kaynak hep DOM'da tutuyordu);
-// viewport çarpışması (resolveSide/resolveShiftX), açılışta odağın panele geçmesi,
+// çarpışma (resolveSide/resolveAlign/resolveShiftX — yatay sınır `main`, sidebar'ın üstüne açılmaz), açılışta odağın panele geçmesi,
 // ↑/↓ gezinme, Tab döngüsü ve kapanışta odak iadesi eklendi. Geometri ve karar
 // mantığı utils.ts'te (vitest). Hover modu kaynakla diff'lenebilir kalsın diye korundu.
 
@@ -47,6 +47,7 @@ import {
   contentOpacity,
   type Geo,
   nextFocusIndex,
+  resolveAlign,
   resolveShiftX,
   resolveSide,
   type Side,
@@ -430,6 +431,10 @@ export function GooPopoverContent({ children, className, 'aria-label': ariaLabel
     const triggerH = layout?.trigger.height ?? 0;
     const contentW = layout?.content.width ?? 0;
     const contentH = layout?.content.height ?? 0;
+    // Yatay sınır sayfa gövdesidir (`main`), viewport değil: sidebar'ın üstüne açılmaz.
+    const page = layout ? triggerRef.current?.closest('main')?.getBoundingClientRect() : undefined;
+    const bounds = { left: page?.left ?? 0, right: page?.right ?? (layout ? window.innerWidth : 0) };
+    const resolvedAlign = layout ? resolveAlign(align, layout.trigger.left, triggerW, contentW, bounds) : align;
     return buildGeo({
       triggerW,
       triggerH,
@@ -445,16 +450,16 @@ export function GooPopoverContent({ children, className, 'aria-label': ariaLabel
             viewportHeight: window.innerHeight,
           })
         : side,
-      align,
+      align: resolvedAlign,
       gap,
       panelRadius,
       triggerRadius,
       shiftX: layout
-        ? resolveShiftX(layout.trigger.left, alignX(align, triggerW, contentW), contentW, window.innerWidth)
+        ? resolveShiftX(layout.trigger.left, alignX(resolvedAlign, triggerW, contentW), contentW, bounds)
         : 0,
       pad: LAYER_PAD,
     });
-  }, [layout, side, align, gap, panelRadius, triggerRadius]);
+  }, [layout, side, align, gap, panelRadius, triggerRadius, triggerRef]);
 
   // Aynı morph goo gövdesine, hairline kontura ve içeriğe uygulanır: panel tek
   // parça akar, metin onunla açılır (ölçeklenmez). Oturunca clip kalkar ki

@@ -1,5 +1,5 @@
 // Goo popover geometrisi ve karar mantığı — React'siz saf fonksiyonlar (vitest ile sınanır).
-// Geometri beui popover kaynağından; `resolveSide`, `resolveShiftX`, `growRect` ve
+// Geometri beui popover kaynağından; `resolveSide`, `resolveAlign`, `resolveShiftX`, `growRect` ve
 // `nextFocusIndex`, `arrowNavigatesFrom` Flowventory ekleri (DESIGN.md §5 "Goo açılır panel").
 
 export type Side = 'top' | 'bottom';
@@ -212,12 +212,45 @@ export function resolveSide({
   return preferred === 'bottom' ? 'top' : 'bottom';
 }
 
-/** Paneli viewport'un içine çeken yatay kaydırma; sığmıyorsa sol kenar kazanır. */
-export function resolveShiftX(triggerLeft: number, panelX: number, contentWidth: number, viewportWidth: number, margin = 8): number {
+/** Panelin yatayda içinde kalması gereken alan (viewport koordinatları) — sayfa gövdesi, sidebar değil. */
+export interface Bounds {
+  left: number;
+  right: number;
+}
+
+function overflowX(left: number, contentWidth: number, bounds: Bounds, margin: number): number {
+  return Math.max(0, bounds.left + margin - left) + Math.max(0, left + contentWidth - (bounds.right - margin));
+}
+
+/**
+ * Tercih edilen hiza paneli sınırın dışına taşırıyorsa (ör. sola sarmış bir
+ * butonda `end` → panel sidebar'ın üstüne) daha az taşıran hizaya çevirir;
+ * eşitlikte tercih korunur.
+ */
+export function resolveAlign(
+  preferred: Align,
+  triggerLeft: number,
+  triggerWidth: number,
+  contentWidth: number,
+  bounds: Bounds,
+  margin = 8,
+): Align {
+  const overflow = (align: Align) =>
+    overflowX(triggerLeft + alignX(align, triggerWidth, contentWidth), contentWidth, bounds, margin);
+  let best = preferred;
+  if (overflow(preferred) === 0) return preferred;
+  for (const candidate of ['start', 'end', 'center'] as const) {
+    if (overflow(candidate) < overflow(best)) best = candidate;
+  }
+  return best;
+}
+
+/** Paneli sınırın içine çeken yatay kaydırma; sığmıyorsa sol kenar kazanır. */
+export function resolveShiftX(triggerLeft: number, panelX: number, contentWidth: number, bounds: Bounds, margin = 8): number {
   const left = triggerLeft + panelX;
-  const overflowRight = left + contentWidth - (viewportWidth - margin);
+  const overflowRight = left + contentWidth - (bounds.right - margin);
   let shift = overflowRight > 0 ? -overflowRight : 0;
-  if (left + shift < margin) shift = margin - left;
+  if (left + shift < bounds.left + margin) shift = bounds.left + margin - left;
   return shift;
 }
 

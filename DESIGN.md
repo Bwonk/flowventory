@@ -285,7 +285,10 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   oturunca filtre ve clip kapanır. Akarken kontur, gövdenin 1px dışında kalan
   `bg-hairline` goo katmanıdır. Yarıçap 8 (panel) / 6 (tetikleyici), boyun 8px,
   `gooStrength` 5 (daha yükseği 8px aralıkta kalıcı köprü kurar), `z-50`.
-  Altta yer yoksa üste çevrilir, yatayda viewport'a sığdırılır. Açılışta odak
+  Altta yer yoksa üste çevrilir. Yatay sınır viewport değil sayfa gövdesidir
+  (`main`): hiza paneli sınırın dışına taşırıyorsa daha az taşıran hizaya
+  çevrilir (dar iframe'de başlık butonu sola sarınca `end` → `start`; panel
+  sidebar'ın üstüne açılmaz), yine sığmazsa içeri kaydırılır. Açılışta odak
   seçili seçeneğe (ya da `autoFocus` alana) geçer, ↑/↓ seçeneklerde gezinir,
   Tab panel içinde döner (↑/↓'yu kendi kullanan sayı/tarih alanlarında tuş
   alana kalır), Escape/kapanış odağı tetikleyiciye iade eder; dışarı
