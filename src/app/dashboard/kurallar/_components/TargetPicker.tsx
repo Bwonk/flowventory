@@ -22,7 +22,7 @@ interface TargetPickerProps {
 }
 
 /**
- * Ürün/tedarikçi seçici — goo `Dropdown`'ı içinde arama kutusu + seçenek
+ * Ürün/tedarikçi seçici — filtre `Dropdown`'ı içinde arama kutusu + seçenek
  * listesi. Aramadan ↓ ile listeye inilir (goo panelde typeahead yok, tuşlar durdurulmaz).
  */
 export function TargetPicker({ options, loading, value, placeholder, searchPlaceholder, emptyText, onChange }: TargetPickerProps) {
@@ -37,7 +37,6 @@ export function TargetPicker({ options, loading, value, placeholder, searchPlace
 
   return (
     <Dropdown
-      goo
       label={selected ? selected.label : loading ? 'Yükleniyor…' : placeholder}
       active={Boolean(selected)}
       panelClassName="w-80 max-w-[calc(100vw-2rem)] p-1.5"

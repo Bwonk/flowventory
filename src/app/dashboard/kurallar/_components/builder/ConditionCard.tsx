@@ -81,7 +81,7 @@ export function ConditionCard({ stageIndex, index, condition, removable, onSetMe
       </div>
 
       <div className="mt-2 flex flex-wrap items-center gap-2">
-        <Dropdown goo label={def.label} active panelClassName="max-h-80 overflow-y-auto">
+        <Dropdown label={def.label} active panelClassName="max-h-80 overflow-y-auto">
           {close => (
             <>
               {stageIndex > 0 && (
@@ -134,7 +134,7 @@ export function ConditionCard({ stageIndex, index, condition, removable, onSetMe
         )}
 
         {input.kind === 'enum' && 'value' in condition && (
-          <Dropdown goo label={input.options.find(o => o.value === condition.value)?.label ?? condition.value} active>
+          <Dropdown label={input.options.find(o => o.value === condition.value)?.label ?? condition.value} active>
             {close =>
               input.options.map(o => (
                 <OptionButton

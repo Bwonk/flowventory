@@ -40,6 +40,7 @@ import { usePopoverPortalPosition } from './position';
 import {
   type Align,
   alignX,
+  arrowNavigatesFrom,
   buildGeo,
   clipForProgress,
   contentOpacity,
@@ -486,6 +487,8 @@ export function GooPopoverContent({ children, className, 'aria-label': ariaLabel
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const arrow = event.key === 'ArrowDown' || event.key === 'ArrowUp';
     if (!arrow && event.key !== 'Tab') return;
+    const from = event.target as HTMLElement;
+    if (arrow && !arrowNavigatesFrom(from.tagName, (from as HTMLInputElement).type)) return;
     const panel = contentRef.current;
     if (!panel) return;
     // ↑/↓ seçenekler (button) arasında, Tab tüm odaklanabilirler arasında döner.

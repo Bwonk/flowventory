@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  arrowNavigatesFrom,
   buildGeo,
   clipForProgress,
   contentOpacity,
@@ -153,6 +154,24 @@ describe('resolveShiftX', () => {
 
   it('viewport panelden darsa sol kenar kazanır', () => {
     expect(resolveShiftX(20, 0, 400, 360)).toBe(-12);
+  });
+});
+
+describe('arrowNavigatesFrom', () => {
+  it('buton ve metin/arama kutusundan seçeneklere geçilir', () => {
+    expect(arrowNavigatesFrom('BUTTON')).toBe(true);
+    expect(arrowNavigatesFrom('DIV')).toBe(true);
+    expect(arrowNavigatesFrom('INPUT', 'text')).toBe(true);
+    expect(arrowNavigatesFrom('INPUT', 'search')).toBe(true);
+    expect(arrowNavigatesFrom('INPUT')).toBe(true);
+  });
+
+  it('↑/↓ kullanan alanlarda tuş alana kalır', () => {
+    expect(arrowNavigatesFrom('INPUT', 'number')).toBe(false);
+    expect(arrowNavigatesFrom('INPUT', 'date')).toBe(false);
+    expect(arrowNavigatesFrom('INPUT', 'range')).toBe(false);
+    expect(arrowNavigatesFrom('SELECT', 'select-one')).toBe(false);
+    expect(arrowNavigatesFrom('TEXTAREA', 'textarea')).toBe(false);
   });
 });
 

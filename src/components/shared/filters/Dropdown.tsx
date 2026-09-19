@@ -6,11 +6,6 @@ import { useReducedMotion } from 'motion/react';
 import { CHECK_ANIMATION_MS, CheckIcon, type CheckIconHandle } from '@/components/ui/icons/check';
 import { useIconHover } from '@/components/ui/icons/use-icon-hover';
 import { GooPopover, GooPopoverContent, GooPopoverTrigger } from '@/components/motion/goo-popover';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 
 interface DropdownProps {
@@ -28,18 +23,15 @@ interface DropdownProps {
   closeDelay?: number;
   align?: 'start' | 'end';
   panelClassName?: string;
-  /**
-   * Panel tetikleyiciden goo ile akarak açılır (DESIGN.md §5 "Goo açılır panel").
-   * Deneme: yalnız Kurallar. İçerikte radix `DropdownMenu*` parçası kullanılamaz.
-   */
-  goo?: boolean;
   children: (close: () => void) => React.ReactNode;
 }
 
 /**
- * Filtre tetikleyicisi: radix DropdownMenu (ya da `goo` ile GooPopover) üzerine ince sarmalayıcı.
+ * Filtre tetikleyicisi: `GooPopover` üzerine ince sarmalayıcı — panel
+ * tetikleyiciden goo ile akarak açılır (DESIGN.md §5 "Goo açılır panel").
  * children(close) sözleşmesi korunur; panel içeriği serbest biçimlidir
- * (OptionButton listesi veya ThresholdControl formu).
+ * (OptionButton listesi veya ThresholdControl formu). İçerikte radix
+ * `DropdownMenu*` parçası kullanılamaz (menü context'i yok).
  */
 export const Dropdown: React.FC<DropdownProps> = ({
   label,
@@ -48,7 +40,6 @@ export const Dropdown: React.FC<DropdownProps> = ({
   closeDelay = CHECK_ANIMATION_MS,
   align = 'start',
   panelClassName,
-  goo = false,
   children,
 }) => {
   const [open, setOpen] = useState(false);
@@ -103,26 +94,16 @@ export const Dropdown: React.FC<DropdownProps> = ({
       />
     </button>
   );
-  const panelClass = cn('min-w-[200px] p-1.5', panelClassName);
-
-  if (goo) {
-    return (
-      <GooPopover open={open} onOpenChange={setOpen} align={align} dismiss="consume" className="shrink-0">
-        <GooPopoverTrigger>{trigger}</GooPopoverTrigger>
-        <GooPopoverContent className={panelClass} aria-label={typeof label === 'string' ? label : undefined}>
-          {children(close)}
-        </GooPopoverContent>
-      </GooPopover>
-    );
-  }
-
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
-      <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
-      <DropdownMenuContent align={align} sideOffset={6} className={cn('rounded-lg border-hairline', panelClass)}>
+    <GooPopover open={open} onOpenChange={setOpen} align={align} dismiss="consume" className="shrink-0">
+      <GooPopoverTrigger>{trigger}</GooPopoverTrigger>
+      <GooPopoverContent
+        className={cn('min-w-[200px] p-1.5', panelClassName)}
+        aria-label={typeof label === 'string' ? label : undefined}
+      >
         {children(close)}
-      </DropdownMenuContent>
-    </DropdownMenu>
+      </GooPopoverContent>
+    </GooPopover>
   );
 };
 

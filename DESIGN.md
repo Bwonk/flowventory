@@ -266,20 +266,21 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
 - **Goo açılır panel (GooPopover):**
   [src/components/motion/goo-popover/](src/components/motion/goo-popover/) —
   beui `popover` uyarlaması; panel tetikleyiciden sıvı bir boyunla akarak
-  açılır. `Dropdown`'ın `goo` prop'uyla gelir
-  ([src/components/shared/filters/Dropdown.tsx](src/components/shared/filters/Dropdown.tsx));
+  açılır. Ortak `Dropdown`'ın tek yüzeyidir
+  ([src/components/shared/filters/Dropdown.tsx](src/components/shared/filters/Dropdown.tsx)):
+  değer seçen her alan (araç yolu filtre segmentleri, stok eşiği formu, ayarlar
+  gün/saat, kural metrik/değer/aksiyon/hedef seçicileri) goo ile açılır;
   tetikleyici, `OptionButton`, tik çizimi sonrası kapanış ve `children(close)`
-  sözleşmesi aynıdır. **Deneme: yalnız Kurallar** — değer seçen alanlar
-  (metrik, enum değer, aksiyon türü, hedef ürün/tedarikçi); eylem menüleri
-  ("Aksiyon ekle", "Yeni kural ekle") ve tablo "…" menüleri `DropdownMenu`
-  kalır. Dinlenme hali standart açılır yüzeydir (`rounded-lg` +
+  sözleşmesi değişmez. Eylem menüleri ("Aksiyon ekle", "Yeni kural ekle") ve
+  tablo "…" menüleri `DropdownMenu` kalır — goo *değer taşıyan alan* içindir. Dinlenme hali standart açılır yüzeydir (`rounded-lg` +
   `border-hairline` + `bg-popover` + `shadow-md`) — goo yalnız geçiştir:
   oturunca filtre ve clip kapanır. Akarken kontur, gövdenin 1px dışında kalan
   `bg-hairline` goo katmanıdır. Yarıçap 8 (panel) / 6 (tetikleyici), boyun 8px,
   `gooStrength` 5 (daha yükseği 8px aralıkta kalıcı köprü kurar), `z-50`.
   Altta yer yoksa üste çevrilir, yatayda viewport'a sığdırılır. Açılışta odak
   seçili seçeneğe (ya da `autoFocus` alana) geçer, ↑/↓ seçeneklerde gezinir,
-  Tab panel içinde döner, Escape/kapanış odağı tetikleyiciye iade eder; dışarı
+  Tab panel içinde döner (↑/↓'yu kendi kullanan sayı/tarih alanlarında tuş
+  alana kalır), Escape/kapanış odağı tetikleyiciye iade eder; dışarı
   tıklama yutulur (`dismiss="consume"` — radix menü eşliği). Goo panel içinde
   radix `DropdownMenu*` parçası kullanılamaz (context yok): grup etiketi ve
   ayraç düz `div`.

@@ -1,6 +1,6 @@
 // Goo popover geometrisi ve karar mantığı — React'siz saf fonksiyonlar (vitest ile sınanır).
 // Geometri beui popover kaynağından; `resolveSide`, `resolveShiftX`, `growRect` ve
-// `nextFocusIndex` Flowventory ekleri (DESIGN.md §5 "Goo açılır panel").
+// `nextFocusIndex`, `arrowNavigatesFrom` Flowventory ekleri (DESIGN.md §5 "Goo açılır panel").
 
 export type Side = 'top' | 'bottom';
 export type Align = 'start' | 'center' | 'end';
@@ -209,6 +209,18 @@ export function resolveShiftX(triggerLeft: number, panelX: number, contentWidth:
   let shift = overflowRight > 0 ? -overflowRight : 0;
   if (left + shift < margin) shift = margin - left;
   return shift;
+}
+
+/**
+ * ↑/↓ odaktaki öğeden seçeneklere geçirsin mi? Metin/arama kutusundan evet
+ * (combobox kalıbı); ↑/↓'yu kendi kullanan alanlarda (sayı, tarih, select,
+ * textarea…) hayır — tuş alana kalır.
+ */
+export function arrowNavigatesFrom(tagName: string, inputType = ''): boolean {
+  const tag = tagName.toLowerCase();
+  if (tag === 'select' || tag === 'textarea') return false;
+  if (tag !== 'input') return true;
+  return ['', 'text', 'search', 'email', 'tel', 'url', 'password'].includes(inputType.toLowerCase());
 }
 
 /**
