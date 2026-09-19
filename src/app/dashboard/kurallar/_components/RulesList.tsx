@@ -1,15 +1,20 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Pencil, SlidersHorizontal, Trash2 } from 'lucide-react';
+import { SlidersHorizontal } from 'lucide-react';
+import { useReducedMotion } from 'motion/react';
 import type { TrackingRuleItem } from '@/app/api/rules/route';
 import { Table, type TableColumn } from '@/components/motion/table';
 import { EmptyState } from '@/components/shared/data-table/EmptyState';
 import { TableFooterNote } from '@/components/shared/data-table/TableFooterNote';
 import { TableSection } from '@/components/shared/data-table/TableSection';
+import { PencilIcon } from '@/components/ui/icons/pencil';
+import { TrashIcon } from '@/components/ui/icons/trash';
+import type { AnimatedIconHandle } from '@/components/ui/icons/use-icon-hover';
 import { Switch } from '@/components/ui/switch';
+import type { RuleActionType } from '@/lib/rules/types';
 import { ActionIcon } from './ActionIcon';
 import { DeleteRuleDialog } from './DeleteRuleDialog';
 
@@ -65,14 +70,7 @@ export function RulesList({ rules, loading, onToggle, onDelete, onCreateFirst }:
         header: 'Aksiyonlar',
         width: '220px',
         cell: rule => (
-          <span className="inline-flex min-w-0 items-center gap-2 text-sm text-foreground" title={rule.actionSummary}>
-            <span className="inline-flex shrink-0 items-center gap-1">
-              {rule.actionTypes.map(type => (
-                <ActionIcon key={type} type={type} />
-              ))}
-            </span>
-            <span className="truncate">{rule.actionSummary || '—'}</span>
-          </span>
+          <ActionSummary types={rule.actionTypes} summary={rule.actionSummary} />
         ),
       },
       {
@@ -114,8 +112,8 @@ export function RulesList({ rules, loading, onToggle, onDelete, onCreateFirst }:
           onRowClick={rule => router.push(`/dashboard/kurallar/${rule.id}`)}
           rowState={rule => (rule.enabled ? undefined : { className: 'opacity-60' })}
           rowMenu={rule => [
-            { label: 'Düzenle', icon: <Pencil className="size-3.5" aria-hidden />, onSelect: () => router.push(`/dashboard/kurallar/${rule.id}`) },
-            { label: 'Sil', icon: <Trash2 className="size-3.5" aria-hidden />, destructive: true, onSelect: () => setDeleting(rule) },
+            { label: 'Düzenle', animatedIcon: PencilIcon, onSelect: () => router.push(`/dashboard/kurallar/${rule.id}`) },
+            { label: 'Sil', animatedIcon: TrashIcon, destructive: true, onSelect: () => setDeleting(rule) },
           ]}
           emptyState={
             <EmptyState
@@ -139,5 +137,38 @@ export function RulesList({ rules, loading, onToggle, onDelete, onCreateFirst }:
         />
       )}
     </>
+  );
+}
+
+/**
+ * Aksiyon ikonları + özet. Birden çok ikon tek `useIconHover` ile sürülemez;
+ * hover hücre içeriğinden gelir ve ikonların hepsini birlikte oynatır.
+ */
+function ActionSummary({ types, summary }: { types: readonly RuleActionType[]; summary: string }) {
+  const icons = useRef(new Map<RuleActionType, AnimatedIconHandle>());
+  const reduceMotion = useReducedMotion();
+  return (
+    <span
+      className="inline-flex min-w-0 items-center gap-2 text-sm text-foreground"
+      title={summary}
+      onMouseEnter={() => {
+        if (!reduceMotion) icons.current.forEach(icon => icon.startAnimation());
+      }}
+      onMouseLeave={() => icons.current.forEach(icon => icon.stopAnimation())}
+    >
+      <span className="inline-flex shrink-0 items-center gap-1">
+        {types.map(type => (
+          <ActionIcon
+            key={type}
+            type={type}
+            ref={handle => {
+              if (handle) icons.current.set(type, handle);
+              else icons.current.delete(type);
+            }}
+          />
+        ))}
+      </span>
+      <span className="truncate">{summary || '—'}</span>
+    </span>
   );
 }

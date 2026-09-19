@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { BoltIcon } from '@/components/ui/icons/bolt';
+import { useIconHover } from '@/components/ui/icons/use-icon-hover';
 import { SegmentedTrack } from '@/components/shared/tool-track';
 import { describeScope } from '@/lib/rules/describe';
 import { GRANULARITY_LABELS, SCOPE_LABELS, type RuleGranularity, type RuleScope } from '@/lib/rules/types';
@@ -36,6 +37,7 @@ interface TriggerCardProps {
  */
 export function TriggerCard({ state, hasStockAction, products, vendors, optionsLoading, onScopeChange, onPatch }: TriggerCardProps) {
   const [open, setOpen] = useState(state.scope !== 'all' && !state.targetId);
+  const bolt = useIconHover();
   const granularity = hasStockAction ? 'variant' : state.granularity;
   const countHint =
     state.scope === 'all' && !optionsLoading && products.length > 0
@@ -45,11 +47,11 @@ export function TriggerCard({ state, hasStockAction, products, vendors, optionsL
         : null;
 
   return (
-    <section className={CARD} aria-label="Tetikleyici">
+    <section className={CARD} aria-label="Tetikleyici" {...bolt.hoverProps}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <Zap className="size-4 text-muted-foreground" aria-hidden />
+            <BoltIcon ref={bolt.ref} size={16} className="flex shrink-0 text-muted-foreground" aria-hidden />
             <Eyebrow>Tetikleyici</Eyebrow>
           </div>
           <p className="mt-1 text-sm text-foreground">{describeScope(state)}</p>

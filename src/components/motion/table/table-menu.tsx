@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 import { MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useIconHover } from '@/components/ui/icons/use-icon-hover';
 import { GooPopover, GooPopoverContent, GooPopoverTrigger } from '@/components/motion/goo-popover';
 import { GooMenuItem } from '@/components/motion/goo-popover/menu';
 import type { TableMenuItem } from './types';
@@ -43,17 +44,26 @@ export function TableMenu({
       </GooPopoverTrigger>
       <GooPopoverContent aria-label={ariaLabel} className="min-w-[8rem] p-1" onClick={e => e.stopPropagation()}>
         {items.map(item => (
-          <GooMenuItem
-            key={item.label}
-            variant={item.destructive ? 'destructive' : 'default'}
-            disabled={item.disabled}
-            onSelect={item.onSelect}
-          >
-            {item.icon}
-            {item.label}
-          </GooMenuItem>
+          <MenuRow key={item.label} item={item} />
         ))}
       </GooPopoverContent>
     </GooPopover>
+  );
+}
+
+/** Tek menü öğesi — animasyonlu ikonun hover'ı öğeden sürülür (DESIGN.md §6). */
+function MenuRow({ item }: { item: TableMenuItem }) {
+  const { ref, hoverProps } = useIconHover();
+  const Animated = item.animatedIcon;
+  return (
+    <GooMenuItem
+      variant={item.destructive ? 'destructive' : 'default'}
+      disabled={item.disabled}
+      onSelect={item.onSelect}
+      {...hoverProps}
+    >
+      {Animated ? <Animated ref={ref} size={14} className="flex shrink-0 [&>svg]:size-3.5!" aria-hidden /> : item.icon}
+      {item.label}
+    </GooMenuItem>
   );
 }

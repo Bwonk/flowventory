@@ -2,8 +2,10 @@
 
 import { Fragment } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { PlusIcon } from '@/components/ui/icons/plus';
+import { TrashIcon } from '@/components/ui/icons/trash';
+import { useIconHover } from '@/components/ui/icons/use-icon-hover';
 import { GooPopover, GooPopoverContent, GooPopoverTrigger } from '@/components/motion/goo-popover';
 import { GooMenuItem } from '@/components/motion/goo-popover/menu';
 import { ACTION_CATALOG } from '@/lib/rules/actions-catalog';
@@ -59,6 +61,8 @@ export function StageBlock({ stage, stageIndex, stageCount, notificationEmail, .
   const addableTypes = RULE_ACTION_TYPES.filter(t => !usedTypes.includes(t));
   const canAddAction = stage.actions.length < MAX_ACTIONS && addableTypes.length > 0;
 
+  const trash = useIconHover();
+  const plus = useIconHover();
   const motionProps = {
     layout: !reduceMotion,
     initial: reduceMotion ? false : { opacity: 0, y: 8 },
@@ -73,8 +77,14 @@ export function StageBlock({ stage, stageIndex, stageCount, notificationEmail, .
         <div className="mb-2 flex items-center justify-between gap-3">
           <Eyebrow>Aşama {stageIndex + 1}</Eyebrow>
           {stageIndex > 0 && (
-            <Button variant="ghost" size="xs" className="text-muted-foreground hover:text-destructive" onClick={h.onRemoveStage}>
-              <Trash2 aria-hidden />
+            <Button
+              variant="ghost"
+              size="xs"
+              className="text-muted-foreground hover:text-destructive"
+              onClick={h.onRemoveStage}
+              {...trash.hoverProps}
+            >
+              <TrashIcon ref={trash.ref} size={12} className="flex shrink-0 [&>svg]:size-3!" aria-hidden />
               Aşamayı kaldır
             </Button>
           )}
@@ -138,20 +148,28 @@ export function StageBlock({ stage, stageIndex, stageCount, notificationEmail, .
       {/* Kesikli kart `rounded-lg`: oyuk yarıçapı 8. Tam genişlikte tetikleyicide morph ortadan başlar. */}
       <GooPopover align="center" dismiss="consume" triggerRadius={8} className="flex w-full">
         <GooPopoverTrigger>
-          <button type="button" className={DASHED_ADD} disabled={!canAddAction}>
-            <Plus className="size-3.5" aria-hidden />
+          <button type="button" className={DASHED_ADD} disabled={!canAddAction} {...plus.hoverProps}>
+            <PlusIcon ref={plus.ref} size={14} className="flex shrink-0" aria-hidden />
             {canAddAction ? 'Aksiyon ekle' : 'Tüm aksiyonlar eklendi'}
           </button>
         </GooPopoverTrigger>
         <GooPopoverContent aria-label="Aksiyon ekle" className="min-w-[220px] p-1.5">
           {addableTypes.map(t => (
-            <GooMenuItem key={t} onSelect={() => h.onAddAction(t)}>
-              <ActionIcon type={t} className="text-foreground" />
-              {ACTION_CATALOG[t].label}
-            </GooMenuItem>
+            <AddActionItem key={t} type={t} onSelect={() => h.onAddAction(t)} />
           ))}
         </GooPopoverContent>
       </GooPopover>
     </section>
+  );
+}
+
+/** "Aksiyon ekle" menü öğesi — ikon hover'ı öğeden sürülür. */
+function AddActionItem({ type, onSelect }: { type: RuleActionType; onSelect: () => void }) {
+  const icon = useIconHover();
+  return (
+    <GooMenuItem onSelect={onSelect} {...icon.hoverProps}>
+      <ActionIcon ref={icon.ref} type={type} tone="ink" />
+      {ACTION_CATALOG[type].label}
+    </GooMenuItem>
   );
 }

@@ -1,3 +1,4 @@
+import type { AnimatedIcon } from '@/components/ui/icons/use-icon-hover';
 import type { ReactNode } from 'react';
 
 export type SortDirection = 'asc' | 'desc';
@@ -60,6 +61,8 @@ export interface RowState {
 export interface TableMenuItem {
   label: string;
   icon?: ReactNode;
+  /** `icon` yerine animasyonlu ikon (`src/components/ui/icons/*`); hover'ı menü öğesinden sürülür. */
+  animatedIcon?: AnimatedIcon;
   onSelect: () => void;
   destructive?: boolean;
   disabled?: boolean;

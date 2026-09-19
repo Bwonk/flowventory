@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { ChevronDown } from 'lucide-react';
 import { useReducedMotion } from 'motion/react';
 import { CHECK_ANIMATION_MS, CheckIcon, type CheckIconHandle } from '@/components/ui/icons/check';
+import { ChevronDownIcon } from '@/components/ui/icons/chevron-down';
 import { useIconHover } from '@/components/ui/icons/use-icon-hover';
 import { GooPopover, GooPopoverContent, GooPopoverTrigger } from '@/components/motion/goo-popover';
 import { cn } from '@/lib/utils';
@@ -44,6 +44,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
 }) => {
   const [open, setOpen] = useState(false);
   const reduceMotion = useReducedMotion();
+  const chevron = useIconHover();
   const closeTimer = useRef<number | null>(null);
   useEffect(
     () => () => {
@@ -66,6 +67,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
   const trigger = (
     <button
       type="button"
+      {...chevron.hoverProps}
       className={cn(
         'inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md text-sm transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         // Segment: değer taşıyan bir alan — açık arama hapıyla aynı bg-card +
@@ -85,12 +87,12 @@ export const Dropdown: React.FC<DropdownProps> = ({
     >
       {label}
       {variant === 'segment' && active && <span aria-hidden className="size-1.5 rounded-full bg-foreground" />}
-      <ChevronDown
-        className={cn(
-          'transition-transform duration-150',
-          variant === 'segment' ? 'size-3.5' : 'size-4',
-          open && 'rotate-180',
-        )}
+      {/* Hover'ı tetikleyiciden sürülür; açıkken sarmalayıcı döner, ok yine "aşağı" zıplar. */}
+      <ChevronDownIcon
+        ref={chevron.ref}
+        size={variant === 'segment' ? 14 : 16}
+        aria-hidden
+        className={cn('flex shrink-0 transition-transform duration-150', open && 'rotate-180')}
       />
     </button>
   );

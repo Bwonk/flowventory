@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Check, History, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { extractErrorMessage } from '@/lib/api-error';
 import { ApiRequests } from '@/lib/api-requests';
@@ -11,6 +10,10 @@ import { ACTION_CATALOG } from '@/lib/rules/actions-catalog';
 import type { RuleEventItem } from '@/lib/rules/serialize';
 import type { RuleActionResult } from '@/lib/rules/types';
 import { Button } from '@/components/ui/button';
+import { CheckIcon } from '@/components/ui/icons/check';
+import { ClockIcon } from '@/components/ui/icons/clock';
+import { useIconHover } from '@/components/ui/icons/use-icon-hover';
+import { XMarkIcon } from '@/components/ui/icons/x-mark';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { relativeTime } from '../RulesList';
 
@@ -28,6 +31,7 @@ interface RuleHistorySheetProps {
  */
 export function RuleHistorySheet({ token, ruleId, events: initialEvents, multiStage }: RuleHistorySheetProps) {
   const [events, setEvents] = useState(initialEvents);
+  const clock = useIconHover();
   const [undoing, setUndoing] = useState<string | null>(null);
 
   const undo = async (eventId: string) => {
@@ -49,8 +53,8 @@ export function RuleHistorySheet({ token, ruleId, events: initialEvents, multiSt
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button variant="outline" className="gap-2">
-          <History className="size-3.5" aria-hidden />
+        <Button variant="outline" className="gap-2" {...clock.hoverProps}>
+          <ClockIcon ref={clock.ref} size={14} className="flex shrink-0 [&>svg]:size-3.5!" aria-hidden />
           Geçmiş
         </Button>
       </SheetTrigger>
@@ -96,10 +100,17 @@ export function RuleHistorySheet({ token, ruleId, events: initialEvents, multiSt
 }
 
 function ActionResultRow({ result, undoing, onUndo }: { result: RuleActionResult; undoing: boolean; onUndo: () => void }) {
-  const Icon = result.ok ? Check : X;
+  const icon = useIconHover();
+  const Icon = result.ok ? CheckIcon : XMarkIcon;
   return (
-    <li className="flex items-center gap-2 text-xs">
-      <Icon className={result.ok ? 'size-3.5 shrink-0 text-foreground' : 'size-3.5 shrink-0 text-destructive'} aria-label={result.ok ? 'Başarılı' : 'Başarısız'} />
+    <li className="flex items-center gap-2 text-xs" {...icon.hoverProps}>
+      <Icon
+        ref={icon.ref}
+        size={14}
+        role="img"
+        aria-label={result.ok ? 'Başarılı' : 'Başarısız'}
+        className={result.ok ? 'flex shrink-0 text-foreground' : 'flex shrink-0 text-destructive'}
+      />
       <span className="shrink-0 text-foreground">{ACTION_CATALOG[result.type].label}</span>
       <span className="min-w-0 flex-1 truncate text-muted-foreground" title={result.detail}>
         {result.detail}

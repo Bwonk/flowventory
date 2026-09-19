@@ -320,12 +320,17 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   buton içinde `size-3`), stroke varsayılan; ikon+metin çiftlerinde optik
   hizalama. Etkileşimli sanksiyonlu noktalar — sidebar navigasyonu, bildirim
   zili, liste satırı "detaya git" affordance'ı, yenile aksiyonu, rapor
-  araç yollarındaki yazdır/gönder/parametre/sepet/iletişim tetikleri ve sepet
-  satırı silme (çöp) — animasyonlu
+  araç yollarındaki yazdır/gönder/parametre/sepet/iletişim tetikleri, sepet
+  satırı silme (çöp), ortak `Dropdown` tetikleyicisinin oku ve Kurallar (ekle
+  artısı, kaldır/sil çöpü, düzenle kalemi, tetikleyici şimşeği, stok uyarı
+  üçgeni, boş kural belgesi, geçmiş saati, geçmiş sonucu tik/çarpı, aksiyon
+  türü ikonları: zil / zarf / arşiv kutusu — `ActionIcon`; tablo menüsünde
+  `TableMenuItem.animatedIcon`) — animasyonlu
   heroicons kullanır: [src/components/ui/icons/](src/components/ui/icons).
   Karma kütüphane **bilinçli**: heroicons stroke-1.5, lucide stroke-2; ikisi
   aynı satırda yan yana getirilmez. Animasyonlu ikonlar bir `<div>` sarmaladığı
-  için boyut `size` prop'uyla açıkça verilir (`[&>svg]` direkt-çocuk kuralları
+  için `<p>` içine konmaz (geçersiz iç içe yerleşim → hydration hatası; satırı
+  `div` yap) ve boyut `size` prop'uyla açıkça verilir (`[&>svg]` direkt-çocuk kuralları
   bu ikonlara işlemez).
 - **Butonlar:** [src/components/ui/button.tsx](src/components/ui/button.tsx);
   birincil = ink, ikincil = `variant="outline"` hairline; tehlikeli =

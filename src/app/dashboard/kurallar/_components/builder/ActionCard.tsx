@@ -1,9 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { TriangleAlert, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { ExclamationTriangleIcon } from '@/components/ui/icons/exclamation-triangle';
+import { TrashIcon } from '@/components/ui/icons/trash';
+import { useIconHover } from '@/components/ui/icons/use-icon-hover';
 import { Dropdown, OptionButton } from '@/components/shared/filters/Dropdown';
 import { SegmentedTrack } from '@/components/shared/tool-track';
 import { ACTION_CATALOG, STOCK_MODE_LABELS } from '@/lib/rules/actions-catalog';
@@ -31,6 +33,9 @@ interface ActionCardProps {
  */
 export function ActionCard({ index, action, usedTypes, removable, notificationEmail, onSetType, onChange, onRemove }: ActionCardProps) {
   const def = ACTION_CATALOG[action.type];
+  const trash = useIconHover();
+  const typeIcon = useIconHover();
+  const warning = useIconHover();
   const choices = RULE_ACTION_TYPES.filter(t => t === action.type || !usedTypes.includes(t));
 
   return (
@@ -44,17 +49,20 @@ export function ActionCard({ index, action, usedTypes, removable, notificationEm
             className="-mr-2 -mt-2 size-7 text-muted-foreground hover:text-destructive"
             aria-label={`Aksiyon ${index + 1} kaldır`}
             onClick={onRemove}
+            {...trash.hoverProps}
           >
-            <Trash2 className="size-3.5" aria-hidden />
+            <TrashIcon ref={trash.ref} size={14} className="flex shrink-0 [&>svg]:size-3.5!" aria-hidden />
           </Button>
         )}
       </div>
 
       <div className="mt-2 flex flex-wrap items-center gap-2">
+        {/* Tip ikonunun hover'ı tetikleyiciden sürülür (tetikleyici Dropdown'ın içinde). */}
+        <span className="inline-flex" {...typeIcon.hoverProps}>
         <Dropdown
           label={
             <span className="inline-flex items-center gap-2">
-              <ActionIcon type={action.type} className="text-foreground" />
+              <ActionIcon ref={typeIcon.ref} type={action.type} tone="ink" />
               {def.label}
             </span>
           }
@@ -74,6 +82,7 @@ export function ActionCard({ index, action, usedTypes, removable, notificationEm
             ))
           }
         </Dropdown>
+        </span>
 
         {action.type === 'adjust_stock' && (
           <div className="flex items-center gap-2">
@@ -99,12 +108,13 @@ export function ActionCard({ index, action, usedTypes, removable, notificationEm
       </div>
 
       {def.danger && (
-        <p className="mt-3 flex items-start gap-2 rounded-md bg-muted px-3 py-2 text-xs text-foreground">
-          <TriangleAlert className="mt-px size-3.5 shrink-0 text-destructive" aria-hidden />
+        // `div`: animasyonlu ikon bir <div> sarmalar, <p> içinde geçersiz olurdu (hydration hatası).
+        <div className="mt-3 flex items-start gap-2 rounded-md bg-muted px-3 py-2 text-xs text-foreground" {...warning.hoverProps}>
+          <ExclamationTriangleIcon ref={warning.ref} size={14} className="mt-px flex shrink-0 text-destructive" aria-hidden />
           <span>
             <span className="font-medium">{def.danger}</span> {def.hint}
           </span>
-        </p>
+        </div>
       )}
       {!def.danger && <p className="mt-2 text-pretty text-xs text-muted-foreground">{def.hint}</p>}
       {def.needsEmail && !notificationEmail && (

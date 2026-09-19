@@ -1,8 +1,9 @@
 'use client';
 
-import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { TrashIcon } from '@/components/ui/icons/trash';
+import { useIconHover } from '@/components/ui/icons/use-icon-hover';
 import { Dropdown, OptionButton } from '@/components/shared/filters/Dropdown';
 import { SegmentedTrack } from '@/components/shared/tool-track';
 import { METRIC_CATALOG, METRICS_BY_DOMAIN, STAGE_METRICS, UNIT_LABELS, type MetricInput } from '@/lib/rules/catalog';
@@ -58,6 +59,7 @@ interface ConditionCardProps {
 export function ConditionCard({ stageIndex, index, condition, removable, onSetMetric, onChange, onRemove }: ConditionCardProps) {
   const def = METRIC_CATALOG[condition.metric];
   const input = def.input as MetricInput;
+  const trash = useIconHover();
   const pick = (m: RuleMetric, close: () => void) => {
     if (m !== condition.metric) onSetMetric(m);
     close();
@@ -74,8 +76,9 @@ export function ConditionCard({ stageIndex, index, condition, removable, onSetMe
             className="-mr-2 -mt-2 size-7 text-muted-foreground hover:text-destructive"
             aria-label={`Koşul ${index + 1} kaldır`}
             onClick={onRemove}
+            {...trash.hoverProps}
           >
-            <Trash2 className="size-3.5" aria-hidden />
+            <TrashIcon ref={trash.ref} size={14} className="flex shrink-0 [&>svg]:size-3.5!" aria-hidden />
           </Button>
         )}
       </div>
