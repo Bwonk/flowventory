@@ -2,7 +2,6 @@
 
 import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Dropdown, OptionButton } from '@/components/shared/filters/Dropdown';
 import { SegmentedTrack } from '@/components/shared/tool-track';
@@ -82,21 +81,21 @@ export function ConditionCard({ stageIndex, index, condition, removable, onSetMe
       </div>
 
       <div className="mt-2 flex flex-wrap items-center gap-2">
-        <Dropdown label={def.label} active panelClassName="max-h-80 overflow-y-auto">
+        <Dropdown goo label={def.label} active panelClassName="max-h-80 overflow-y-auto">
           {close => (
             <>
               {stageIndex > 0 && (
                 <>
-                  <DropdownMenuLabel className={GROUP_LABEL}>Önceki aşamadan beri</DropdownMenuLabel>
+                  <div className={GROUP_LABEL}>Önceki aşamadan beri</div>
                   {STAGE_METRICS.map(m => (
                     <OptionButton key={m} label={METRIC_CATALOG[m].label} selected={condition.metric === m} onClick={() => pick(m, close)} />
                   ))}
-                  <DropdownMenuSeparator />
+                  <div aria-hidden className="-mx-1 my-1 h-px bg-border" />
                 </>
               )}
               {RULE_DOMAINS.map(domain => (
                 <div key={domain}>
-                  <DropdownMenuLabel className={GROUP_LABEL}>{DOMAIN_LABELS[domain]}</DropdownMenuLabel>
+                  <div className={GROUP_LABEL}>{DOMAIN_LABELS[domain]}</div>
                   {METRICS_BY_DOMAIN[domain].map(m => (
                     <OptionButton key={m} label={METRIC_CATALOG[m].label} selected={condition.metric === m} onClick={() => pick(m, close)} />
                   ))}
@@ -135,7 +134,7 @@ export function ConditionCard({ stageIndex, index, condition, removable, onSetMe
         )}
 
         {input.kind === 'enum' && 'value' in condition && (
-          <Dropdown label={input.options.find(o => o.value === condition.value)?.label ?? condition.value} active>
+          <Dropdown goo label={input.options.find(o => o.value === condition.value)?.label ?? condition.value} active>
             {close =>
               input.options.map(o => (
                 <OptionButton

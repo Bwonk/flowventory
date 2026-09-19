@@ -263,6 +263,26 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   alana kayar. Emsal: satın alma raporu (`ReportActionBar` sayfa araçları,
   `VendorTabsPanel` tedarikçi sekmeleri, `VendorActionBar` tedarikçi
   işlemleri).
+- **Goo açılır panel (GooPopover):**
+  [src/components/motion/goo-popover/](src/components/motion/goo-popover/) —
+  beui `popover` uyarlaması; panel tetikleyiciden sıvı bir boyunla akarak
+  açılır. `Dropdown`'ın `goo` prop'uyla gelir
+  ([src/components/shared/filters/Dropdown.tsx](src/components/shared/filters/Dropdown.tsx));
+  tetikleyici, `OptionButton`, tik çizimi sonrası kapanış ve `children(close)`
+  sözleşmesi aynıdır. **Deneme: yalnız Kurallar** — değer seçen alanlar
+  (metrik, enum değer, aksiyon türü, hedef ürün/tedarikçi); eylem menüleri
+  ("Aksiyon ekle", "Yeni kural ekle") ve tablo "…" menüleri `DropdownMenu`
+  kalır. Dinlenme hali standart açılır yüzeydir (`rounded-lg` +
+  `border-hairline` + `bg-popover` + `shadow-md`) — goo yalnız geçiştir:
+  oturunca filtre ve clip kapanır. Akarken kontur, gövdenin 1px dışında kalan
+  `bg-hairline` goo katmanıdır. Yarıçap 8 (panel) / 6 (tetikleyici), boyun 8px,
+  `gooStrength` 5 (daha yükseği 8px aralıkta kalıcı köprü kurar), `z-50`.
+  Altta yer yoksa üste çevrilir, yatayda viewport'a sığdırılır. Açılışta odak
+  seçili seçeneğe (ya da `autoFocus` alana) geçer, ↑/↓ seçeneklerde gezinir,
+  Tab panel içinde döner, Escape/kapanış odağı tetikleyiciye iade eder; dışarı
+  tıklama yutulur (`dismiss="consume"` — radix menü eşliği). Goo panel içinde
+  radix `DropdownMenu*` parçası kullanılamaz (context yok): grup etiketi ve
+  ayraç düz `div`.
 - **Kaydırmalı liste (SwipeableList):**
   [src/components/motion/swipeable-list/](src/components/motion/swipeable-list/) —
   beui `swipeable-list` uyarlaması; emsal bildirim drawer'ı
@@ -362,7 +382,11 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   `PopoverForm`'un büyüme/çökme geçişinde
   ([src/components/ui/popover-form.tsx](src/components/ui/popover-form.tsx) —
   sidebar geri bildirim paneli: satırdan yukarı büyür, kapanışta aşağı çöküp
-  satıra solar; upstream'deki `layoutId` morph'u yazıyı ölçeklediği için yok);
+  satıra solar; upstream'deki `layoutId` morph'u yazıyı ölçeklediği için yok)
+  ve `motion/goo-popover` morph'unda (§5 "Goo açılır panel" — tek `progress`
+  değeri clip-path + SVG goo filtresini sürer, `spring 350/35`; yazı
+  ölçeklenmez, clip'le açılır ve opaklığı ilerlemeyi izler, kapanış aynı eğriyi
+  tersten oynar; `prefers-reduced-motion`'da filtresiz ve anlık);
   ikisi bilinçli olarak birlikte yaşar — yeni animasyon için önce mevcut
   utility'ye bak.
 - **Slayt (carousel) motifi** — onboarding kartı emsaldir: yön farkındalıklı

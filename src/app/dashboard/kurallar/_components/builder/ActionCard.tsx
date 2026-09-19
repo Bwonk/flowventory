@@ -52,6 +52,7 @@ export function ActionCard({ index, action, usedTypes, removable, notificationEm
 
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <Dropdown
+          goo
           label={
             <span className="inline-flex items-center gap-2">
               <ActionIcon type={action.type} className="text-foreground" />

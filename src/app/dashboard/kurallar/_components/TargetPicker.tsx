@@ -22,8 +22,8 @@ interface TargetPickerProps {
 }
 
 /**
- * Ürün/tedarikçi seçici — filtre `Dropdown`'ı içinde arama kutusu + seçenek
- * listesi. Arama tuşları menünün typeahead'ine gitmesin diye durdurulur.
+ * Ürün/tedarikçi seçici — goo `Dropdown`'ı içinde arama kutusu + seçenek
+ * listesi. Aramadan ↓ ile listeye inilir (goo panelde typeahead yok, tuşlar durdurulmaz).
  */
 export function TargetPicker({ options, loading, value, placeholder, searchPlaceholder, emptyText, onChange }: TargetPickerProps) {
   const [query, setQuery] = useState('');
@@ -37,6 +37,7 @@ export function TargetPicker({ options, loading, value, placeholder, searchPlace
 
   return (
     <Dropdown
+      goo
       label={selected ? selected.label : loading ? 'Yükleniyor…' : placeholder}
       active={Boolean(selected)}
       panelClassName="w-80 max-w-[calc(100vw-2rem)] p-1.5"
@@ -48,7 +49,6 @@ export function TargetPicker({ options, loading, value, placeholder, searchPlace
             value={query}
             placeholder={searchPlaceholder}
             onChange={e => setQuery(e.target.value)}
-            onKeyDown={e => e.stopPropagation()}
             aria-label={searchPlaceholder}
             className="h-8"
           />
