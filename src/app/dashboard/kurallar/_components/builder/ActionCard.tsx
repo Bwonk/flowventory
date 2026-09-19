@@ -63,6 +63,7 @@ export function ActionCard({ index, action, usedTypes, removable, notificationEm
                 key={t}
                 label={ACTION_CATALOG[t].label}
                 selected={t === action.type}
+                icon={ref => <ActionIcon ref={ref} type={t} tone="ink" />}
                 onClick={() => {
                   if (t !== action.type) onSetType(t);
                   close();

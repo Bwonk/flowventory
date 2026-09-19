@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useReducedMotion } from 'motion/react';
 import { CHECK_ANIMATION_MS, CheckIcon, type CheckIconHandle } from '@/components/ui/icons/check';
 import { ChevronDownIcon } from '@/components/ui/icons/chevron-down';
-import { useIconHover } from '@/components/ui/icons/use-icon-hover';
+import { type AnimatedIconHandle, useIconHover } from '@/components/ui/icons/use-icon-hover';
 import { GooPopover, GooPopoverContent, GooPopoverTrigger } from '@/components/motion/goo-popover';
 import { cn } from '@/lib/utils';
 
@@ -109,13 +109,20 @@ export const Dropdown: React.FC<DropdownProps> = ({
   );
 };
 
-/** Menü seçeneği — seçili satırda ink tik (heroicons-animated `check`): menü açılınca çizilir, satır hover'ında yeniden oynar. */
-export const OptionButton: React.FC<{ label: string; selected: boolean; onClick: () => void }> = ({
-  label,
-  selected,
-  onClick,
-}) => {
+/**
+ * Menü seçeneği — seçili satırda ink tik (heroicons-animated `check`): menü
+ * açılınca çizilir, satır hover'ında yeniden oynar. `icon` verilirse etiketin
+ * solunda ikinci bir animasyonlu ikon durur; ikisinin de hover'ı satırdan
+ * sürülür (DESIGN.md §6), o yüzden ikon `ref` alan bir fonksiyon olarak gelir.
+ */
+export const OptionButton: React.FC<{
+  label: string;
+  selected: boolean;
+  onClick: () => void;
+  icon?: (ref: React.Ref<AnimatedIconHandle>) => React.ReactNode;
+}> = ({ label, selected, onClick, icon }) => {
   const check = useIconHover<CheckIconHandle>();
+  const lead = useIconHover();
   useEffect(() => {
     if (selected) check.ref.current?.startAnimation();
   }, [selected, check.ref]);
@@ -125,10 +132,20 @@ export const OptionButton: React.FC<{ label: string; selected: boolean; onClick:
       type="button"
       onClick={onClick}
       data-selected={selected}
-      {...(selected ? check.hoverProps : {})}
+      onMouseEnter={() => {
+        if (selected) check.hoverProps.onMouseEnter();
+        if (icon) lead.hoverProps.onMouseEnter();
+      }}
+      onMouseLeave={() => {
+        if (selected) check.hoverProps.onMouseLeave();
+        if (icon) lead.hoverProps.onMouseLeave();
+      }}
       className="flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:outline-none"
     >
-      <span className="truncate">{label}</span>
+      <span className="inline-flex min-w-0 items-center gap-2">
+        {icon?.(lead.ref)}
+        <span className="truncate">{label}</span>
+      </span>
       {selected && <CheckIcon ref={check.ref} size={16} className="flex shrink-0 text-foreground" aria-hidden />}
     </button>
   );
