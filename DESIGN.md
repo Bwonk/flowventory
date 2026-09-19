@@ -369,7 +369,14 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   anlatır**: koşul/aksiyonda "Koşulu kaldır", aşamada "Aşamayı kaldır —
   koşulları ve aksiyonlarıyla birlikte". Taslakta "kaldır", kalıcı silmede
   ("Sil" — kural listesi, onay diyaloğu) "sil" denir. Ad `aria-label`'da
-  (balon DOM'a basılmaz). Kaldırılan şeyin başlık satırının sağında durur: kartta
+  (balon DOM'a basılmaz). **Basmadan önce vurgu:** çöpün üzerindeyken
+  (ya da klavye odağında) gidecek şeyin kenarlığı `border-destructive/50`'ye
+  döner — kart çöpünde kartın kendisi, aşama çöpünde aşamadaki tüm kutular
+  (`data-remove` + `has-[]` / `group-has-[]/stage`, JS yok). **Bastıktan sonra
+  geri al:** aşama, içeriğiyle birlikte gittiği için onay penceresi yerine
+  "Aşama N kaldırıldı · Geri Al" bildirimi çıkar (stok düzenlemeyle aynı
+  kalıp); eski sırasına döner, aşama sınırı dolduysa "geri alınamadı" der.
+  Koşul/aksiyon kaldırmada bildirim yok — tek kart, yeniden eklemek bir tık. Kaldırılan şeyin başlık satırının sağında durur: kartta
   `-mr-2 -mt-2`, kutusuz aşama başlığında `mr-2` (+ satırda `px-px`) ile tüm
   çöp ikonları aynı dikey hizaya oturur. Ekle butonları kesikli hairline kart; kart giriş/çıkışı
   `AnimatePresence` + `layout`, 200ms easeOut, `useReducedMotion`'da anlık.

@@ -10,7 +10,17 @@ import { TrashIcon } from '@/components/ui/icons/trash';
 import { cn } from '@/lib/utils';
 
 /** Akış kartı yüzeyi (DESIGN.md §5 "Akış kartları"). */
-export const CARD = 'rounded-lg border border-hairline bg-card p-4';
+/**
+ * Kaldır vurgusu: çöp ikonunun üzerindeyken (ya da klavyeyle odaktayken) gidecek
+ * şeyin kenarlığı kızarır — kendi çöpünde kartın kendisi, aşama çöpünde
+ * (`group/stage`) aşamadaki tüm kutular. `RemoveButton` `data-remove` ile işaretler.
+ */
+export const REMOVE_HIGHLIGHT_STAGE =
+  'transition-colors duration-150 group-has-[[data-remove=stage]:hover]/stage:border-destructive/50 group-has-[[data-remove=stage]:focus-visible]/stage:border-destructive/50';
+const REMOVE_HIGHLIGHT_SELF =
+  'has-[[data-remove=card]:hover]:border-destructive/50 has-[[data-remove=card]:focus-visible]:border-destructive/50';
+
+export const CARD = `rounded-lg border border-hairline bg-card p-4 ${REMOVE_HIGHLIGHT_SELF} ${REMOVE_HIGHLIGHT_STAGE}`;
 
 export function Eyebrow({ children, className }: { children: ReactNode; className?: string }) {
   return <p className={cn('font-mono text-[10px] font-medium uppercase tracking-wider text-muted-foreground', className)}>{children}</p>;
@@ -58,6 +68,7 @@ export function DashedAddButton({ label, disabled, onClick }: { label: string; d
 export function RemoveButton({
   label,
   tip = label,
+  scope = 'card',
   onClick,
   className,
 }: {
@@ -65,6 +76,8 @@ export function RemoveButton({
   label: string;
   /** Balon metni; verilmezse `label`. */
   tip?: string;
+  /** Vurgunun kapsamı: kartın kendisi ya da tüm aşama (`REMOVE_HIGHLIGHT_*`). */
+  scope?: 'card' | 'stage';
   onClick: () => void;
   className?: string;
 }) {
@@ -77,6 +90,7 @@ export function RemoveButton({
           size="icon"
           className={cn('size-7 text-muted-foreground hover:text-destructive', className)}
           aria-label={label}
+          data-remove={scope}
           onClick={onClick}
           {...trash.hoverProps}
         >

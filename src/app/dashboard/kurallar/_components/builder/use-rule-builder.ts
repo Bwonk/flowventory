@@ -21,6 +21,7 @@ import {
   type RuleWindowHours,
   type RuleWorkflow,
 } from '@/lib/rules/types';
+import { removeStageAt, restoreStageAt } from './stage-ops';
 
 export interface BuilderState {
   name: string;
@@ -40,6 +41,7 @@ type Action =
   | { type: 'setScope'; scope: RuleScope }
   | { type: 'addStage'; stage: RuleStage }
   | { type: 'removeStage'; stage: number }
+  | { type: 'restoreStage'; index: number; stage: RuleStage }
   | { type: 'addCondition'; stage: number; condition: RuleCondition }
   | { type: 'updateCondition'; stage: number; index: number; condition: RuleCondition }
   | { type: 'setConnector'; stage: number; index: number; op: RuleLogic }
@@ -64,10 +66,14 @@ function reducer(state: BuilderState, action: Action): BuilderState {
     case 'addStage':
       if (state.workflow.stages.length >= MAX_STAGES) return state;
       return { ...state, workflow: { stages: [...state.workflow.stages, action.stage] } };
-    case 'removeStage':
-      // Aşama 1 silinmez; sonraki aşamalar "önceki aşamaya" göre ölçer.
-      if (action.stage === 0) return state;
-      return { ...state, workflow: { stages: state.workflow.stages.filter((_, i) => i !== action.stage) } };
+    case 'removeStage': {
+      const stages = removeStageAt(state.workflow.stages, action.stage);
+      return stages === state.workflow.stages ? state : { ...state, workflow: { stages: [...stages] } };
+    }
+    case 'restoreStage': {
+      const stages = restoreStageAt(state.workflow.stages, action.index, action.stage);
+      return stages === state.workflow.stages ? state : { ...state, workflow: { stages: [...stages] } };
+    }
     case 'addCondition':
       return mapStage(state, action.stage, s =>
         s.conditions.length >= MAX_CONDITIONS ? s : { ...s, conditions: [...s.conditions, { op: 'and', condition: action.condition }] },
@@ -167,6 +173,8 @@ export function useRuleBuilder(init: BuilderInit) {
     [leadTimeDays],
   );
   const removeStage = useCallback((stage: number) => dispatch({ type: 'removeStage', stage }), []);
+  /** "Geri al": kaldırılan aşamayı eski sırasına koyar (sınır doluysa etkisiz). */
+  const restoreStage = useCallback((index: number, stage: RuleStage) => dispatch({ type: 'restoreStage', index, stage }), []);
 
   const addCondition = useCallback(
     (stage: number) => dispatch({ type: 'addCondition', stage, condition: defaultCondition('stock_below', { leadTimeDays }) }),
@@ -214,6 +222,7 @@ export function useRuleBuilder(init: BuilderInit) {
     setScope,
     addStage,
     removeStage,
+    restoreStage,
     addCondition,
     setMetric,
     updateCondition,

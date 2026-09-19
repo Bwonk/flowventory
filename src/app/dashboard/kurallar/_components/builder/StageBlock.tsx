@@ -23,7 +23,7 @@ import { cn } from '@/lib/utils';
 import { ActionIcon } from '../ActionIcon';
 import { ActionCard } from './ActionCard';
 import { ConditionCard, ConnectorToggle } from './ConditionCard';
-import { DASHED_ADD, DashedAddButton, Eyebrow, FlowConnector, RemoveButton } from './flow-primitives';
+import { DASHED_ADD, DashedAddButton, Eyebrow, FlowConnector, REMOVE_HIGHLIGHT_STAGE, RemoveButton } from './flow-primitives';
 
 export interface StageHandlers {
   onAddCondition: () => void;
@@ -69,7 +69,7 @@ export function StageBlock({ stage, stageIndex, stageCount, notificationEmail, .
   } as const;
 
   return (
-    <section aria-label={`Aşama ${stageIndex + 1}`} className="flex flex-col">
+    <section aria-label={`Aşama ${stageIndex + 1}`} className="group/stage flex flex-col">
       {stageCount > 1 && (
         // `px-px`: kartların 1px kenarlığı kadar — çöp ikonu alttaki kartlardakiyle aynı dikey hizada.
         <div className="mb-2 flex items-center justify-between gap-3 px-px">
@@ -78,6 +78,7 @@ export function StageBlock({ stage, stageIndex, stageCount, notificationEmail, .
             <RemoveButton
               label={`Aşama ${stageIndex + 1} kaldır`}
               tip="Aşamayı kaldır — koşulları ve aksiyonlarıyla birlikte"
+              scope="stage"
               onClick={h.onRemoveStage}
               className="-my-1 mr-2"
             />
@@ -90,7 +91,7 @@ export function StageBlock({ stage, stageIndex, stageCount, notificationEmail, .
         {groups.map((group, gi) => (
           <motion.div key={`g${group[0]}`} {...motionProps} className="flex flex-col">
             {gi > 0 && <ConnectorToggle op="or" onToggle={op => h.onSetConnector(group[0], op)} />}
-            <div className={cn('flex flex-col', clustered && group.length > 1 && 'rounded-lg border border-hairline p-2')}>
+            <div className={cn('flex flex-col', clustered && group.length > 1 && cn('rounded-lg border border-hairline p-2', REMOVE_HIGHLIGHT_STAGE))}>
               {group.map((index, pos) => (
                 <Fragment key={index}>
                   {pos > 0 && <ConnectorToggle op="and" onToggle={op => h.onSetConnector(index, op)} />}

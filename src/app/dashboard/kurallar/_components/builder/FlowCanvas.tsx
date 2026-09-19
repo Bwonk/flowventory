@@ -1,8 +1,9 @@
 'use client';
 
-import { Fragment } from 'react';
+import { Fragment, useRef } from 'react';
+import { toast } from 'sonner';
 import { describeRule } from '@/lib/rules/describe';
-import { MAX_STAGES } from '@/lib/rules/types';
+import { MAX_STAGES, type RuleStage } from '@/lib/rules/types';
 import type { TargetOption } from '../TargetPicker';
 import { DashedAddButton, Eyebrow, FlowConnector } from './flow-primitives';
 import { RunSettings } from './RunSettings';
@@ -25,6 +26,28 @@ interface FlowCanvasProps {
 export function FlowCanvas({ builder, products, vendors, optionsLoading, notificationEmail }: FlowCanvasProps) {
   const { state } = builder;
   const stages = state.workflow.stages;
+  // "Geri Al" tıklandığında güncel aşama sayısı: bildirim açıkken yeni aşama eklenmiş olabilir.
+  const stageCount = useRef(stages.length);
+  stageCount.current = stages.length;
+
+  // Aşama, içindeki koşul ve aksiyonlarla gider; yanlış tıklama onay penceresiyle
+  // değil "Geri Al" ile karşılanır (stok düzenleme bildirimiyle aynı kalıp).
+  const removeStage = (index: number, stage: RuleStage) => {
+    builder.removeStage(index);
+    toast(`Aşama ${index + 1} kaldırıldı`, {
+      description: `${stage.conditions.length} koşul ve ${stage.actions.length} aksiyonla birlikte.`,
+      action: {
+        label: 'Geri Al',
+        onClick: () => {
+          if (stageCount.current >= MAX_STAGES) {
+            toast.error(`Geri alınamadı: en fazla ${MAX_STAGES} aşama olabilir.`);
+            return;
+          }
+          builder.restoreStage(index, stage);
+        },
+      },
+    });
+  };
 
   return (
     <div className="flex flex-col items-stretch">
@@ -55,7 +78,7 @@ export function FlowCanvas({ builder, products, vendors, optionsLoading, notific
             onSetActionType={(i, t) => builder.setActionType(si, i, t)}
             onUpdateAction={(i, a) => builder.updateAction(si, i, a)}
             onRemoveAction={i => builder.removeAction(si, i)}
-            onRemoveStage={() => builder.removeStage(si)}
+            onRemoveStage={() => removeStage(si, stage)}
           />
         </Fragment>
       ))}
