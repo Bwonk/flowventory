@@ -1,5 +1,6 @@
 'use client';
 
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/animate-ui/components/animate/tooltip';
 import { Input } from '@/components/ui/input';
 import { Dropdown, OptionButton } from '@/components/shared/filters/Dropdown';
 import { SegmentedTrack } from '@/components/shared/tool-track';
@@ -19,25 +20,39 @@ import { cn } from '@/lib/utils';
 import { CARD, Eyebrow, RemoveButton } from './flow-primitives';
 
 const WINDOW_OPTIONS = RULE_WINDOWS.map(h => ({ value: `${h}` as `${RuleWindowHours}`, label: WINDOW_LABELS[h] }));
+const CONNECTOR_LABEL = 'font-mono text-[11px] font-medium uppercase tracking-wider';
+const CONNECTOR_OPTIONS = (['and', 'or'] as const).map(value => ({
+  value,
+  label: <span className={CONNECTOR_LABEL}>{LOGIC_LABELS[value]}</span>,
+}));
 const GROUP_LABEL = 'px-3 pb-1 pt-2 font-mono text-[10px] font-medium uppercase tracking-wider text-muted-foreground';
 
 /**
- * Koşullar arasındaki tıklanabilir bağlaç rozeti (VE ⇄ VEYA). Badge
- * görünümlü buton; VE önce bağlandığı için VEYA kümeleri ayırır (K1).
+ * Koşullar arasındaki bağlaç (VE ⇄ VEYA). İki seçenekli anahtar: ikisi de
+ * görünür, seçili olan hapla öne çıkar — tek rozet hali tıklanamaz "SONRA"
+ * rozetiyle aynı görünüyor, değiştirilebildiği anlaşılmıyordu (DESIGN.md §5
+ * "Akış kartları"). VE önce bağlandığı için VEYA kümeleri ayırır (K1).
  */
 export function ConnectorToggle({ op, onToggle }: { op: RuleLogic; onToggle: (op: RuleLogic) => void }) {
-  const next: RuleLogic = op === 'and' ? 'or' : 'and';
   return (
     <div className="flex flex-col items-center">
       <span className="h-3 w-px bg-hairline" aria-hidden />
-      <button
-        type="button"
-        onClick={() => onToggle(next)}
-        aria-label={`Bağlaç ${LOGIC_LABELS[op]} — ${LOGIC_LABELS[next]} yapmak için tıklayın`}
-        className="inline-flex h-6 items-center rounded-md border border-hairline bg-card px-2 font-mono text-[11px] font-medium uppercase tracking-wider text-foreground transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        {LOGIC_LABELS[op]}
-      </button>
+      <Tooltip side="right" align="center">
+        <TooltipTrigger asChild>
+          <div>
+            <SegmentedTrack
+              size="sm"
+              aria-label="Koşul bağlacı"
+              value={op}
+              onChange={next => {
+                if (next !== op) onToggle(next);
+              }}
+              options={CONNECTOR_OPTIONS}
+            />
+          </div>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-64 text-balance">VE: iki koşul da sağlanmalı · VEYA: biri yeter</TooltipContent>
+      </Tooltip>
       <span className="h-3 w-px bg-hairline" aria-hidden />
     </div>
   );

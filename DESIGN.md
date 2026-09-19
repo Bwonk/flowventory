@@ -352,8 +352,11 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   (`rounded-lg border border-hairline bg-card p-4`); aralarında
   `w-px h-4 bg-hairline` bağlantı çizgisi. Aşamalar arası rozet "SONRA"
   (`Badge variant="outline"`, mono uppercase); tek aşamada "AŞAMA n" başlığı
-  gizli. Koşullar arası bağlaç **tıklanabilir rozet** (`ConnectorToggle`:
-  Badge görünümlü buton, VE ⇄ VEYA); VE önce bağlandığı için birden fazla
+  gizli. Koşullar arası bağlaç **iki seçenekli anahtardır** (`ConnectorToggle`:
+  `SegmentedTrack size="sm"`, mono `VE | VEYA`, seçili olan hapla öne çıkar;
+  balon anlamı söyler) — tek rozet hali tıklanamaz "SONRA" rozetiyle aynı
+  görünüyor, değiştirilebildiği anlaşılmıyordu. Kural: **değişebilen şey
+  rozet gibi görünmez**; rozet yalnız bilgidir. VE önce bağlandığı için birden fazla
   koşullu VE zinciri ince `rounded-lg border border-hairline p-2` küme
   çerçevesiyle sarılır, kümeler arası VEYA. Koşullardan sonra "→" rozeti ve
   **aksiyon kartları** (tip seçici + girdiler); dışarı yazan aksiyonda
