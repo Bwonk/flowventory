@@ -19,6 +19,12 @@ export interface Geo {
   left: number;
   top: number;
   trigger: Rect;
+  /**
+   * Morph'un başladığı dikdörtgen: tetikleyici panelden genişse (tam genişlikte
+   * "ekle" kartı) hizaya göre panel genişliğine daraltılır — yoksa açılış,
+   * tetikleyici boyunca uzanan beyaz bir şerit olarak başlardı.
+   */
+  origin: Rect;
   panel: Rect;
 }
 
@@ -64,12 +70,16 @@ export function buildGeo({
   const layerW = Math.max(triggerW, px + contentW) + pad - left;
   const layerH = Math.max(triggerH, py + contentH) + pad - top;
 
+  const trigger = { x: 0 - left, y: 0 - top, w: triggerW, h: triggerH, r: Math.min(triggerH / 2, triggerRadius) };
+  const originW = Math.min(triggerW, contentW);
+
   return {
     layerW,
     layerH,
     left,
     top,
-    trigger: { x: 0 - left, y: 0 - top, w: triggerW, h: triggerH, r: Math.min(triggerH / 2, triggerRadius) },
+    trigger,
+    origin: { ...trigger, x: trigger.x + alignX(align, triggerW, originW), w: originW },
     panel: { x: px - left, y: py - top, w: contentW, h: contentH, r: panelRadius },
   };
 }
@@ -82,13 +92,13 @@ export function alignX(align: Align, triggerW: number, contentW: number): number
 }
 
 export function rectAtProgress(geo: Geo, progress: number): Rect {
-  const { trigger, panel } = geo;
+  const { origin, panel } = geo;
   return {
-    x: lerp(trigger.x, panel.x, progress),
-    y: lerp(trigger.y, panel.y, progress),
-    w: lerp(trigger.w, panel.w, progress),
-    h: lerp(trigger.h, panel.h, progress),
-    r: lerp(trigger.r, panel.r, progress),
+    x: lerp(origin.x, panel.x, progress),
+    y: lerp(origin.y, panel.y, progress),
+    w: lerp(origin.w, panel.w, progress),
+    h: lerp(origin.h, panel.h, progress),
+    r: lerp(origin.r, panel.r, progress),
   };
 }
 

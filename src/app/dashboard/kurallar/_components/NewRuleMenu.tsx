@@ -3,14 +3,8 @@
 import { useRouter } from 'next/navigation';
 import { ChevronDown, FilePlus2, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { GooPopover, GooPopoverContent, GooPopoverTrigger } from '@/components/motion/goo-popover';
+import { GooMenuItem, GooMenuLabel, GooMenuSeparator } from '@/components/motion/goo-popover/menu';
 import { hasActionType } from '@/lib/rules/actions-catalog';
 import { RULE_TEMPLATES, type RuleTemplateKey } from '@/lib/rules/templates';
 
@@ -29,32 +23,32 @@ export function newRuleHref(template?: RuleTemplateKey): string {
 const LABEL_CLASS = 'font-mono text-[10px] uppercase tracking-wider text-muted-foreground';
 
 /**
- * "Yeni kural ekle" — düz menü: boş kural + hazır şablonlar (ad + tek satır
- * açıklama). E-posta aksiyonlu şablon bildirim adresi yoksa pasiftir.
+ * "Yeni kural ekle" — goo ile açılan düz menü: boş kural + hazır şablonlar (ad +
+ * tek satır açıklama). E-posta aksiyonlu şablon bildirim adresi yoksa pasiftir.
  */
 export function NewRuleMenu({ notificationEmail, open, onOpenChange }: NewRuleMenuProps) {
   const router = useRouter();
 
   return (
-    <DropdownMenu open={open} onOpenChange={onOpenChange}>
-      <DropdownMenuTrigger asChild>
+    <GooPopover open={open} onOpenChange={onOpenChange} align="end" dismiss="consume">
+      <GooPopoverTrigger>
         <Button className="gap-2">
           <Plus className="size-3" aria-hidden />
           Yeni kural ekle
           <ChevronDown className="size-3 opacity-70" aria-hidden />
         </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-72 rounded-lg border-hairline p-1.5">
-        <DropdownMenuItem className="gap-2" onSelect={() => router.push(newRuleHref())}>
+      </GooPopoverTrigger>
+      <GooPopoverContent aria-label="Yeni kural ekle" className="w-72 p-1.5">
+        <GooMenuItem onSelect={() => router.push(newRuleHref())}>
           <FilePlus2 className="size-4" aria-hidden />
           Boş kural
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuLabel className={LABEL_CLASS}>Şablonlar</DropdownMenuLabel>
+        </GooMenuItem>
+        <GooMenuSeparator />
+        <GooMenuLabel className={LABEL_CLASS}>Şablonlar</GooMenuLabel>
         {RULE_TEMPLATES.map(template => {
           const needsEmail = hasActionType(template.rule.workflow, 'email') && !notificationEmail;
           return (
-            <DropdownMenuItem
+            <GooMenuItem
               key={template.key}
               disabled={needsEmail}
               className="flex-col items-start gap-0.5"
@@ -64,10 +58,10 @@ export function NewRuleMenu({ notificationEmail, open, onOpenChange }: NewRuleMe
               <span className="text-xs text-muted-foreground">
                 {needsEmail ? 'E-posta için Ayarlar’da bildirim adresi gerekli.' : template.description}
               </span>
-            </DropdownMenuItem>
+            </GooMenuItem>
           );
         })}
-      </DropdownMenuContent>
-    </DropdownMenu>
+      </GooPopoverContent>
+    </GooPopover>
   );
 }

@@ -271,8 +271,14 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   değer seçen her alan (araç yolu filtre segmentleri, stok eşiği formu, ayarlar
   gün/saat, kural metrik/değer/aksiyon/hedef seçicileri) goo ile açılır;
   tetikleyici, `OptionButton`, tik çizimi sonrası kapanış ve `children(close)`
-  sözleşmesi değişmez. Eylem menüleri ("Aksiyon ekle", "Yeni kural ekle") ve
-  tablo "…" menüleri `DropdownMenu` kalır — goo *değer taşıyan alan* içindir. Dinlenme hali standart açılır yüzeydir (`rounded-lg` +
+  sözleşmesi değişmez. Görünür bir butondan açılan eylem menüleri de goo'dur
+  ("Aksiyon ekle", "Yeni kural ekle"): `GooPopover` + `GooMenuItem` /
+  `GooMenuLabel` / `GooMenuSeparator`
+  ([src/components/motion/goo-popover/menu.tsx](src/components/motion/goo-popover/menu.tsx) —
+  `DropdownMenuItem` ile aynı görünüm, seçince kapanır). Tetikleyici panelden
+  genişse (tam genişlikte kesikli "ekle" kartı) morph, hizaya göre panel
+  genişliğindeki bir dilimden başlar; `rounded-lg` tetikleyicide
+  `triggerRadius={8}`. Tablo satır/kolon "…" menüleri `DropdownMenu` kalır. Dinlenme hali standart açılır yüzeydir (`rounded-lg` +
   `border-hairline` + `bg-popover` + `shadow-md`) — goo yalnız geçiştir:
   oturunca filtre ve clip kapanır. Akarken kontur, gövdenin 1px dışında kalan
   `bg-hairline` goo katmanıdır. Yarıçap 8 (panel) / 6 (tetikleyici), boyun 8px,

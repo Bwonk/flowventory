@@ -74,6 +74,20 @@ describe('buildGeo', () => {
     expect(geo.panel.x).toBe(0);
   });
 
+  it('panelden dar tetikleyicide morph tetikleyicinin kendisinden başlar', () => {
+    const geo = buildGeo(base);
+    expect(geo.origin).toEqual(geo.trigger);
+  });
+
+  it('panelden geniş tetikleyicide morph hizaya göre panel genişliğinden başlar', () => {
+    const wide = { ...base, triggerW: 600 };
+    expect(buildGeo({ ...wide, align: 'center' }).origin).toMatchObject({ x: 200, w: 200, h: 36 });
+    expect(buildGeo({ ...wide, align: 'start' }).origin).toMatchObject({ x: 0, w: 200 });
+    expect(buildGeo({ ...wide, align: 'end' }).origin).toMatchObject({ x: 400, w: 200 });
+    // Oyuk yine tüm tetikleyiciyi açar.
+    expect(buildGeo({ ...wide, align: 'center' }).trigger.w).toBe(600);
+  });
+
   it('alçak tetikleyicide yarıçap yüksekliğin yarısını geçmez', () => {
     expect(buildGeo({ ...base, triggerH: 8 }).trigger.r).toBe(4);
   });
@@ -83,7 +97,7 @@ describe('morph', () => {
   const geo = buildGeo(base);
 
   it('0 tetikleyici, 1 panel, arası doğrusal', () => {
-    expect(rectAtProgress(geo, 0)).toEqual(geo.trigger);
+    expect(rectAtProgress(geo, 0)).toEqual(geo.origin);
     expect(rectAtProgress(geo, 1)).toEqual(geo.panel);
     expect(rectAtProgress(geo, 0.5)).toEqual({ x: 0, y: 22, w: 160, h: 98, r: 7 });
   });

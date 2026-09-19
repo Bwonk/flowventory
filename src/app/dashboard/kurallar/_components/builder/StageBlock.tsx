@@ -4,7 +4,8 @@ import { Fragment } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { GooPopover, GooPopoverContent, GooPopoverTrigger } from '@/components/motion/goo-popover';
+import { GooMenuItem } from '@/components/motion/goo-popover/menu';
 import { ACTION_CATALOG } from '@/lib/rules/actions-catalog';
 import { groupNodes } from '@/lib/rules/logic';
 import {
@@ -134,22 +135,23 @@ export function StageBlock({ stage, stageIndex, stageCount, notificationEmail, .
       </AnimatePresence>
 
       <FlowConnector />
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild disabled={!canAddAction}>
+      {/* Kesikli kart `rounded-lg`: oyuk yarıçapı 8. Tam genişlikte tetikleyicide morph ortadan başlar. */}
+      <GooPopover align="center" dismiss="consume" triggerRadius={8} className="flex w-full">
+        <GooPopoverTrigger>
           <button type="button" className={DASHED_ADD} disabled={!canAddAction}>
             <Plus className="size-3.5" aria-hidden />
             {canAddAction ? 'Aksiyon ekle' : 'Tüm aksiyonlar eklendi'}
           </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="center" className="min-w-[220px] rounded-lg border-hairline p-1.5">
+        </GooPopoverTrigger>
+        <GooPopoverContent aria-label="Aksiyon ekle" className="min-w-[220px] p-1.5">
           {addableTypes.map(t => (
-            <DropdownMenuItem key={t} className="gap-2" onSelect={() => h.onAddAction(t)}>
+            <GooMenuItem key={t} onSelect={() => h.onAddAction(t)}>
               <ActionIcon type={t} className="text-foreground" />
               {ACTION_CATALOG[t].label}
-            </DropdownMenuItem>
+            </GooMenuItem>
           ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
+        </GooPopoverContent>
+      </GooPopover>
     </section>
   );
 }

@@ -57,8 +57,6 @@ type TriggerMode = 'click' | 'hover';
 /** DESIGN.md §6 kanonik spring. */
 const GOO_SPRING = { type: 'spring' as const, stiffness: 350, damping: 35 };
 const HOVER_CLOSE_DELAY = 120;
-/** Tetikleyici yarıçapı — `rounded-md`. */
-const TRIGGER_RADIUS = 6;
 /** Gövdenin hairline kontur katmanından içeri çekilmesi (px) — oturan panelin 1px kenarlığıyla aynı yer. */
 const HAIRLINE = 1;
 /** Katman kutusu payı: kontur ve goo kabarması kutu kenarında kesilmesin. */
@@ -92,6 +90,7 @@ interface GooPopoverContextValue {
   align: Align;
   gap: number;
   panelRadius: number;
+  triggerRadius: number;
   gooStrength: number;
   reduce: boolean;
   gooId: string;
@@ -104,6 +103,11 @@ interface GooPopoverContextValue {
 }
 
 const GooPopoverContext = createContext<GooPopoverContextValue | null>(null);
+
+/** Panel içeriğinden kapatma — menü öğeleri seçimden sonra çağırır. */
+export function useGooPopoverClose(): () => void {
+  return useGooPopoverContext('useGooPopoverClose').close;
+}
 
 function useGooPopoverContext(component: string) {
   const ctx = useContext(GooPopoverContext);
@@ -126,6 +130,8 @@ export interface GooPopoverProps {
   sideOffset?: number;
   /** Açık panelin köşe yarıçapı (px). Varsayılan 8 (`rounded-lg`). */
   panelRadius?: number;
+  /** Tetikleyicinin köşe yarıçapı (px) — oyuk ve morph başlangıcı. Varsayılan 6 (`rounded-md`). */
+  triggerRadius?: number;
   /** Goo filtresini besleyen bulanıklık — büyüdükçe daha çok erir. Varsayılan 5. */
   gooStrength?: number;
   /** Morph geçişi; verilmezse kanonik spring. Kimliği değişse de süren animasyonu yeniden başlatmaz. */
@@ -145,6 +151,7 @@ export function GooPopover({
   align = 'center',
   sideOffset = 8,
   panelRadius = 8,
+  triggerRadius = 6,
   gooStrength = 5,
   dismiss = 'pass-through',
   transition,
@@ -251,6 +258,7 @@ export function GooPopover({
       align,
       gap: sideOffset,
       panelRadius,
+      triggerRadius,
       gooStrength,
       reduce,
       gooId,
@@ -273,6 +281,7 @@ export function GooPopover({
       align,
       sideOffset,
       panelRadius,
+      triggerRadius,
       gooStrength,
       reduce,
       gooId,
@@ -380,6 +389,7 @@ export function GooPopoverContent({ children, className, 'aria-label': ariaLabel
     align,
     gap,
     panelRadius,
+    triggerRadius,
     gooStrength,
     reduce,
     gooId,
@@ -432,13 +442,13 @@ export function GooPopoverContent({ children, className, 'aria-label': ariaLabel
       align,
       gap,
       panelRadius,
-      triggerRadius: TRIGGER_RADIUS,
+      triggerRadius,
       shiftX: layout
         ? resolveShiftX(layout.trigger.left, alignX(align, triggerW, contentW), contentW, window.innerWidth)
         : 0,
       pad: LAYER_PAD,
     });
-  }, [layout, side, align, gap, panelRadius]);
+  }, [layout, side, align, gap, panelRadius, triggerRadius]);
 
   // Aynı morph goo gövdesine, hairline kontura ve içeriğe uygulanır: panel tek
   // parça akar, metin onunla açılır (ölçeklenmez). Oturunca clip kalkar ki
@@ -516,11 +526,11 @@ export function GooPopoverContent({ children, className, 'aria-label': ariaLabel
     clipPath: triggerCutout(geo),
   };
   const pillStyle = {
-    left: geo.trigger.x,
-    top: geo.trigger.y,
-    width: geo.trigger.w,
-    height: geo.trigger.h,
-    borderRadius: geo.trigger.r,
+    left: geo.origin.x,
+    top: geo.origin.y,
+    width: geo.origin.w,
+    height: geo.origin.h,
+    borderRadius: geo.origin.r,
   };
   // Goo katmanları oturunca söner (150ms), kapanışta anında geri gelir.
   const gooLayerClass =
