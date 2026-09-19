@@ -383,10 +383,17 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   Geçmiş başlıkta "Geçmiş" butonu → sağ `Sheet`.
 - **Satır içi başlık (`EditableTitle`):**
   [src/components/shared/EditableTitle.tsx](src/components/shared/EditableTitle.tsx),
-  `PageHeader.titleSlot` ile. h1 tipografisi aynen kalır; hover/odakta sağda
-  soluk kalem (`opacity-0 group-hover:opacity-100`); tıkla → aynı
-  tipografide input (`ring-1 ring-hairline`), Enter/blur kaydeder, Esc geri
-  alır; boşken placeholder `text-muted-foreground`. Ayrı "ad" alanı açma.
+  `PageHeader.titleSlot` ile. h1 tipografisi aynen kalır. Tek kabuk iki halde
+  yaşar (zıplama yok): dinlenmede başlık + **hep görünen** soluk hareketli
+  kalem (`text-muted-foreground` — düzenlenebilirliğin işareti; hover'da
+  kabuk `bg-muted`, kalem oynar), düzenlemede `bg-card` + `ring-1
+  ring-hairline` → odak halkası ve kalemin yerine çizilerek gelen tik.
+  Enter/blur/tik kaydeder, Esc geri alır; boşken placeholder
+  `text-muted-foreground`. Genişlik görünmez ölçü metninden gelir
+  (`inline-grid`, input `size={1}` + `w-0 min-w-full`) — `size` özniteliğiyle
+  genişlik verme. Negatif kenar boşluğu kabukta değil `h1`'de: kabukta
+  `max-w-full` ile birlikte kendini 8px daraltıp her başlığı kırpıyordu.
+  Ayrı "ad" alanı açma.
 - **Sidebar onboarding kartı:**
   [src/components/layout/OnboardingCard.tsx](src/components/layout/OnboardingCard.tsx);
   beyaz sidebar yüzeyi üzerinde ikinci seviye `bg-muted` zemin — çerçevesiz,
