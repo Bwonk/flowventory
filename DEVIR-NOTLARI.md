@@ -200,6 +200,30 @@ Plan: `docs/plans/kurallar-v3-aksiyon-workflow.md` (K1 VE önceliği, K2 hedef b
 | — | Lint uyarıları: `TrendChart` hourlyViews dep (gerçek bug'dı — 24s/görüntülenme grafiği asenkron veriyi göstermiyordu) + `<img>` → `next/image` | ✅ Temiz (0 uyarı) |
 | — | `src/app/api/dev/seed-orders` + mock-analytics: production build'e girmiyor ama App Store öncesi tamamen silinebilir | Not — manuel QA bitene kadar dursun |
 
+### Planlanan UI işleri (kullanıcı isteği, sıraya alındı)
+- **Diğer sayfalardaki ikonları hareketliye çevir** (istek: 19 Eyl 2026). Kurallar sayfası emsal
+  (`658b35f`): lucide ikonları → `src/components/ui/icons/` altındaki animasyonlu heroicons, hover
+  `useIconHover()` ile parent'tan sürülür (DESIGN.md §5 "İkonlar", §6). Kalan alanlar ve lucide
+  envanteri (19 Eyl 2026):
+  - **Genel Bakış** (`dashboard/_components`): AlertTriangle, Package, Eye, ArrowUpRight, Activity
+  - **Stok Takibi**: Check, X, Pencil, Package, Download, Loader2
+  - **Satın Alma (rapor)**: Check, Plus, Trash2, AlertTriangle, Wallet, Truck, Store, Package, Loader2
+  - **Ayarlar**: ArrowUpRight, Loader2 · **Analiz**: lucide yok
+  - **Layout** (sidebar, bildirim drawer'ı): X, Bell, AlertTriangle, TrendingUp, Trash2, Store,
+    RotateCcw, Radar, Mail, MailOpen, ChevronLeft/Right, Check, CheckCheck, Archive
+  - **Ortak** (`components/shared`): Package, Minus, X, TrendingUp/Down, Search, RotateCcw, Plus,
+    Pencil, Check, Calendar, AlertTriangle
+  - Elde hazır karşılıklar: plus, trash, pencil, check, x-mark, bell, envelope, eye,
+    exclamation-triangle, clock, chevron-down, cube, arrow-path, archive-box-arrow-down.
+    **Eksikler kullanıcıdan istenecek** (`pnpm dlx shadcn@latest add @heroicons-animated/<ad>` —
+    dosyalar `src/components/ui/`'a düşer, `ui/icons/`'a taşı): ok (arrow-up-right), indir
+    (arrow-down-tray), ara (magnifying-glass), takvim (calendar), eksi (minus), sol/sağ ok
+    (chevron-left/right), mağaza (building-storefront), kamyon (truck), cüzdan (wallet), trend
+    (arrow-trending-up/down), açık zarf (envelope-open), arşiv (archive-box).
+  - Dikkat: animasyonlu ikon bir `<div>` sarmalar — `<p>` içine konmaz (hydration hatası);
+    `Button`/menü öğesi içinde boyut `[&>svg]:size-*!` ile verilir; `Loader2` dönen yükleme
+    göstergesi, ikon değil — dokunma; boş durumdaki büyük soluk ikonlar dekoratif, ayrı karar.
+
 ### Plandan kalan özellik fikirleri (Katman 2-3, hiç başlanmadı)
 - Kaydedilmiş görünümler / paylaşılabilir filtreler
 - Excel export (CSV var; rapor bazlı export yok)
