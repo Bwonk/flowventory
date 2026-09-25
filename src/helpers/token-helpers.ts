@@ -117,6 +117,12 @@ export class TokenHelpers {
       // Store authorized app ID separately for reference
       sessionStorage.setItem('authorizedAppId', authorizedAppId);
       
+      // Inside the ikas iframe (e.g. after reAuthorizeApp) stay in place instead of nesting a second Admin
+      if (window.self !== window.top) {
+        router.replace('/dashboard');
+        return;
+      }
+
       // Redirect to the specified URL (typically back to the app)
       window.location.replace(redirectUrl);
       

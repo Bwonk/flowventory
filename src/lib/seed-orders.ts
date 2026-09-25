@@ -1,6 +1,6 @@
 import { getIkas } from '@/helpers/api-helpers';
 import type { AuthToken } from '@/models/auth-token';
-import { config } from '@/globals/config';
+import { OrderShippingMethodEnum } from '@/lib/ikas-client/generated/graphql';
 
 type SeedVariant = {
   id: string;
@@ -15,19 +15,6 @@ type CreatedOrderSummary = {
   orderedAt?: number | null;
   totalFinalPrice?: number | null;
 };
-
-const CREATE_ORDER_MUTATION = `
-  mutation createOrderWithTransactions($input: PublicCreateOrderWithTransactionsInput!) {
-    createOrderWithTransactions(input: $input) {
-      id
-      orderNumber
-      orderedAt
-      totalFinalPrice
-      currencyCode
-      status
-    }
-  }
-`;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -113,7 +100,7 @@ export async function seedSalesOrders(
       order: {
         currencyCode: 'TRY',
         orderedAt,
-        shippingMethod: 'NO_SHIPMENT',
+        shippingMethod: OrderShippingMethodEnum.NO_SHIPMENT,
         note: `Flowventory seed #${i + 1}`,
         customer: {
           email: `seed.customer.${(i % 5) + 1}@flowventory.dev`,
@@ -143,29 +130,14 @@ export async function seedSalesOrders(
       transactions: [{ amount }],
     };
 
-    const response = await fetch(config.graphApiUrl!, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${authToken.accessToken}`,
-      },
-      body: JSON.stringify({
-        query: CREATE_ORDER_MUTATION,
-        variables: { input },
-        operationName: 'createOrderWithTransactions',
-      }),
-    });
+    const response = await ikas.mutations.createOrderWithTransactions({ input });
 
-    const json = (await response.json()) as {
-      data?: { createOrderWithTransactions?: CreatedOrderSummary };
-      errors?: Array<{ message: string }>;
-    };
-
-    if (json.errors?.length) {
-      throw new Error(`Sipariş #${i + 1} hata: ${json.errors.map(e => e.message).join('; ')}`);
+    if (!response.isSuccess) {
+      const messages = (response.errors ?? []).map(e => e.message).join('; ') || String(response.error ?? 'bilinmeyen hata');
+      throw new Error(`Sipariş #${i + 1} hata: ${messages}`);
     }
 
-    const order = json.data?.createOrderWithTransactions;
+    const order = response.data?.createOrderWithTransactions;
     if (order?.id) created.push(order);
   }
 

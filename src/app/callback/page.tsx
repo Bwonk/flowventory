@@ -24,7 +24,9 @@ function CallbackContent() {
       // NOT: callback parametreleri (code, signature) hassastır — loglanmaz.
       // Set token and handle redirect logic
       await TokenHelpers.setToken(router, params);
-    })();
+    })().catch((e) => {
+      if (e !== 'redirectUrl-called') throw e;
+    });
   }, [router, searchParams]);
 
   // Show loading indicator while processing callback

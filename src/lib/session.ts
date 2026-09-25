@@ -15,7 +15,11 @@ export interface SessionData {
 }
 
 export async function getSession(): Promise<IronSession<SessionData>> {
-  const session = await getIronSession(await cookies(), { password: config.cookiePassword || '', cookieName: TOKEN_COOKIE || '' });
+  // iron-session requires 32+ chars; fail with a clear message instead of an empty password.
+  if (!config.cookiePassword || config.cookiePassword.length < 32) {
+    throw new Error('SECRET_COOKIE_PASSWORD must be set and at least 32 characters');
+  }
+  const session = await getIronSession(await cookies(), { password: config.cookiePassword, cookieName: TOKEN_COOKIE || '' });
   return session;
 }
 

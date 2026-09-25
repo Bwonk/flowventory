@@ -3,9 +3,11 @@
 import { logger } from '@/lib/logger';
 import { AppBridgeHelper } from '@ikas/app-helpers';
 import { useRouter } from 'next/navigation';
+import { isAxiosError } from 'axios';
 import { useEffect, useState } from 'react';
 
 import { TokenHelpers } from '@/helpers/token-helpers';
+import { ApiRequests } from '@/lib/api-requests';
 
 /**
  * Custom hook for managing the base home page authentication and routing logic.
@@ -43,6 +45,14 @@ export function useBaseHomePage() {
         const existingToken = await TokenHelpers.getTokenForIframeApp();
 
         if (existingToken) {
+          // A bridge token only proves ikas created the authorization — the OAuth
+          // callback may have failed, leaving the backend without an ikas token.
+          if (!(await hasBackendToken(existingToken))) {
+            const storeName = new URLSearchParams(window.location.search).get('storeName');
+            router.push(storeName ? `/authorize-store?storeName=${encodeURIComponent(storeName)}` : '/authorize-store');
+            return;
+          }
+
           // Valid token found - user is already authenticated, proceed to main application
           router.push('/dashboard');
           return;
@@ -59,6 +69,19 @@ export function useBaseHomePage() {
       } finally {
         // Always reset loading state when initialization completes
         setIsLoading(false);
+      }
+    };
+
+    /**
+     * Returns false only when the backend explicitly has no ikas token for this
+     * authorization (404). Other failures are left to the dashboard's error state.
+     */
+    const hasBackendToken = async (token: string) => {
+      try {
+        await ApiRequests.ikas.getMerchant(token);
+        return true;
+      } catch (error) {
+        return !(isAxiosError(error) && error.response?.status === 404);
       }
     };
 

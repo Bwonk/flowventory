@@ -2,11 +2,25 @@ import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/prisma';
 import { invalidateSync, refreshProductSnapshot } from '@/lib/sync/ikas-sync';
 import { AuthTokenManager } from '@/models/auth-token/manager';
+import { removeTrackingScript } from '@/lib/tracking-script';
 import { validateIkasWebhookSignature, type IkasWebhook } from '@ikas/admin-api-client';
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 
 /** App client secret used to verify the HMAC-SHA256 webhook signature. */
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
+
+/** ikas webhook zarfı — imza kontrolünden önce şekil doğrulanır. */
+const webhookSchema = z.object({
+  id: z.string(),
+  // SDK string diyor; canlıda timestamp gelebilir — ikisini de kabul et, string'e çevir.
+  createdAt: z.union([z.string(), z.number()]).transform(String),
+  scope: z.string(),
+  merchantId: z.string(),
+  authorizedAppId: z.string(),
+  data: z.string(),
+  signature: z.string(),
+});
 
 /** Stok/ürün payload'larından productId çıkarımı için gevşek tip. */
 type ProductishWebhookData = {
@@ -27,7 +41,8 @@ type ProductishWebhookData = {
  *    - store/product/deleted → snapshot satırları silinir.
  *    - store/order/*  → sipariş verisi "kirli" işaretlenir; bir sonraki
  *      analytics okuması yeniden sync yapar (çift sayma riski yok).
- *    - store/app/deleted → merchant'ın tüm verisi silinir (KVKK/GDPR).
+ *    - store/app/deleted → vitrin script'i kaldırılır, merchant'ın tüm verisi
+ *      silinir (KVKK/GDPR).
  *
  * Not (eski davranış): stok webhook'u gelen değeri saveVariantStocks ile
  * ikas'a GERİ yazıyordu — bu bir no-op'tu ve kaldırıldı. ikas stok verisinin
@@ -41,12 +56,18 @@ export async function POST(request: NextRequest) {
     }
 
     const rawBody = await request.text();
-    let webhook: IkasWebhook;
+    let body: unknown;
     try {
-      webhook = JSON.parse(rawBody) as IkasWebhook;
+      body = JSON.parse(rawBody);
     } catch {
       return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
     }
+
+    const parsed = webhookSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Invalid webhook payload' }, { status: 400 });
+    }
+    const webhook: IkasWebhook = parsed.data;
 
     if (!validateIkasWebhookSignature(webhook, CLIENT_SECRET)) {
       return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 401 });
@@ -113,6 +134,12 @@ export async function POST(request: NextRequest) {
       case 'store/app/deleted': {
         // Uygulama kaldırıldı — merchant'a ait TÜM veriyi temizle.
         const { merchantId } = webhook;
+        // Vitrin script'i token'a ihtiyaç duyar: token satırı silinmeden önce kaldır.
+        // Token yoksa kaldırma zaten işlenmiştir (tekrar teslimat) — API çağrısı yapma.
+        const authToken = await AuthTokenManager.get(webhook.authorizedAppId);
+        if (authToken) {
+          await removeTrackingScript(authToken);
+        }
         await prisma.$transaction([
           prisma.productSnapshot.deleteMany({ where: { merchantId } }),
           prisma.stockHistory.deleteMany({ where: { merchantId } }),

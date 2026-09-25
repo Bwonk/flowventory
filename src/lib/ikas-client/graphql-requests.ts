@@ -15,6 +15,8 @@ export const GET_AUTHORIZED_APP = gql`
     getAuthorizedApp {
       id
       salesChannelId
+      storeAppId
+      deleted
     }
   }
 `;
@@ -141,6 +143,25 @@ export const UPDATE_STOREFRONT_JS_SCRIPT = gql`
       isActive
       isHighPriority
       storefrontId
+    }
+  }
+`;
+
+export const DELETE_STOREFRONT_JS_SCRIPT = gql`
+  mutation deleteStorefrontJSScript {
+    deleteStorefrontJSScript
+  }
+`;
+
+export const CREATE_ORDER_WITH_TRANSACTIONS = gql`
+  mutation createOrderWithTransactions($input: PublicCreateOrderWithTransactionsInput!) {
+    createOrderWithTransactions(input: $input) {
+      id
+      orderNumber
+      orderedAt
+      totalFinalPrice
+      currencyCode
+      status
     }
   }
 `;

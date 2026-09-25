@@ -51,7 +51,8 @@ const AuthorizeStorePage: React.FC = () => {
             <CardTitle>Connect your ikas store</CardTitle>
             <CardDescription>Enter your store name to authorize this app.</CardDescription>
           </CardHeader>
-          <form method="GET" action="/api/oauth/authorize/ikas" autoComplete="off">
+          {/* target="_top": inside the ikas iframe OAuth must run in the top window */}
+          <form method="GET" action="/api/oauth/authorize/ikas" target="_top" autoComplete="off">
             <CardContent className="space-y-2">
               <Label htmlFor="storeName">Store name</Label>
               <Input

@@ -1,5 +1,34 @@
 import { BaseGraphQLAPIClient, BaseGraphQLAPIClientOptions, APIResult } from '@ikas/admin-api-client';
 
+export enum OrderAdjustmentEnum {
+  DECREMENT = "DECREMENT",
+  INCREMENT = "INCREMENT"
+}
+
+export enum OrderAmountTypeEnum {
+  AMOUNT = "AMOUNT",
+  RATIO = "RATIO"
+}
+
+export enum OrderShippingMethodEnum {
+  CLICK_AND_COLLECT = "CLICK_AND_COLLECT",
+  DIGITAL_DELIVERY = "DIGITAL_DELIVERY",
+  NO_SHIPMENT = "NO_SHIPMENT",
+  SHIPMENT = "SHIPMENT"
+}
+
+export enum OrderStatusEnum {
+  CANCELLED = "CANCELLED",
+  CREATED = "CREATED",
+  DRAFT = "DRAFT",
+  PARTIALLY_CANCELLED = "PARTIALLY_CANCELLED",
+  PARTIALLY_REFUNDED = "PARTIALLY_REFUNDED",
+  REFUNDED = "REFUNDED",
+  REFUND_REJECTED = "REFUND_REJECTED",
+  REFUND_REQUESTED = "REFUND_REQUESTED",
+  WAITING_UPSELL_ACTION = "WAITING_UPSELL_ACTION"
+}
+
 export enum ProductTypeEnum {
   BUNDLE = "BUNDLE",
   DIGITAL = "DIGITAL",
@@ -46,6 +75,18 @@ export enum StorefrontJSScriptContentTypeEnum {
   SCRIPT = "SCRIPT"
 }
 
+export type BundleProductOrderLineInput = {
+  bundleLineId: string;
+  bundleLineQuantity: number;
+  name?: string;
+  options?: Array<OrderLineOptionInput>;
+  variant: OrderLineVariantInput;
+}
+
+export type BundleProductOrderLineInputVariant = {
+  id: string;
+}
+
 export type CreateStorefrontJSScriptInput = {
   contentType: StorefrontJSScriptContentTypeEnum;
   fileName?: string;
@@ -71,6 +112,65 @@ export type HTMLMetaDataTranslationInput = {
   locale: string;
   pageTitle?: string;
   slug?: string;
+}
+
+export type OrderAddressRegionInput = {
+  id: string;
+  name: string;
+}
+
+export type OrderAdjustmentInput = {
+  amount: number;
+  amountType: OrderAmountTypeEnum;
+  campaignId?: string;
+  couponId?: string;
+  name: string;
+  order: number;
+  type: OrderAdjustmentEnum;
+}
+
+export type OrderCustomerInput = {
+  email?: string;
+  firstName?: string;
+  id?: string;
+  lastName?: string;
+}
+
+export type OrderLineDiscountInput = {
+  amount: number;
+  amountType: OrderAmountTypeEnum;
+  maxApplicableQuantity?: number;
+  reason?: string;
+}
+
+export type OrderLineOptionInput = {
+  productOptionId: string;
+  productOptionsSetId: string;
+  values: Array<OrderLineOptionValueInput>;
+}
+
+export type OrderLineOptionValueInput = {
+  price?: number;
+  value: string;
+}
+
+export type OrderLineVariantBundleProductInput = {
+  id: string;
+  order: number;
+  productId: string;
+  quantity: number;
+  variant: BundleProductOrderLineInputVariant;
+}
+
+export type OrderLineVariantInput = {
+  bundleProducts?: Array<OrderLineVariantBundleProductInput>;
+  id?: string;
+  name?: string;
+}
+
+export type OrderTransactionInput = {
+  amount: number;
+  paymentGatewayId?: string;
 }
 
 export type PaginationInput = {
@@ -129,6 +229,100 @@ export type ProductVariantUnitModelInput = {
 export type ProductVendorInput = {
   description?: string;
   name: string;
+}
+
+export type PublicCreateOrderInput = {
+  billingAddress?: PublicOrderAddressInput;
+  branchSessionId?: string;
+  currencyCode?: string;
+  customer?: OrderCustomerInput;
+  host?: string;
+  note?: string;
+  orderAdjustments?: Array<OrderAdjustmentInput>;
+  orderLineItems: Array<PublicOrderLineItemInput>;
+  orderTagIds?: Array<string>;
+  orderedAt?: number;
+  priceListId?: string;
+  salesChannelId?: string;
+  shippingAddress?: PublicOrderAddressInput;
+  shippingLines?: Array<PublicOrderShippingLineInput>;
+  shippingMethod?: OrderShippingMethodEnum;
+  sourceId?: string;
+  staff?: PublicOrderStaffInput;
+  terminalId?: string;
+}
+
+export type PublicCreateOrderWithTransactionsInput = {
+  disableAutoCreateCustomer?: boolean;
+  isTaxFreeOrder?: boolean;
+  order: PublicCreateOrderInput;
+  transactions: Array<OrderTransactionInput>;
+}
+
+export type PublicOrderAddressCityInput = {
+  code?: string;
+  name: string;
+}
+
+export type PublicOrderAddressCountryInput = {
+  code?: string;
+  iso2?: string;
+  iso3?: string;
+  name: string;
+}
+
+export type PublicOrderAddressDistrictInput = {
+  code?: string;
+  name?: string;
+}
+
+export type PublicOrderAddressInput = {
+  addressLine1: string;
+  addressLine2?: string;
+  city: PublicOrderAddressCityInput;
+  company?: string;
+  country: PublicOrderAddressCountryInput;
+  district?: PublicOrderAddressDistrictInput;
+  firstName: string;
+  identityNumber?: string;
+  isDefault: boolean;
+  lastName: string;
+  phone?: string;
+  postalCode?: string;
+  region?: OrderAddressRegionInput;
+  state?: PublicOrderAddressStateInput;
+  taxNumber?: string;
+  taxOffice?: string;
+}
+
+export type PublicOrderAddressStateInput = {
+  code?: string;
+  name?: string;
+}
+
+export type PublicOrderLineItemInput = {
+  bundleProductSettings?: BundleProductOrderLineInput;
+  discount?: OrderLineDiscountInput;
+  discountPrice?: number;
+  options?: Array<OrderLineOptionInput>;
+  price: number;
+  quantity: number;
+  sourceId?: string;
+  variant: OrderLineVariantInput;
+}
+
+export type PublicOrderShippingLineInput = {
+  price: number;
+  priceListId?: string;
+  taxValue?: number;
+  title: string;
+}
+
+export type PublicOrderStaffInput = {
+  email: string;
+  firstName: string;
+  id: string;
+  lastName: string;
 }
 
 export type SaveVariantStockInput = {
@@ -234,6 +428,8 @@ export type GetAuthorizedAppQueryVariables = {}
 export type GetAuthorizedAppQueryData = {
   id: string;
   salesChannelId?: string;
+  storeAppId: string;
+  deleted: boolean;
 }
 
 export interface GetAuthorizedAppQuery {
@@ -393,6 +589,31 @@ export interface UpdateStorefrontJSScriptMutation {
   updateStorefrontJSScript: UpdateStorefrontJSScriptMutationData;
 }
 
+export type DeleteStorefrontJSScriptMutationVariables = {}
+
+export type DeleteStorefrontJSScriptMutationData = boolean
+
+export interface DeleteStorefrontJSScriptMutation {
+  deleteStorefrontJSScript: DeleteStorefrontJSScriptMutationData;
+}
+
+export type CreateOrderWithTransactionsMutationVariables = {
+  input: PublicCreateOrderWithTransactionsInput;
+}
+
+export type CreateOrderWithTransactionsMutationData = {
+  id: string;
+  orderNumber?: string;
+  orderedAt?: number;
+  totalFinalPrice: number;
+  currencyCode: string;
+  status: OrderStatusEnum;
+}
+
+export interface CreateOrderWithTransactionsMutation {
+  createOrderWithTransactions: CreateOrderWithTransactionsMutationData;
+}
+
 export type SaveWebhooksMutationVariables = {
   input: WebhookInput;
 }
@@ -463,6 +684,8 @@ export class GeneratedQueries {
     getAuthorizedApp {
       id
       salesChannelId
+      storeAppId
+      deleted
     }
   }
 `;
@@ -650,6 +873,31 @@ export class GeneratedMutations {
   }
 `;
     return this.client.mutate<Partial<UpdateStorefrontJSScriptMutation>>({ mutation, variables });
+  }
+
+  async deleteStorefrontJSScript(): Promise<APIResult<Partial<DeleteStorefrontJSScriptMutation>>> {
+    const mutation = `
+  mutation deleteStorefrontJSScript {
+    deleteStorefrontJSScript
+  }
+`;
+    return this.client.mutate<Partial<DeleteStorefrontJSScriptMutation>>({ mutation });
+  }
+
+  async createOrderWithTransactions(variables: CreateOrderWithTransactionsMutationVariables): Promise<APIResult<Partial<CreateOrderWithTransactionsMutation>>> {
+    const mutation = `
+  mutation createOrderWithTransactions($input: PublicCreateOrderWithTransactionsInput!) {
+    createOrderWithTransactions(input: $input) {
+      id
+      orderNumber
+      orderedAt
+      totalFinalPrice
+      currencyCode
+      status
+    }
+  }
+`;
+    return this.client.mutate<Partial<CreateOrderWithTransactionsMutation>>({ mutation, variables });
   }
 
   async saveWebhooks(variables: SaveWebhooksMutationVariables): Promise<APIResult<Partial<SaveWebhooksMutation>>> {

@@ -8,7 +8,7 @@ import { JwtHelpers } from '@/helpers/jwt-helpers';
 import { TokenHelpers } from '@/helpers/token-helpers';
 import { AuthToken } from '@/models/auth-token';
 import { AuthTokenManager } from '@/models/auth-token/manager';
-import { resolvePublicApiUrl } from '@/lib/tracking-script';
+import { installOrUpdateTrackingScript, resolvePublicApiUrl } from '@/lib/tracking-script';
 import { registerWebhooks } from '@/lib/sync/register-webhooks';
 import { NextRequest, NextResponse, after } from 'next/server';
 import { runFullSync } from '@/lib/sync/ikas-sync';
@@ -108,6 +108,19 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Token must belong to this app and to a live (not uninstalled) authorization
+    const authorizedApp = authorizedAppResponse.data.getAuthorizedApp;
+    if (authorizedApp.storeAppId !== config.oauth.clientId || authorizedApp.deleted) {
+      logger.error('Callback rejected: authorized app mismatch or deleted', {
+        storeAppId: authorizedApp.storeAppId,
+        deleted: authorizedApp.deleted,
+      });
+      return NextResponse.json(
+        { error: { statusCode: 403, message: 'Authorized app does not belong to this app' } },
+        { status: 403 },
+      );
+    }
+
     // Extract necessary IDs and calculate token expiration date
     const authorizedAppId = authorizedAppResponse.data.getAuthorizedApp.id!;
     const merchantId = merchantResponse.data.getMerchant.id!;
@@ -126,9 +139,11 @@ export async function GET(request: NextRequest) {
     // Store the token for future use
     await AuthTokenManager.put(token);
 
+    const publicApiUrl = resolvePublicApiUrl(request);
+
     // Stok/ürün/sipariş webhook'larını kaydet — sync katmanını taze tutar.
     // Hata kurulum akışını kırmaz (registerWebhooks içeride loglar).
-    await registerWebhooks(token, resolvePublicApiUrl(request)).catch(error => {
+    await registerWebhooks(token, publicApiUrl).catch(error => {
       logger.error('Webhook registration error (non-fatal)', { error });
     });
 
@@ -140,6 +155,17 @@ export async function GET(request: NextRequest) {
         logger.error('Initial sync after install failed (non-fatal)', { merchantId, error });
       }),
     );
+
+    // Vitrin takip script'i kurulumda otomatik eklenir (ikas R5); kaldırmada
+    // webhook siler. Vitrin https olmayan bir adrese istek atamayacağı için
+    // localhost'ta atlanır. Hata kurulumu kırmaz; Ayarlar'dan yeniden denenebilir.
+    if (publicApiUrl.startsWith('https://')) {
+      after(() =>
+        installOrUpdateTrackingScript({ merchantId, authToken: token, apiUrl: publicApiUrl }).catch(error => {
+          logger.error('Tracking script auto-install failed (non-fatal)', { merchantId, error });
+        }),
+      );
+    }
 
     // Update session with new merchant and app IDs, clear state, and set expiration
     session.expiresAt = new Date(Date.now() + 3600 * 1000);

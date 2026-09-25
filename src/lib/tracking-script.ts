@@ -2,7 +2,8 @@ import { logger } from '@/lib/logger';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { getIkas } from '@/helpers/api-helpers';
-import { StorefrontJSScriptContentTypeEnum } from '@/lib/ikas-client/generated/graphql';
+import { ikasAdminGraphQLAPIClient, StorefrontJSScriptContentTypeEnum } from '@/lib/ikas-client/generated/graphql';
+import { config } from '@/globals/config';
 import { prisma } from '@/lib/prisma';
 import { buildTrackToken } from '@/lib/track-token';
 import { AuthToken } from '@/models/auth-token';
@@ -321,6 +322,43 @@ export async function installOrUpdateTrackingScript(params: {
       ? 'Tracking script updated successfully'
       : 'Tracking script installed successfully',
   };
+}
+
+/** Kaldırma sırasında ikas çağrısı için üst sınır (refresh asılı kalabiliyor). */
+const REMOVE_TIMEOUT_MS = 8_000;
+
+/**
+ * Uygulamanın vitrine eklediği TÜM script'leri siler (ikas R5: kaldırmada
+ * otomatik silinmeli). deleteStorefrontJSScript argümansızdır; tek çağrı
+ * uygulamanın bütün script'lerini kaldırır.
+ *
+ * Kaldırma webhook'unda çağrılır: token refresh'i (onCheckToken) atlanır
+ * çünkü kaldırılmış uygulamanın refresh isteği 30 sn+ asılı kalabiliyor;
+ * mevcut access token ile ve zaman aşımıyla denenir. Hata fırlatmaz —
+ * yerel temizlik her durumda sürmelidir.
+ */
+export async function removeTrackingScript(authToken: AuthToken): Promise<void> {
+  const ikasClient = new ikasAdminGraphQLAPIClient<AuthToken>({
+    graphApiUrl: config.graphApiUrl!,
+    accessToken: authToken.accessToken,
+    tokenData: authToken,
+  });
+
+  try {
+    const result = await Promise.race([
+      ikasClient.mutations.deleteStorefrontJSScript(),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('deleteStorefrontJSScript timed out')), REMOVE_TIMEOUT_MS),
+      ),
+    ]);
+
+    // Silinecek script yoksa ikas STOREFRONT_SF_SCRIPT / not_found döner — başarı say.
+    if (!result.isSuccess && !JSON.stringify(result.errors ?? '').includes('not_found')) {
+      logger.warn('deleteStorefrontJSScript failed during uninstall', { errors: result.errors });
+    }
+  } catch (error) {
+    logger.warn('deleteStorefrontJSScript failed during uninstall', { error });
+  }
 }
 
 export class TrackingScriptError extends Error {

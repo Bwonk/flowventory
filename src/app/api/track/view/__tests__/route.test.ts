@@ -8,22 +8,25 @@ import { OPTIONS, POST } from '../route';
  *
  * Bu endpoint storefront'a (yani internete) açık olduğu için güvenlik
  * davranışı manuel QA yerine burada doğrulanıyor:
- * imzasız/yanlış token reddi, cross-tenant yazma engeli ve rate limit.
+ * imzasız/yanlış token reddi, cross-tenant yazma engeli, kaldırılmış mağaza
+ * reddi ve rate limit.
  *
  * DB'ye gerçekten yazmamak için prisma ve merchant ayarları mock'lanıyor.
  */
 
 // vi.hoisted: mock fabrikaları import'lardan önce çalıştığı için
 // spy'lar da oraya taşınmalı, yoksa "cannot access before initialization".
-const { upsertProductView, upsertProductViewHourly } = vi.hoisted(() => ({
+const { upsertProductView, upsertProductViewHourly, findAuthToken } = vi.hoisted(() => ({
   upsertProductView: vi.fn(),
   upsertProductViewHourly: vi.fn(),
+  findAuthToken: vi.fn(),
 }));
 
 vi.mock('@/lib/prisma', () => ({
   prisma: {
     productView: { upsert: upsertProductView },
     productViewHourly: { upsert: upsertProductViewHourly },
+    authToken: { findFirst: findAuthToken },
   },
 }));
 
@@ -62,6 +65,8 @@ afterAll(() => {
 beforeEach(() => {
   upsertProductView.mockReset();
   upsertProductViewHourly.mockReset();
+  findAuthToken.mockReset();
+  findAuthToken.mockResolvedValue({ id: 'app-1' });
 });
 
 describe('POST /api/track/view — token doğrulaması', () => {
@@ -103,6 +108,18 @@ describe('POST /api/track/view — token doğrulaması', () => {
     );
 
     expect(res.status).toBe(401);
+    expect(upsertProductView).not.toHaveBeenCalled();
+  });
+
+  it('uygulama kaldırılmışsa (AuthToken yok) 410 döner ve hiçbir şey yazmaz', async () => {
+    findAuthToken.mockResolvedValue(null);
+
+    const res = await post(
+      { productId: 'p1', merchantId: MERCHANT_ID, token: VALID_TOKEN },
+      '10.0.0.6',
+    );
+
+    expect(res.status).toBe(410);
     expect(upsertProductView).not.toHaveBeenCalled();
   });
 

@@ -16,7 +16,8 @@ import { z } from 'zod';
  * Güvenlik katmanları:
  * - `token`: kurulumda tracker'a gömülen, CLIENT_SECRET ile imzalı
  *   merchant token'ı. Başka mağaza adına yazma (cross-tenant) engellenir.
- * - Rate limit: IP başına dakikada 60 istek.
+ * - Rate limit: IP başına dakikada 60, mağaza başına dakikada 600 istek
+ *   (IP değiştirerek tek mağazanın sayımını şişirmeyi sınırlar).
  * - zod ile body validasyonu.
  *
  * Aynı merchant + ürün + gün için tek satır tutuyoruz, viewCount'u artırıyoruz.
@@ -29,6 +30,7 @@ const trackViewSchema = z.object({
 });
 
 const RATE_LIMIT_PER_MINUTE = 60;
+const MERCHANT_RATE_LIMIT_PER_MINUTE = 600;
 
 function jsonWithCors(body: unknown, status = 200) {
   return NextResponse.json(body, { status, headers: corsHeaders() });
@@ -53,6 +55,17 @@ export async function POST(request: NextRequest) {
     // Ayarlar sayfasından script'in yeniden kurulması gerekir.
     if (!verifyTrackToken(merchantId, token)) {
       return jsonWithCors({ error: 'Geçersiz token' }, 401);
+    }
+
+    if (!checkRateLimit(`track:merchant:${merchantId}`, MERCHANT_RATE_LIMIT_PER_MINUTE, 60_000)) {
+      return jsonWithCors({ error: 'Too many requests' }, 429);
+    }
+
+    // Uygulama kaldırıldıysa (AuthToken satırı silinmiş) vitrinde kalmış bir
+    // script'ten gelen kaydı kabul etme — silinmiş mağazaya veri yazılmasın.
+    const installed = await prisma.authToken.findFirst({ where: { merchantId }, select: { id: true } });
+    if (!installed) {
+      return jsonWithCors({ error: 'Uygulama bu mağazada kurulu değil' }, 410);
     }
 
     // Bugünün tarihi + saati — merchant'ın kendi timezone'unda
