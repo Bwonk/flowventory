@@ -22,7 +22,7 @@ const PAPER_VARIANTS: Variants = {
   animate: {
     y: [0, 1.7, 0],
     transition: {
-      duration: 0.5,
+      duration: 0.3,
       ease: "easeInOut",
     },
   },

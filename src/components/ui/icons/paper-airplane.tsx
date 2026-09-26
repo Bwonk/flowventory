@@ -24,10 +24,10 @@ const AIRPLANE_VARIANTS: Variants = {
     scale: [1, 0.8, 1, 1, 1],
     x: [0, "-10%", "125%", "-150%", 0],
     transition: {
-      default: { ease: "easeInOut", duration: 1.2 },
+      default: { ease: "easeInOut", duration: 0.4 },
       x: {
         ease: "easeInOut",
-        duration: 1.2,
+        duration: 0.4,
         times: [0, 0.25, 0.5, 0.5, 1],
       },
     },

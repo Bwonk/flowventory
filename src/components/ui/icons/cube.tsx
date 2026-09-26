@@ -22,7 +22,7 @@ const CUBE_VARIANTS: Variants = {
   animate: {
     rotateY: [0, 15, -15, 0],
     transition: {
-      duration: 0.6,
+      duration: 0.3,
       ease: "easeInOut",
     },
   },

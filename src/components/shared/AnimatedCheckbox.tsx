@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { Check, Minus } from 'lucide-react';
+import { INSTANT, PRESS_FEEDBACK_CLASS, springOrInstant } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 
 interface AnimatedCheckboxProps {
@@ -21,12 +22,10 @@ interface AnimatedCheckboxProps {
  */
 export function AnimatedCheckbox({ checked, onToggle, label, title, disabled }: AnimatedCheckboxProps) {
   const reduceMotion = useReducedMotion();
-  const transition = reduceMotion
-    ? { duration: 0 }
-    : ({ type: 'spring', stiffness: 350, damping: 35 } as const);
+  const transition = springOrInstant(reduceMotion);
   // Çıkış hızlı ve düz: mixed→checked geçişinde eski "−" spring'le oyalanıp
   // yeni tikin üstünde görünmesin (kullanıcı "tik yerine −" olarak algılıyordu).
-  const exitTransition = reduceMotion ? { duration: 0 } : { duration: 0.1 };
+  const exitTransition = reduceMotion ? INSTANT : { duration: 0.1 };
   const isMarked = checked !== false;
 
   return (
@@ -39,7 +38,10 @@ export function AnimatedCheckbox({ checked, onToggle, label, title, disabled }: 
       disabled={disabled}
       onClick={onToggle}
       // p-1 -m-1: görsel kutu 16px kalırken tıklama alanı genişler.
-      className="group/check -m-1 rounded-md p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+      className={cn(
+        'group/check -m-1 rounded-md p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50',
+        PRESS_FEEDBACK_CLASS,
+      )}
     >
       <span
         className={cn(

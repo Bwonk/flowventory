@@ -40,9 +40,14 @@ export function NewRuleMenu({ notificationEmail, open, onOpenChange }: NewRuleMe
       <GooPopoverTrigger>
         <Button
           className="gap-2"
-          onMouseEnter={() => {
-            plus.hoverProps.onMouseEnter();
-            chevron.hoverProps.onMouseEnter();
+          // Olay iletilir: dokunmadaki uyumluluk mouseenter'ı ikonları oynatmasın.
+          onPointerEnter={(e) => {
+            plus.hoverProps.onPointerEnter(e);
+            chevron.hoverProps.onPointerEnter(e);
+          }}
+          onMouseEnter={(e) => {
+            plus.hoverProps.onMouseEnter(e);
+            chevron.hoverProps.onMouseEnter(e);
           }}
           onMouseLeave={() => {
             plus.hoverProps.onMouseLeave();

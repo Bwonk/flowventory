@@ -7,7 +7,7 @@
 // satır zemin değiştirmez (yalnız tik), pending opacity-60; seçim kutusu AnimatedCheckbox (spring 350/35);
 // sıralama asc↔desc, ok mutlak konumlu, sıralanan kolon vurgulanmaz; resize
 // tutamacı hairline/ink, bırakma göstergesi ink; portal hap, gölge, motion
-// scale yok; menüler DropdownMenu; kenar boşluğu türetilir (px-5/px-3);
+// scale yok; menüler goo (TableMenu); kenar boşluğu türetilir (px-5/px-3);
 // onEndReached yok — sonsuz kaydırma InfiniteScrollFooter'da kalır.
 
 import { useVirtualizer } from '@tanstack/react-virtual';

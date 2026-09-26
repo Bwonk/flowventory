@@ -11,7 +11,8 @@ export function Toaster() {
   return (
     <Sonner
       theme="light"
-      position="bottom-right"
+      // Sağ alt köşe sepet çekmecesinin altbilgisini (toplam + gönder) örtüyordu.
+      position="bottom-center"
       toastOptions={{
         classNames: {
           toast: 'rounded-lg! border-hairline! bg-card! text-foreground! text-sm!',

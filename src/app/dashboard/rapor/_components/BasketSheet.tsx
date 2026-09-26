@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import type { ReactNode } from 'react';
+import { AnimatePresence, motion, useReducedMotion, type Transition } from 'motion/react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AnimatedNumber } from '@/components/shared/AnimatedNumber';
@@ -20,6 +21,7 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
+import { EASE_OUT, INSTANT } from '@/lib/motion';
 import { formatPrice } from '@/lib/currency';
 import type { PurchaseReportVendor } from '@/app/api/reports/purchase/route';
 import type { VendorListItem } from '@/app/api/vendors/route';
@@ -31,6 +33,14 @@ import {
 } from './basket';
 import { BulkSendDialog } from './BulkSendDialog';
 import { SendReportDialog } from './SendReportDialog';
+
+/** Kaldırılan satır/grup çöküşü: opaklık önce söner, yükseklik ardından kapanır (DESIGN.md §6). */
+const COLLAPSE: Transition = {
+  opacity: { duration: 0.12 },
+  height: { duration: 0.2, ease: EASE_OUT, delay: 0.04 },
+};
+/** Sonradan gelen satırın girişi: yalnız opaklık, yükseklik anlık — çıkıştan sessiz. */
+const ENTER: Transition = { opacity: { duration: 0.15 }, height: { duration: 0 } };
 
 interface BasketSheetProps {
   token: string | null;
@@ -79,6 +89,14 @@ export function BasketSheet({
   trigger,
 }: BasketSheetProps) {
   const { ref: cartRef, hoverProps: cartHoverProps } = useIconHover();
+  const reduceMotion = useReducedMotion();
+  // Satır ve grup aynı giriş/çıkış dilini paylaşır; ilk boyamada animasyon yok.
+  const presence = {
+    initial: { opacity: 0, height: 'auto' },
+    animate: { opacity: 1, height: 'auto' },
+    exit: { opacity: 0, height: 0, transition: reduceMotion ? INSTANT : COLLAPSE },
+    transition: reduceMotion ? INSTANT : ENTER,
+  } as const;
   // Tab sırasıyla aynı mantık: "Tedarikçi atanmamış" sona pinlenir.
   const orderedVendors = [
     ...vendors.filter(v => v.vendorId !== null),
@@ -127,113 +145,121 @@ export function BasketSheet({
             </p>
           </div>
         ) : (
-          <div className="flex-1 space-y-3 overflow-y-auto p-3">
+          // Gruplar arası boşluk sarmalayıcı içindeki mb-3'te: çöken grubun aralığı da
+          // yükseklikle birlikte kapanır (space-y bırakınca sonda sıçrıyordu).
+          <div className="flex-1 overflow-y-auto px-3 pt-3">
             {/* Grup dili: "Kart Grupları" yönü (sepet canvas'ı) — beyaz çekmece
                 yüzeyinde ikinci seviye bg-muted blok, çerçevesiz/gölgesiz
                 (kart-içinde-kart kuralı); satır listesi blok içinde beyaz yüzey. */}
-            {groups.map(({ vendor, lines }) => {
-              const vendorTotals = vendorBasketTotals(vendor, basket);
-              const contact = vendorList.find(v => v.vendorId === vendor.vendorId);
-              return (
-                <section
-                  key={vendor.vendorId ?? 'none'}
-                  aria-label={vendor.vendorName}
-                  className="rounded-lg bg-muted"
-                >
-                  <div className="flex items-start justify-between gap-2 px-3 pt-2.5 pb-2">
-                    <div className="min-w-0">
-                      <p
-                        className={cn(
-                          'truncate text-sm font-semibold text-foreground',
-                          vendor.vendorId === null && 'text-muted-foreground',
-                        )}
-                      >
-                        {vendor.vendorId === null ? 'Tedarikçi atanmamış' : vendor.vendorName}
-                      </p>
-                      <p className="text-xs tabular-nums text-muted-foreground">
-                        <AnimatedNumber value={vendorTotals.count} /> kalem
-                      </p>
-                    </div>
-                    {/* Grup toplamı sağda vurgulu (Kart × Sevkiyat karması) */}
-                    <p
-                      className="shrink-0 text-sm font-semibold tabular-nums text-foreground"
-                      title={vendorTotals.hasEstimate ? 'Bazı satırlarda alış fiyatı yok; satış fiyatı kullanıldı' : undefined}
-                    >
-                      <AnimatedNumber value={vendorTotals.total} format={formatPrice} />
-                    </p>
-                  </div>
-                  <ul className="mx-2 mb-2 divide-y divide-border rounded-md bg-card">
-                    {lines.map(({ line, qty }) => (
-                      <li
-                        key={line.variantId}
-                        className="group flex items-center gap-2.5 px-3 py-2 transition-colors duration-150 first:rounded-t-md last:rounded-b-md hover:bg-muted/40"
-                      >
-                        {line.imageUrl ? (
-                          <Image
-                            src={line.imageUrl}
-                            alt=""
-                            width={24}
-                            height={24}
-                            className="h-6 w-6 shrink-0 rounded border border-border object-cover"
-                            unoptimized
-                          />
-                        ) : (
-                          <span aria-hidden className="size-6 shrink-0 rounded border border-border bg-muted" />
-                        )}
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-[13px] font-medium text-foreground">
-                            {line.productName}
-                            {line.urgent && (
-                              <Badge variant="critical" className="ml-1.5 align-middle">
-                                Acil
-                              </Badge>
+            <AnimatePresence initial={false}>
+              {groups.map(({ vendor, lines }) => {
+                const vendorTotals = vendorBasketTotals(vendor, basket);
+                const contact = vendorList.find(v => v.vendorId === vendor.vendorId);
+                return (
+                  <motion.div key={vendor.vendorId ?? 'none'} {...presence} className="overflow-hidden">
+                    <section aria-label={vendor.vendorName} className="mb-3 rounded-lg bg-muted">
+                      <div className="flex items-start justify-between gap-2 px-3 pt-2.5 pb-2">
+                        <div className="min-w-0">
+                          <p
+                            className={cn(
+                              'truncate text-sm font-semibold text-foreground',
+                              vendor.vendorId === null && 'text-muted-foreground',
                             )}
+                          >
+                            {vendor.vendorId === null ? 'Tedarikçi atanmamış' : vendor.vendorName}
                           </p>
-                          {line.variantName && (
-                            <p className="truncate text-xs text-muted-foreground">{line.variantName}</p>
-                          )}
+                          <p className="text-xs tabular-nums text-muted-foreground">
+                            <AnimatedNumber value={vendorTotals.count} /> kalem
+                          </p>
                         </div>
-                        <NumberStepper
-                          value={qty}
-                          onChange={next => onLineQtyChange(line.variantId, next)}
-                          onRemove={() => onLineQtyChange(line.variantId, null)}
-                          label={`${line.productName} adedi`}
-                        />
+                        {/* Grup toplamı sağda vurgulu (Kart × Sevkiyat karması) */}
                         <p
-                          className="w-14 shrink-0 text-right text-xs font-medium tabular-nums text-foreground"
-                          title={line.isEstimate ? 'Alış fiyatı tanımlı değil; satış fiyatıyla hesaplandı' : undefined}
+                          className="shrink-0 text-sm font-semibold tabular-nums text-foreground"
+                          title={vendorTotals.hasEstimate ? 'Bazı satırlarda alış fiyatı yok; satış fiyatı kullanıldı' : undefined}
                         >
-                          <AnimatedNumber value={qty * line.unitCost} format={formatPrice} />
+                          <AnimatedNumber value={vendorTotals.total} format={formatPrice} />
                         </p>
-                        <RowActions className="shrink-0">
-                          <RemoveLineButton
-                            onRemove={() => onLineQtyChange(line.variantId, null)}
-                            label={line.productName}
+                      </div>
+                      <ul className="mx-2 mb-2 divide-y divide-border rounded-md bg-card">
+                        <AnimatePresence initial={false}>
+                          {lines.map(({ line, qty }) => (
+                            <motion.li
+                              key={line.variantId}
+                              {...presence}
+                              className="overflow-hidden first:rounded-t-md last:rounded-b-md"
+                            >
+                              {/* Dolgu iç kapta: çökerken li yüksekliği gerçekten 0'a iner. */}
+                              <div className="group flex items-center gap-2.5 px-3 py-2 transition-colors duration-150 hover:bg-muted/40">
+                                {line.imageUrl ? (
+                                  <Image
+                                    src={line.imageUrl}
+                                    alt=""
+                                    width={24}
+                                    height={24}
+                                    className="h-6 w-6 shrink-0 rounded border border-border object-cover"
+                                    unoptimized
+                                  />
+                                ) : (
+                                  <span aria-hidden className="size-6 shrink-0 rounded border border-border bg-muted" />
+                                )}
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-[13px] font-medium text-foreground">
+                                    {line.productName}
+                                    {line.urgent && (
+                                      <Badge variant="critical" className="ml-1.5 align-middle">
+                                        Acil
+                                      </Badge>
+                                    )}
+                                  </p>
+                                  {line.variantName && (
+                                    <p className="truncate text-xs text-muted-foreground">{line.variantName}</p>
+                                  )}
+                                </div>
+                                <NumberStepper
+                                  value={qty}
+                                  onChange={next => onLineQtyChange(line.variantId, next)}
+                                  onRemove={() => onLineQtyChange(line.variantId, null)}
+                                  label={`${line.productName} adedi`}
+                                />
+                                <p
+                                  className="w-14 shrink-0 text-right text-xs font-medium tabular-nums text-foreground"
+                                  title={line.isEstimate ? 'Alış fiyatı tanımlı değil; satış fiyatıyla hesaplandı' : undefined}
+                                >
+                                  <AnimatedNumber value={qty * line.unitCost} format={formatPrice} />
+                                </p>
+                                <RowActions className="shrink-0">
+                                  <RemoveLineButton
+                                    onRemove={() => onLineQtyChange(line.variantId, null)}
+                                    label={line.productName}
+                                  />
+                                </RowActions>
+                              </div>
+                            </motion.li>
+                          ))}
+                        </AnimatePresence>
+                      </ul>
+                      {vendor.vendorId !== null && token ? (
+                        <div className="px-2 pb-2">
+                          <SendReportDialog
+                            token={token}
+                            vendorId={vendor.vendorId}
+                            vendorName={vendor.vendorName}
+                            email={contact?.email ?? null}
+                            lines={lines}
+                            onSent={() => onVendorSent(vendor.vendorId!)}
+                            variant="group"
                           />
-                        </RowActions>
-                      </li>
-                    ))}
-                  </ul>
-                  {vendor.vendorId !== null && token ? (
-                    <div className="px-2 pb-2">
-                      <SendReportDialog
-                        token={token}
-                        vendorId={vendor.vendorId}
-                        vendorName={vendor.vendorName}
-                        email={contact?.email ?? null}
-                        lines={lines}
-                        onSent={() => onVendorSent(vendor.vendorId!)}
-                        variant="group"
-                      />
-                    </div>
-                  ) : (
-                    <p className="px-3 pb-2.5 text-xs text-muted-foreground">
-                      Sipariş göndermek için tedarikçi atayın.
-                    </p>
-                  )}
-                </section>
-              );
-            })}
+                        </div>
+                      ) : (
+                        <p className="px-3 pb-2.5 text-xs text-muted-foreground">
+                          Sipariş göndermek için tedarikçi atayın.
+                        </p>
+                      )}
+                    </section>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
           </div>
         )}
 

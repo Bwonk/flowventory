@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Minus, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { PRESS_FEEDBACK_CLASS } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 import { AnimatedNumber } from './AnimatedNumber';
 
@@ -35,9 +36,11 @@ interface NumberStepperProps {
   className?: string;
 }
 
+// `inputText`: dokunmatikte 16px (iOS odakta sayfayı yakınlaştırmasın),
+// ince işaretçide kutunun kompakt boyu.
 const SIZES = {
-  sm: { box: 'h-6', button: 'size-5.5', field: 'w-8', text: 'text-xs', icon: 'size-3' },
-  md: { box: 'h-9', button: 'size-8', field: 'w-14', text: 'text-sm', icon: 'size-3.5' },
+  sm: { box: 'h-6', button: 'size-5.5', field: 'w-8', text: 'text-xs', inputText: 'text-base pointer-fine:text-xs', icon: 'size-3' },
+  md: { box: 'h-9', button: 'size-8', field: 'w-14', text: 'text-sm', inputText: 'text-base pointer-fine:text-sm', icon: 'size-3.5' },
 } as const;
 
 /**
@@ -113,6 +116,7 @@ export function NumberStepper({
         <input
           autoFocus
           inputMode="numeric"
+          enterKeyHint="done"
           value={text}
           disabled={disabled}
           onChange={e => setText(e.target.value.replace(/[^\d]/g, ''))}
@@ -143,7 +147,7 @@ export function NumberStepper({
           className={cn(
             'h-full bg-transparent text-center font-medium tabular-nums text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
             s.field,
-            s.text,
+            s.inputText,
             fieldClassName,
           )}
         />
@@ -158,6 +162,7 @@ export function NumberStepper({
             s.field,
             s.text,
             fieldClassName,
+            PRESS_FEEDBACK_CLASS,
           )}
         >
           <AnimatedNumber value={value} />

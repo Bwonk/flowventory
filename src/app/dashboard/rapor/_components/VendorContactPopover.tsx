@@ -15,8 +15,7 @@ import {
   PopoverTitle,
   PopoverTrigger,
 } from '@/components/ui/popover';
-
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+import { useEmailField } from './use-email-field';
 
 interface VendorContactPopoverProps {
   token: string;
@@ -40,9 +39,10 @@ export function VendorContactPopover({ token, vendorId, vendorName, contact, onS
   const [phone, setPhone] = useState(contact.phone ?? '');
   const [saving, setSaving] = useState(false);
 
-  const trimmedEmail = email.trim();
+  const emailField = useEmailField(email);
+  const trimmedEmail = emailField.trimmed;
   const trimmedPhone = phone.trim();
-  const emailValid = trimmedEmail === '' || EMAIL_PATTERN.test(trimmedEmail);
+  const emailErrorId = `contact-email-error-${vendorId}`;
 
   const save = async () => {
     setSaving(true);
@@ -76,6 +76,7 @@ export function VendorContactPopover({ token, vendorId, vendorName, contact, onS
           // Popover her açılışta kayıtlı değerlerden başlar.
           setEmail(contact.email ?? '');
           setPhone(contact.phone ?? '');
+          emailField.reset();
         }
       }}
     >
@@ -105,12 +106,24 @@ export function VendorContactPopover({ token, vendorId, vendorName, contact, onS
             <Input
               id={`contact-email-${vendorId}`}
               type="email"
+              inputMode="email"
+              // Tarayıcı satıcının kendi adresini önermesin — bu tedarikçinin adresi.
+              autoComplete="off"
               value={email}
               onChange={e => setEmail(e.target.value)}
+              onBlur={emailField.onBlur}
               placeholder="siparis@tedarikci.com"
-              className="h-8 text-sm"
+              // iOS odakta zoom yapmasın: dokunmatikte 16px, ince işaretçide 14px.
+              className="h-8 md:text-base pointer-fine:text-sm"
               disabled={saving}
+              aria-invalid={emailField.showError || undefined}
+              aria-describedby={emailField.showError ? emailErrorId : undefined}
             />
+            {emailField.showError && (
+              <p id={emailErrorId} className="mt-1 text-xs text-destructive">
+                Geçerli bir e-posta adresi girin.
+              </p>
+            )}
           </div>
           <div>
             <label htmlFor={`contact-phone-${vendorId}`} className="mb-1 block text-xs text-muted-foreground">
@@ -119,14 +132,16 @@ export function VendorContactPopover({ token, vendorId, vendorName, contact, onS
             <Input
               id={`contact-phone-${vendorId}`}
               type="tel"
+              inputMode="tel"
+              autoComplete="off"
               value={phone}
               onChange={e => setPhone(e.target.value)}
               placeholder="0 5xx xxx xx xx"
-              className="h-8 text-sm"
+              className="h-8 md:text-base pointer-fine:text-sm"
               disabled={saving}
             />
           </div>
-          <Button type="button" size="sm" onClick={save} disabled={saving || !emailValid} className="w-full">
+          <Button type="button" size="sm" onClick={save} disabled={saving || !emailField.valid} className="w-full">
             {saving ? 'Kaydediliyor…' : 'Kaydet'}
           </Button>
         </div>

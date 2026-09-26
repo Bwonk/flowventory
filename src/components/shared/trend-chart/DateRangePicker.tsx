@@ -9,6 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { PRESS_FEEDBACK_CLASS } from '@/lib/motion';
 
 export interface QuickRangeOption<T extends string> {
   value: T;
@@ -182,6 +183,7 @@ export function DateRangePicker<T extends string>({
                   className={cn(
                     'flex h-8 shrink-0 items-center justify-center rounded-md px-4 text-xs font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
                     active ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+                    PRESS_FEEDBACK_CLASS,
                   )}
                 >
                   {r.label}

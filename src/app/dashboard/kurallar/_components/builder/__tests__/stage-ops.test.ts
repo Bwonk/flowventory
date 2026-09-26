@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MAX_STAGES, type RuleStage } from '@/lib/rules/types';
-import { removeStageAt, restoreStageAt } from '../stage-ops';
+import { removeStageAt, restoreStageAt, stripKeys, withKeys } from '../stage-ops';
 
 const stage = (threshold: number): RuleStage => ({
   conditions: [{ op: 'and', condition: { metric: 'stock_below', threshold } }],
@@ -43,5 +43,25 @@ describe('restoreStageAt', () => {
   it('aşama sınırı doluysa geri almaz', () => {
     const full = Array.from({ length: MAX_STAGES }, (_, i) => stage(i + 1));
     expect(restoreStageAt(full, 1, stage(9))).toBe(full);
+  });
+});
+
+describe('withKeys / stripKeys', () => {
+  const workflow = {
+    stages: [
+      stage(1),
+      { conditions: [{ op: 'or' as const, condition: { metric: 'stock_below' as const, threshold: 2 } }], actions: [{ type: 'adjust_stock' as const, mode: 'set' as const, amount: 5 }] },
+    ],
+  };
+
+  it('her aşama/koşul/aksiyona tekil anahtar verir', () => {
+    const keyed = withKeys(workflow);
+    const keys = keyed.stages.flatMap(s => [s.key, ...s.conditions.map(c => c.key), ...s.actions.map(a => a.key)]);
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it('anahtarları söküp API gövdesini birebir geri verir', () => {
+    expect(stripKeys(withKeys(workflow))).toEqual(workflow);
+    expect(JSON.stringify(stripKeys(withKeys(workflow)))).not.toContain('"key"');
   });
 });

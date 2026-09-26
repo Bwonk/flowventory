@@ -6,6 +6,7 @@ import { CHECK_ANIMATION_MS, CheckIcon, type CheckIconHandle } from '@/component
 import { ChevronDownIcon } from '@/components/ui/icons/chevron-down';
 import { type AnimatedIconHandle, useIconHover } from '@/components/ui/icons/use-icon-hover';
 import { GooPopover, GooPopoverContent, GooPopoverTrigger } from '@/components/motion/goo-popover';
+import { PRESS_FEEDBACK_CLASS } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 
 interface DropdownProps {
@@ -83,6 +84,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
                 ? 'bg-muted font-medium text-foreground'
                 : 'text-muted-foreground hover:bg-muted hover:text-foreground',
             ),
+        PRESS_FEEDBACK_CLASS,
       )}
     >
       {label}
@@ -132,15 +134,23 @@ export const OptionButton: React.FC<{
       type="button"
       onClick={onClick}
       data-selected={selected}
-      onMouseEnter={() => {
-        if (selected) check.hoverProps.onMouseEnter();
-        if (icon) lead.hoverProps.onMouseEnter();
+      // Olay iletilir: dokunmadaki uyumluluk mouseenter'ı ikonu oynatmasın.
+      onPointerEnter={(e) => {
+        check.hoverProps.onPointerEnter(e);
+        lead.hoverProps.onPointerEnter(e);
+      }}
+      onMouseEnter={(e) => {
+        if (selected) check.hoverProps.onMouseEnter(e);
+        if (icon) lead.hoverProps.onMouseEnter(e);
       }}
       onMouseLeave={() => {
         if (selected) check.hoverProps.onMouseLeave();
         if (icon) lead.hoverProps.onMouseLeave();
       }}
-      className="flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:outline-none"
+      className={cn(
+        'flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-left text-sm text-foreground hover:bg-muted focus-visible:bg-muted focus-visible:outline-none',
+        PRESS_FEEDBACK_CLASS,
+      )}
     >
       <span className="inline-flex min-w-0 items-center gap-2">
         {icon?.(lead.ref)}

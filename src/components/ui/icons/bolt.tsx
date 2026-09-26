@@ -21,7 +21,7 @@ const VARIANTS: Variants = {
     pathLength: 1,
     pathOffset: 0,
     transition: {
-      duration: 0.4,
+      duration: 0.2,
       opacity: { duration: 0.1 },
     },
   },
@@ -30,7 +30,7 @@ const VARIANTS: Variants = {
     pathLength: [0, 1],
     pathOffset: [1, 0],
     transition: {
-      duration: 0.6,
+      duration: 0.3,
       ease: "linear",
       opacity: { duration: 0.1 },
     },

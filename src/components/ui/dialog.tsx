@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import * as DialogPrimitive from "@radix-ui/react-dialog"
+import { Dialog as DialogPrimitive } from "radix-ui"
 import { XIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -38,7 +38,9 @@ function DialogOverlay({
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
       className={cn(
-        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=open]:duration-300 data-[state=closed]:duration-200 motion-reduce:data-[state=open]:animate-none motion-reduce:data-[state=closed]:animate-none fixed inset-0 z-50 bg-black/40 backdrop-blur-sm",
+        // İçerikle aynı ritim; reduced-motion'da da kısa fade kalır.
+        // Şeffaflık azaltılmışsa blur yok, perde koyulaşır.
+        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=open]:duration-200 data-[state=closed]:duration-150 ease-out fixed inset-0 z-50 bg-black/40 backdrop-blur-sm reduced-transparency:backdrop-blur-none reduced-transparency:bg-black/60",
         className
       )}
       {...props}
@@ -59,10 +61,11 @@ function DialogContent({
       <DialogOverlay />
       <DialogPrimitive.Content
         data-slot="dialog-content"
-        // Giriş: fade + zoom + hafif yukarı süzülme, 300ms ease-out — stok
-        // 200ms fade/zoom fark edilmiyordu. Çıkış girişten sessiz: 200ms.
+        // Giriş: fade + zoom + hafif yukarı süzülme, 200ms güçlü ease-out;
+        // çıkış girişten sessiz: 150ms. reduced-motion'da yalnız fade kalır
+        // (zoom/kayma motion-safe'te).
         className={cn(
-          "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-bottom-2 data-[state=open]:duration-300 data-[state=closed]:duration-200 ease-out motion-reduce:data-[state=open]:animate-none motion-reduce:data-[state=closed]:animate-none fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg sm:max-w-lg",
+          "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 motion-safe:data-[state=closed]:zoom-out-95 motion-safe:data-[state=open]:zoom-in-95 motion-safe:data-[state=open]:slide-in-from-bottom-2 data-[state=open]:duration-200 data-[state=closed]:duration-150 ease-out fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg sm:max-w-lg",
           className
         )}
         {...props}

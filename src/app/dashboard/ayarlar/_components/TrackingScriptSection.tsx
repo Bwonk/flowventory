@@ -2,11 +2,16 @@
 
 import { useCallback, useState } from 'react';
 import { Loader2 } from 'lucide-react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { Button } from '@/components/ui/button';
 import { ApiRequests } from '@/lib/api-requests';
+import { EASE_OUT } from '@/lib/motion';
 import { markTrackerInstalled } from '@/lib/onboarding';
 import type { TrackingScriptStatusApiResponse } from '@/app/api/tracking-script/status/route';
 import { SettingsSection } from './SettingsSection';
+import { StatusText } from './StatusText';
+
+const DL_TRANSITION = { duration: 0.2, ease: EASE_OUT } as const;
 
 type UiPhase = 'idle' | 'installing' | 'success' | 'error';
 
@@ -39,6 +44,7 @@ export function TrackingScriptSection({ token, initialStatus }: TrackingScriptSe
   const [phase, setPhase] = useState<UiPhase>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const reduceMotion = useReducedMotion();
 
   const handleInstall = useCallback(async () => {
     if (phase === 'installing') return;
@@ -92,8 +98,8 @@ export function TrackingScriptSection({ token, initialStatus }: TrackingScriptSe
         <span
           className={
             installed
-              ? 'size-2 rounded-full bg-status-healthy'
-              : 'size-2 rounded-full bg-status-warning'
+              ? 'size-2 rounded-full bg-status-healthy transition-colors duration-150'
+              : 'size-2 rounded-full bg-status-warning transition-colors duration-150'
           }
           aria-hidden
         />
@@ -102,28 +108,41 @@ export function TrackingScriptSection({ token, initialStatus }: TrackingScriptSe
         </span>
       </div>
 
-      {installed && (status?.apiUrl || updatedLabel) && (
-        <dl className="rounded-md bg-muted p-3">
-          {status?.apiUrl && (
-            <div className="flex items-baseline justify-between gap-4 py-1">
-              <dt className="shrink-0 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                Kayıtlı API URL
-              </dt>
-              <dd className="min-w-0 truncate font-mono text-xs text-foreground" title={status.apiUrl}>
-                {status.apiUrl}
-              </dd>
-            </div>
-          )}
-          {updatedLabel && (
-            <div className="flex items-baseline justify-between gap-4 py-1">
-              <dt className="shrink-0 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                Son güncelleme
-              </dt>
-              <dd className="font-mono text-xs tabular-nums text-foreground">{updatedLabel}</dd>
-            </div>
-          )}
-        </dl>
-      )}
+      {/* Kurulumdan sonra açılan detay: yüksekliği 200ms'de açılır, buton imlecin
+          altından sıçramaz. -mt-4/pt-4: kapalıyken kolonun gap'i de kapansın. */}
+      <AnimatePresence initial={false}>
+        {installed && (status?.apiUrl || updatedLabel) && (
+          <motion.div
+            key="script-details"
+            initial={reduceMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={reduceMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
+            transition={DL_TRANSITION}
+            className="-mt-4 overflow-hidden pt-4"
+          >
+            <dl className="rounded-md bg-muted p-3">
+              {status?.apiUrl && (
+                <div className="flex items-baseline justify-between gap-4 py-1">
+                  <dt className="shrink-0 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Kayıtlı API URL
+                  </dt>
+                  <dd className="min-w-0 truncate font-mono text-xs text-foreground" title={status.apiUrl}>
+                    {status.apiUrl}
+                  </dd>
+                </div>
+              )}
+              {updatedLabel && (
+                <div className="flex items-baseline justify-between gap-4 py-1">
+                  <dt className="shrink-0 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Son güncelleme
+                  </dt>
+                  <dd className="font-mono text-xs tabular-nums text-foreground">{updatedLabel}</dd>
+                </div>
+              )}
+            </dl>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <p className="text-pretty text-xs text-muted-foreground">
         Dev ortamında tünel URL&apos;si değişirse scripti yeniden kurman gerekir. Daha önce elle
@@ -143,10 +162,14 @@ export function TrackingScriptSection({ token, initialStatus }: TrackingScriptSe
 
         <span aria-live="polite">
           {phase === 'success' && successMessage && (
-            <span className="text-sm text-status-healthy">{successMessage}</span>
+            <StatusText key={successMessage} tone="success">
+              {successMessage}
+            </StatusText>
           )}
           {phase === 'error' && errorMessage && (
-            <span className="text-sm text-destructive">{errorMessage}</span>
+            <StatusText key={errorMessage} tone="error">
+              {errorMessage}
+            </StatusText>
           )}
         </span>
       </div>

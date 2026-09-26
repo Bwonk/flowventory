@@ -18,12 +18,12 @@ interface PencilIconProps extends HTMLAttributes<HTMLDivElement> {
 const VARIANTS: Variants = {
   normal: {
     rotate: 0,
-    transition: { duration: 0.6, ease: "easeInOut" },
+    transition: { duration: 0.3, ease: "easeInOut" },
   },
   animate: {
     rotate: [0, -6, 6, 0],
     transformOrigin: "top right",
-    transition: { duration: 0.6, ease: "easeInOut" },
+    transition: { duration: 0.3, ease: "easeInOut" },
   },
 };
 

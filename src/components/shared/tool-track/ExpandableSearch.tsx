@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import { motion, useReducedMotion, type Transition } from 'motion/react';
+import { motion, useReducedMotion } from 'motion/react';
 import { Search, X } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { PRESS_FEEDBACK_CLASS, springOrInstant } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 
 interface ExpandableSearchProps {
@@ -15,8 +16,6 @@ interface ExpandableSearchProps {
   width?: number;
   className?: string;
 }
-
-const SPRING: Transition = { type: 'spring', stiffness: 350, damping: 35 };
 
 /**
  * Açılır arama segmenti (DESIGN.md §5 "Araç yolu"): `ToolTrack` içinde
@@ -73,6 +72,7 @@ export function ExpandableSearch({
         className={cn(
           'flex h-full w-[30px] shrink-0 items-center justify-center rounded-md transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
           expanded ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
+          PRESS_FEEDBACK_CLASS,
         )}
       >
         <Search className="size-3" aria-hidden />
@@ -80,12 +80,13 @@ export function ExpandableSearch({
       <motion.div
         initial={false}
         animate={{ width: expanded ? openWidth : 0, opacity: expanded ? 1 : 0 }}
-        transition={reduceMotion ? { duration: 0 } : SPRING}
+        transition={springOrInstant(reduceMotion)}
         className="flex h-full items-center overflow-hidden"
       >
         <input
           ref={inputRef}
-          type="text"
+          type="search"
+          enterKeyHint="search"
           value={value}
           onChange={event => onChange(event.target.value)}
           onBlur={() => {
@@ -96,7 +97,9 @@ export function ExpandableSearch({
           aria-label={ariaLabel}
           tabIndex={expanded ? 0 : -1}
           style={{ width: openWidth - 28 }}
-          className="h-full shrink-0 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+          // Dokunmatikte 16px (iOS odakta yakınlaştırmasın), ince işaretçide
+          // kompakt 14px. Yerel "×" gizli — temizleme kendi butonumuzda.
+          className="h-full shrink-0 appearance-none bg-transparent text-base text-foreground placeholder:text-muted-foreground focus:outline-none pointer-fine:text-sm [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none"
         />
         <button
           type="button"

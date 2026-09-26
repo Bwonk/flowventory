@@ -23,9 +23,9 @@ const VERTICAL_LINE_VARIANT: Variants = {
     opacity: [0, 1],
     pathLength: [0, 1],
     transition: {
-      delay: 0.3,
-      duration: 0.2,
-      opacity: { duration: 0.1, delay: 0.3 },
+      delay: 0.1,
+      duration: 0.15,
+      opacity: { duration: 0.1, delay: 0.1 },
     },
   },
 };
@@ -38,9 +38,9 @@ const HORIZONTAL_LINE_VARIANT: Variants = {
     opacity: [0, 1],
     pathLength: [0, 1],
     transition: {
-      delay: 0.6,
-      duration: 0.2,
-      opacity: { duration: 0.1, delay: 0.6 },
+      delay: 0.2,
+      duration: 0.15,
+      opacity: { duration: 0.1, delay: 0.2 },
     },
   },
 };

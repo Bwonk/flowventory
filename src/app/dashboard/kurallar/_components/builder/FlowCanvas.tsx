@@ -1,13 +1,15 @@
 'use client';
 
-import { Fragment, useRef } from 'react';
+import { useRef } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import { toast } from 'sonner';
 import { describeRule } from '@/lib/rules/describe';
-import { MAX_STAGES, type RuleStage } from '@/lib/rules/types';
+import { MAX_STAGES } from '@/lib/rules/types';
 import type { TargetOption } from '../TargetPicker';
-import { DashedAddButton, Eyebrow, FlowConnector } from './flow-primitives';
+import { DashedAddButton, Eyebrow, FlowConnector, useFlowItemMotion } from './flow-primitives';
 import { RunSettings } from './RunSettings';
 import { StageBlock } from './StageBlock';
+import type { BuilderStage } from './stage-ops';
 import { TriggerCard } from './TriggerCard';
 import type { useRuleBuilder } from './use-rule-builder';
 
@@ -25,6 +27,7 @@ interface FlowCanvasProps {
  */
 export function FlowCanvas({ builder, products, vendors, optionsLoading, notificationEmail }: FlowCanvasProps) {
   const { state } = builder;
+  const motionProps = useFlowItemMotion();
   const stages = state.workflow.stages;
   // "Geri Al" tıklandığında güncel aşama sayısı: bildirim açıkken yeni aşama eklenmiş olabilir.
   const stageCount = useRef(stages.length);
@@ -32,9 +35,11 @@ export function FlowCanvas({ builder, products, vendors, optionsLoading, notific
 
   // Aşama, içindeki koşul ve aksiyonlarla gider; yanlış tıklama onay penceresiyle
   // değil "Geri Al" ile karşılanır (stok düzenleme bildirimiyle aynı kalıp).
-  const removeStage = (index: number, stage: RuleStage) => {
+  // Geri Al aynı anahtarla döner → aşama normal giriş hareketiyle yerine süzülür.
+  const removeStage = (index: number, stage: BuilderStage) => {
     builder.removeStage(index);
     toast(`Aşama ${index + 1} kaldırıldı`, {
+      duration: 10000,
       description: `${stage.conditions.length} koşul ve ${stage.actions.length} aksiyonla birlikte.`,
       action: {
         label: 'Geri Al',
@@ -61,27 +66,29 @@ export function FlowCanvas({ builder, products, vendors, optionsLoading, notific
         onPatch={builder.patch}
       />
 
-      {stages.map((stage, si) => (
-        <Fragment key={si}>
-          <FlowConnector label={si > 0 ? 'Sonra' : undefined} />
-          <StageBlock
-            stage={stage}
-            stageIndex={si}
-            stageCount={stages.length}
-            notificationEmail={notificationEmail}
-            onAddCondition={() => builder.addCondition(si)}
-            onSetMetric={(i, m) => builder.setMetric(si, i, m)}
-            onUpdateCondition={(i, c) => builder.updateCondition(si, i, c)}
-            onSetConnector={(i, op) => builder.setConnector(si, i, op)}
-            onRemoveCondition={i => builder.removeCondition(si, i)}
-            onAddAction={t => builder.addAction(si, t)}
-            onSetActionType={(i, t) => builder.setActionType(si, i, t)}
-            onUpdateAction={(i, a) => builder.updateAction(si, i, a)}
-            onRemoveAction={i => builder.removeAction(si, i)}
-            onRemoveStage={() => removeStage(si, stage)}
-          />
-        </Fragment>
-      ))}
+      <AnimatePresence initial={false}>
+        {stages.map((stage, si) => (
+          <motion.div key={stage.key} {...motionProps} className="flex flex-col">
+            <FlowConnector label={si > 0 ? 'Sonra' : undefined} />
+            <StageBlock
+              stage={stage}
+              stageIndex={si}
+              stageCount={stages.length}
+              notificationEmail={notificationEmail}
+              onAddCondition={() => builder.addCondition(si)}
+              onSetMetric={(i, m) => builder.setMetric(si, i, m)}
+              onUpdateCondition={(i, c) => builder.updateCondition(si, i, c)}
+              onSetConnector={(i, op) => builder.setConnector(si, i, op)}
+              onRemoveCondition={i => builder.removeCondition(si, i)}
+              onAddAction={t => builder.addAction(si, t)}
+              onSetActionType={(i, t) => builder.setActionType(si, i, t)}
+              onUpdateAction={(i, a) => builder.updateAction(si, i, a)}
+              onRemoveAction={i => builder.removeAction(si, i)}
+              onRemoveStage={() => removeStage(si, stage)}
+            />
+          </motion.div>
+        ))}
+      </AnimatePresence>
 
       <FlowConnector />
       <DashedAddButton

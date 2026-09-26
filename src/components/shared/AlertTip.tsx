@@ -54,16 +54,20 @@ function AlertTipAnchor({ open, children, className }: { open: boolean; children
       const el = anchorRef.current;
       if (!el) return;
       g.setReferenceEl(el);
-      g.showTooltip({
-        contentProps: l.props,
-        contentAsChild: l.asChild,
-        rect: el.getBoundingClientRect(),
-        side: l.side,
-        sideOffset: l.sideOffset,
-        align: l.align,
-        alignOffset: l.alignOffset,
-        id: l.id,
-      });
+      // Uyarı hover'a değil `open`'a bağlı: `openDelay` beklemeden aç.
+      g.showTooltip(
+        {
+          contentProps: l.props,
+          contentAsChild: l.asChild,
+          rect: el.getBoundingClientRect(),
+          side: l.side,
+          sideOffset: l.sideOffset,
+          align: l.align,
+          alignOffset: l.alignOffset,
+          id: l.id,
+        },
+        { immediate: true },
+      );
       return;
     }
     if (g.currentTooltip?.id === l.id) g.hideImmediate();

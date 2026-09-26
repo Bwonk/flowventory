@@ -76,10 +76,11 @@ export function VendorAssignPopover({ token, productId, vendors, onAssigned }: V
           value={query}
           onChange={e => setQuery(e.target.value)}
           placeholder="Tedarikçi ara veya ekle…"
-          className="h-8 text-sm"
+          // iOS odakta zoom yapmasın: dokunmatikte 16px, ince işaretçide 14px.
+          className="h-8 md:text-base pointer-fine:text-sm"
           disabled={saving}
         />
-        <div className="mt-1.5 max-h-56 overflow-y-auto">
+        <div className="mt-1.5 max-h-56 overflow-y-auto overscroll-contain">
           {filtered.map(v => (
             <OptionButton
               key={v.vendorId}

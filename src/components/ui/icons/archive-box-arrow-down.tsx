@@ -5,6 +5,7 @@ import { motion, useAnimation } from "motion/react";
 import type { HTMLAttributes } from "react";
 import { forwardRef, useCallback, useImperativeHandle, useRef } from "react";
 import { cn } from "@/lib/utils";
+import { ICON_SPRING } from "@/components/ui/icons/icon-motion";
 
 export interface ArchiveBoxArrowDownIconHandle {
   startAnimation: () => void;
@@ -18,63 +19,33 @@ interface ArchiveBoxArrowDownIconProps extends HTMLAttributes<HTMLDivElement> {
 const LID_VARIANTS: Variants = {
   normal: {
     translateY: 0,
-    transition: {
-      duration: 0.2,
-      type: "spring",
-      stiffness: 200,
-      damping: 25,
-    },
+    transition: ICON_SPRING,
   },
   animate: {
     translateY: -1.5,
-    transition: {
-      duration: 0.2,
-      type: "spring",
-      stiffness: 200,
-      damping: 25,
-    },
+    transition: ICON_SPRING,
   },
 };
 
 const PATH_VARIANTS: Variants = {
   normal: {
     translateY: 0,
-    transition: {
-      duration: 0.2,
-      type: "spring",
-      stiffness: 200,
-      damping: 25,
-    },
+    transition: ICON_SPRING,
   },
   animate: {
     translateY: 1,
-    transition: {
-      duration: 0.2,
-      type: "spring",
-      stiffness: 200,
-      damping: 25,
-    },
+    transition: ICON_SPRING,
   },
 };
 
 const ARROW_VARIANTS: Variants = {
   normal: {
     translateY: 0,
-    transition: {
-      duration: 0.2,
-      type: "spring",
-      stiffness: 200,
-      damping: 25,
-    },
+    transition: ICON_SPRING,
   },
   animate: {
     translateY: 2,
-    transition: {
-      duration: 0.2,
-      type: "spring",
-      stiffness: 200,
-      damping: 25,
-    },
+    transition: ICON_SPRING,
   },
 };
 

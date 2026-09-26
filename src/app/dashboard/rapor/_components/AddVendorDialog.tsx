@@ -18,8 +18,7 @@ import {
 import { PlusIcon } from '@/components/ui/icons/plus';
 import { useIconHover } from '@/components/ui/icons/use-icon-hover';
 import { extractErrorMessage } from '@/lib/api-error';
-
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+import { useEmailField } from './use-email-field';
 
 interface AddVendorDialogProps {
   token: string;
@@ -44,14 +43,15 @@ export function AddVendorDialog({ token, onCreated, trigger }: AddVendorDialogPr
   const [saving, setSaving] = useState(false);
 
   const trimmedName = name.trim();
-  const trimmedEmail = email.trim();
-  const emailValid = trimmedEmail === '' || EMAIL_PATTERN.test(trimmedEmail);
-  const canSave = trimmedName.length > 0 && emailValid && !saving;
+  const emailField = useEmailField(email);
+  const trimmedEmail = emailField.trimmed;
+  const canSave = trimmedName.length > 0 && emailField.valid && !saving;
 
   const reset = () => {
     setName('');
     setEmail('');
     setPhone('');
+    emailField.reset();
   };
 
   const save = async () => {
@@ -118,11 +118,22 @@ export function AddVendorDialog({ token, onCreated, trigger }: AddVendorDialogPr
             <Input
               id="new-vendor-email"
               type="email"
+              inputMode="email"
+              // Tarayıcı satıcının kendi adresini önermesin — bu tedarikçinin adresi.
+              autoComplete="off"
               value={email}
               onChange={e => setEmail(e.target.value)}
+              onBlur={emailField.onBlur}
               placeholder="siparis@tedarikci.com"
               disabled={saving}
+              aria-invalid={emailField.showError || undefined}
+              aria-describedby={emailField.showError ? 'new-vendor-email-error' : undefined}
             />
+            {emailField.showError && (
+              <p id="new-vendor-email-error" className="mt-1 text-xs text-destructive">
+                Geçerli bir e-posta adresi girin.
+              </p>
+            )}
           </div>
           <div>
             <label htmlFor="new-vendor-phone" className="mb-1 block text-xs text-muted-foreground">
@@ -131,6 +142,8 @@ export function AddVendorDialog({ token, onCreated, trigger }: AddVendorDialogPr
             <Input
               id="new-vendor-phone"
               type="tel"
+              inputMode="tel"
+              autoComplete="off"
               value={phone}
               onChange={e => setPhone(e.target.value)}
               placeholder="0 5xx xxx xx xx"

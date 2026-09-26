@@ -11,6 +11,7 @@ import {
   type ReactNode,
   type RefObject,
 } from 'react';
+import { toast } from 'sonner';
 import { TokenHelpers } from '@/helpers/token-helpers';
 import { ApiRequests } from '@/lib/api-requests';
 import type { NotificationItem } from '@/app/api/notifications/route';
@@ -144,6 +145,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     ApiRequests.notifications.markRead(token).catch(() => {
       setItems(prevItems);
       setUnreadCount(prevUnread);
+      toast.error('Bildirimler okundu olarak işaretlenemedi. Tekrar deneyin.');
     });
   }, [token, items, unreadCount]);
 
@@ -155,8 +157,11 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       setItems(prev => prev.map(i => (i.id === id ? { ...i, read: true } : i)));
       setUnreadCount(prev => Math.max(0, prev - 1));
       ApiRequests.notifications.markRead(token, [id]).catch(() => {
-        // Satır tıklaması navigasyonla sonuçlanır; başarısızlık bir sonraki
-        // yenilemede sunucu durumundan düzelir.
+        // Satır tıklaması navigasyonla sonuçlanır; yalnız bu satır geri alınır
+        // (arada gelen değişiklikler ezilmesin) ve kullanıcı haberdar edilir.
+        setItems(prev => prev.map(i => (i.id === id ? { ...i, read: false } : i)));
+        setUnreadCount(prev => prev + 1);
+        toast.error('Bildirim okundu olarak işaretlenemedi.');
       });
     },
     [token, items],
@@ -175,6 +180,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       ApiRequests.notifications.markRead(token, [id], next).catch(() => {
         setItems(prevItems);
         setUnreadCount(prevUnread);
+        toast.error(next ? 'Bildirim okundu olarak işaretlenemedi.' : 'Bildirim okunmadı olarak işaretlenemedi.');
       });
     },
     [token, items, unreadCount],
@@ -194,6 +200,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         // Sıra korunur: anlık görüntü geri yüklenir.
         setItems(prevItems);
         setUnreadCount(prevUnread);
+        toast.error('Bildirim kaldırılamadı. Tekrar deneyin.');
       });
     },
     [token, items, unreadCount],

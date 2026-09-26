@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Activity, AlertTriangle, Package } from 'lucide-react';
 import { motion, useReducedMotion } from 'motion/react';
 import { cn } from '@/lib/utils';
+import { SPRING } from '@/lib/motion';
 import { EmptyState } from '@/components/shared/data-table/EmptyState';
 import type { SkuHealth } from '../lib/metrics';
 
@@ -26,8 +27,9 @@ function formatPct(pct: number): string {
 
 /**
  * Metrik panelinin alt bandı: SKU stok sağlığı metresi + kompakt inline legend.
- * Metre segmentleri ilk boyamada spring'le açılır; legend hover'ı ilgili
- * segmenti vurgular (diğerleri söner) — renk-üstü ikinci sinyal.
+ * Metre segmentleri ilk boyamada spring'le açılır (genişlik değil scaleX —
+ * layout tetiklemez); legend hover'ı ilgili segmenti vurgular (diğerleri
+ * söner) — renk-üstü ikinci sinyal. Yalnız fare: dokunuşta sönük hal takılı kalırdı.
  */
 export function StockHealthBand({ skuHealth, error, onRetry, stagger }: StockHealthBandProps) {
   const reduceMotion = useReducedMotion();
@@ -92,12 +94,13 @@ export function StockHealthBand({ skuHealth, error, onRetry, stagger }: StockHea
                 key={s.key}
                 className={cn(
                   s.dot,
-                  'transition-opacity duration-150',
+                  'origin-left transition-opacity duration-150',
                   hovered && hovered !== s.key && 'opacity-35',
                 )}
-                initial={reduceMotion ? { width: `${s.pct}%` } : { width: 0 }}
-                animate={{ width: `${s.pct}%` }}
-                transition={{ type: 'spring', bounce: 0, duration: 0.8, delay: reduceMotion ? 0 : 0.12 * i }}
+                style={{ width: `${s.pct}%` }}
+                initial={reduceMotion ? false : { scaleX: 0 }}
+                animate={{ scaleX: 1 }}
+                transition={{ ...SPRING, delay: 0.08 * i }}
               />
             ))}
           </div>
@@ -106,8 +109,10 @@ export function StockHealthBand({ skuHealth, error, onRetry, stagger }: StockHea
             {items.map(item => (
               <div
                 key={item.key}
-                onMouseEnter={item.count > 0 ? () => setHovered(item.key) : undefined}
-                onMouseLeave={item.count > 0 ? () => setHovered(null) : undefined}
+                onPointerEnter={
+                  item.count > 0 ? e => e.pointerType === 'mouse' && setHovered(item.key) : undefined
+                }
+                onPointerLeave={item.count > 0 ? e => e.pointerType === 'mouse' && setHovered(null) : undefined}
                 className="flex items-center gap-2"
               >
                 <span className={`size-2 rounded-full ${item.dot}`} />

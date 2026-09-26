@@ -16,7 +16,11 @@ import { cn } from '@/lib/utils';
 
 type TooltipProviderProps = TooltipProviderPrimitiveProps;
 
-function TooltipProvider({ openDelay = 0, ...props }: TooltipProviderProps) {
+/**
+ * İlk balon 500ms bekler; biri açıkken/az önce kapandıysa sonraki gecikmesiz
+ * ve animasyonsuz açılır (sıcak pencere primitifte, `closeDelay` kadar).
+ */
+function TooltipProvider({ openDelay = 500, ...props }: TooltipProviderProps) {
   return <TooltipProviderPrimitive openDelay={openDelay} {...props} />;
 }
 
@@ -40,7 +44,8 @@ type TooltipContentProps = Omit<TooltipContentPrimitiveProps, 'asChild'> & {
 function TooltipContent({
   className,
   children,
-  layout = 'preserve-aspect',
+  // Varsayılan kapalı: sıcak geçişte içerik boyutu morph'lanmaz, anında değişir.
+  layout = false,
   ...props
 }: TooltipContentProps) {
   return (

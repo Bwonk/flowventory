@@ -16,7 +16,7 @@ interface ClockIconProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 const HAND_TRANSITION: Transition = {
-  duration: 0.6,
+  duration: 0.4,
   ease: [0.4, 0, 0.2, 1],
 };
 

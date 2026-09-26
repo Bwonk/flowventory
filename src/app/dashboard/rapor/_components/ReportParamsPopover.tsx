@@ -2,6 +2,8 @@
 
 import { logger } from '@/lib/logger';
 import { useState, type ReactNode } from 'react';
+import { toast } from 'sonner';
+import { extractErrorMessage } from '@/lib/api-error';
 import { AdjustmentsHorizontalIcon } from '@/components/ui/icons/adjustments-horizontal';
 import { useIconHover } from '@/components/ui/icons/use-icon-hover';
 import { Button } from '@/components/ui/button';
@@ -45,6 +47,8 @@ export function ReportParamsPopover({ leadTimeDays, targetStockDays, onApply, tr
       setOpen(false);
     } catch (error) {
       logger.error('Error saving report settings', { error });
+      // Popover açık kalır; taslak değerler korunur, yeniden denenebilir.
+      toast.error(extractErrorMessage(error, 'Parametreler kaydedilemedi. Tekrar deneyin.'));
     } finally {
       setSaving(false);
     }

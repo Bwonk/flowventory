@@ -2,14 +2,17 @@
 
 import { useCallback, useState, type ReactNode } from 'react';
 import { isAxiosError } from 'axios';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { ApiRequests } from '@/lib/api-requests';
 import type { DigestFrequency } from '@/lib/digest/schedule';
+import { EASE_OUT, INSTANT, springOrInstant } from '@/lib/motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Dropdown, OptionButton } from '@/components/shared/filters/Dropdown';
 import { SegmentedTrack } from '@/components/shared/tool-track';
 import { SettingsSection } from './SettingsSection';
+import { StatusText } from './StatusText';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -53,6 +56,34 @@ function FieldLabel({ children, htmlFor, disabled }: { children: ReactNode; html
 }
 
 /**
+ * Aç/kapa bölge: yükseklik 0↔auto kanonik spring, içerik 150ms'de belirir,
+ * kapanışta ~100ms'de söner; yalnız hareket sırasında kırpar (odak halkası
+ * dinlenmede taşabilsin). `-mt-4 pt-4`: kapalıyken kolonun gap'i de kapansın.
+ * Reduced-motion: anlık.
+ */
+function Collapse({ children }: { children: ReactNode }) {
+  const reduceMotion = useReducedMotion();
+  return (
+    <motion.div
+      initial={{ height: 0, overflow: 'hidden' }}
+      animate={{ height: 'auto', transitionEnd: { overflow: 'visible' } }}
+      exit={{ height: 0, overflow: 'hidden' }}
+      transition={springOrInstant(reduceMotion)}
+      className="-mt-4"
+    >
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1, transition: reduceMotion ? INSTANT : { duration: 0.15, ease: EASE_OUT } }}
+        exit={{ opacity: 0, transition: reduceMotion ? INSTANT : { duration: 0.1, ease: EASE_OUT } }}
+        className="pt-4"
+      >
+        {children}
+      </motion.div>
+    </motion.div>
+  );
+}
+
+/**
  * E-posta bildirim ayarları bölümü: anlık uyarılar (kritik stok / ölü stok /
  * satış artışı — sync sonrası değerlendirilir) ve zamanlanmış özet raporu
  * (günlük/haftalık, /api/cron/digest). İkisi aynı adrese gider. Veri fetch'i
@@ -77,10 +108,18 @@ export function NotificationSection({ token, initialSettings }: NotificationSect
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [message, setMessage] = useState<{ text: string; isError: boolean } | null>(null);
+  // Hata, adres değiştirilip alan terk edilince görünür (yazarken erken bağırmasın); sonra canlı güncellenir.
+  const [emailTouched, setEmailTouched] = useState(false);
 
   const digestOn = frequency !== 'off';
   const emailNeeded = alerts || digestOn;
   const emailValid = EMAIL_PATTERN.test(email.trim());
+  const emailIssue =
+    emailNeeded && emailTouched && !emailValid
+      ? email.trim()
+        ? 'Geçerli bir e-posta adresi girin (ör. ornek@magaza.com).'
+        : 'Bildirim adresi gerekli.'
+      : null;
   const dirty =
     email.trim() !== saved.email ||
     alerts !== saved.alerts ||
@@ -170,54 +209,58 @@ export function NotificationSection({ token, initialSettings }: NotificationSect
         />
       </div>
 
-      {digestOn && (
-        <div className="flex flex-col gap-2">
-          <div className="flex flex-wrap items-end gap-3">
-            {frequency === 'weekly' && (
-              <div role="group" aria-label="Özet günü">
-                <FieldLabel>Gün</FieldLabel>
-                <Dropdown label={WEEKDAY_LABELS[weekday]} active>
-                  {close =>
-                    WEEKDAY_ORDER.map(day => (
-                      <OptionButton
-                        key={day}
-                        label={WEEKDAY_LABELS[day]}
-                        selected={weekday === day}
-                        onClick={() => {
-                          edit(setWeekday)(day);
-                          close();
-                        }}
-                      />
-                    ))
-                  }
-                </Dropdown>
+      <AnimatePresence initial={false}>
+        {digestOn && (
+          <Collapse key="digest-schedule">
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-wrap items-end gap-3">
+                {frequency === 'weekly' && (
+                  <div role="group" aria-label="Özet günü">
+                    <FieldLabel>Gün</FieldLabel>
+                    <Dropdown label={WEEKDAY_LABELS[weekday]} active>
+                      {close =>
+                        WEEKDAY_ORDER.map(day => (
+                          <OptionButton
+                            key={day}
+                            label={WEEKDAY_LABELS[day]}
+                            selected={weekday === day}
+                            onClick={() => {
+                              edit(setWeekday)(day);
+                              close();
+                            }}
+                          />
+                        ))
+                      }
+                    </Dropdown>
+                  </div>
+                )}
+                <div role="group" aria-label="Özet saati">
+                  <FieldLabel>Saat</FieldLabel>
+                  <Dropdown label={formatHour(hour)} active panelClassName="max-h-72 min-w-[140px] overflow-y-auto">
+                    {close =>
+                      HOURS.map(h => (
+                        <OptionButton
+                          key={h}
+                          label={formatHour(h)}
+                          selected={hour === h}
+                          onClick={() => {
+                            edit(setHour)(h);
+                            close();
+                          }}
+                        />
+                      ))
+                    }
+                  </Dropdown>
+                </div>
               </div>
-            )}
-            <div role="group" aria-label="Özet saati">
-              <FieldLabel>Saat</FieldLabel>
-              <Dropdown label={formatHour(hour)} active panelClassName="max-h-72 min-w-[140px] overflow-y-auto">
-                {close =>
-                  HOURS.map(h => (
-                    <OptionButton
-                      key={h}
-                      label={formatHour(h)}
-                      selected={hour === h}
-                      onClick={() => {
-                        edit(setHour)(h);
-                        close();
-                      }}
-                    />
-                  ))
-                }
-              </Dropdown>
+              <p className="text-pretty text-xs text-muted-foreground">
+                {scheduleText}
+                {timezone ? ` Saatler mağaza saat dilimindedir (${timezone}).` : null}
+              </p>
             </div>
-          </div>
-          <p className="text-pretty text-xs text-muted-foreground">
-            {scheduleText}
-            {timezone ? ` Saatler mağaza saat dilimindedir (${timezone}).` : null}
-          </p>
-        </div>
-      )}
+          </Collapse>
+        )}
+      </AnimatePresence>
 
       <div className="max-w-sm">
         <FieldLabel htmlFor="notifEmail" disabled={!emailNeeded}>
@@ -229,8 +272,19 @@ export function NotificationSection({ token, initialSettings }: NotificationSect
           value={email}
           disabled={!emailNeeded}
           onChange={e => edit(setEmail)(e.target.value)}
+          onBlur={() => {
+            // Yalnız gezinip geçmek (değer değişmeden) hata sayılmaz.
+            if (email.trim() !== saved.email) setEmailTouched(true);
+          }}
           placeholder="ornek@magaza.com"
+          aria-invalid={emailIssue ? true : undefined}
+          aria-describedby={emailIssue ? 'notifEmail-issue' : undefined}
         />
+        {emailIssue && (
+          <p id="notifEmail-issue" className="mt-1 text-xs text-destructive">
+            {emailIssue}
+          </p>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -250,9 +304,9 @@ export function NotificationSection({ token, initialSettings }: NotificationSect
         )}
         <span aria-live="polite">
           {message && (
-            <span className={message.isError ? 'text-sm text-destructive' : 'text-sm text-muted-foreground'}>
+            <StatusText key={message.text} tone={message.isError ? 'error' : 'muted'}>
               {message.text}
-            </span>
+            </StatusText>
           )}
         </span>
       </div>

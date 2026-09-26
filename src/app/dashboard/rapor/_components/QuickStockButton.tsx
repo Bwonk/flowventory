@@ -3,14 +3,20 @@
 import { logger } from '@/lib/logger';
 import { useEffect, useRef, useState } from 'react';
 import { Check, Loader2, Plus } from 'lucide-react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { toast } from 'sonner';
 import { extractErrorMessage } from '@/lib/api-error';
 import { ApiRequests } from '@/lib/api-requests';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
+import { springOrInstant } from '@/lib/motion';
 
 type QuickStockState = 'idle' | 'saving' | 'done';
+
+/** Dokunmatikte hover-duraklatma yok; "Geri Al"a yetişecek kadar uzun kalır. */
+const UNDO_TOAST_MS = 10_000;
+/** İkon takası (DESIGN.md §6 ikon swap motifi). */
+const ICON_SWAP = { opacity: 0, scale: 0.95, filter: 'blur(2px)' };
 
 interface QuickStockButtonProps {
   token: string;
@@ -33,6 +39,7 @@ interface QuickStockButtonProps {
 export function QuickStockButton({ token, productId, variantId, addQty, onStockChange }: QuickStockButtonProps) {
   const [state, setState] = useState<QuickStockState>('idle');
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const reduceMotion = useReducedMotion();
   const doneTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -53,7 +60,9 @@ export function QuickStockButton({ token, productId, variantId, addQty, onStockC
       setState('done');
       doneTimer.current = setTimeout(() => setState('idle'), 1500);
 
-      const undo = async () => {
+      // Geri al aynı toast'ta sürer: yükleniyor → sonuç (ayrı toast açılmaz).
+      const undo = async (toastId: string | number) => {
+        toast.loading('Geri alınıyor…', { id: toastId, action: undefined });
         try {
           await ApiRequests.ikas.updateStock(token, {
             productId,
@@ -62,14 +71,24 @@ export function QuickStockButton({ token, productId, variantId, addQty, onStockC
             stockCount: data.previousCount,
           });
           onStockChange(variantId, data.newTotalStock - addQty);
-          toast.success('Geri alındı');
+          toast.success('Geri alındı', { id: toastId, duration: 4000 });
         } catch (error) {
           logger.error('Quick stock undo failed', { variantId, error });
-          toast.error('Geri alınamadı.');
+          toast.error('Geri alınamadı.', { id: toastId, duration: 4000 });
         }
       };
 
-      toast.success(`Stok girildi: ${addQty}`, { action: { label: 'Geri Al', onClick: undo } });
+      const toastId = toast.success(`Stok girildi: ${addQty}`, {
+        duration: UNDO_TOAST_MS,
+        action: {
+          label: 'Geri Al',
+          onClick: event => {
+            // Toast kapanmasın; yerinde "Geri alınıyor…"a dönüşür.
+            event.preventDefault();
+            void undo(toastId);
+          },
+        },
+      });
     } catch (error) {
       logger.error('Quick stock failed', { variantId, error });
       setState('idle');
@@ -88,13 +107,24 @@ export function QuickStockButton({ token, productId, variantId, addQty, onStockC
           // Görünürlük RowActions'ta (satır hover/focus); burada yalnız renk.
           className="h-6 gap-1 px-2 text-xs text-muted-foreground hover:text-foreground"
         >
-          {state === 'saving' ? (
-            <Loader2 className="size-3 animate-spin" aria-hidden />
-          ) : state === 'done' ? (
-            <Check className="size-3 text-status-healthy" aria-hidden />
-          ) : (
-            <Plus className="size-3" aria-hidden />
-          )}
+          <AnimatePresence initial={false} mode="popLayout">
+            <motion.span
+              key={state}
+              initial={ICON_SWAP}
+              animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+              exit={ICON_SWAP}
+              transition={springOrInstant(reduceMotion)}
+              className="flex shrink-0"
+            >
+              {state === 'saving' ? (
+                <Loader2 className="size-3 animate-spin" aria-hidden />
+              ) : state === 'done' ? (
+                <Check className="size-3 text-status-healthy" aria-hidden />
+              ) : (
+                <Plus className="size-3" aria-hidden />
+              )}
+            </motion.span>
+          </AnimatePresence>
           Stok
         </Button>
       </PopoverTrigger>

@@ -10,6 +10,7 @@ import {
   type RefObject,
 } from 'react';
 import { useReducedMotion } from 'motion/react';
+import { capturePointer, releasePointer } from '@/lib/touch';
 import { cn } from '@/lib/utils';
 
 export interface TrackOverflow {
@@ -125,18 +126,19 @@ export function useTrackOverflow(
     else if (end > el.scrollLeft + el.clientWidth) el.scrollTo({ left: end - el.clientWidth, behavior });
   }, [activeValue, reduceMotion, trackRef]);
 
-  // Kaydırıcı: thumb sürükleme + raya tıklayıp atlama.
-  const dragRef = useRef<{ x: number; scrollLeft: number; factor: number } | null>(null);
+  // Kaydırıcı: thumb sürükleme + raya tıklayıp atlama. Sürükleme tek
+  // pointer'a bağlı; sürerken gelen ikinci parmak/pointer yok sayılır.
+  const dragRef = useRef<{ pointerId: number; x: number; scrollLeft: number; factor: number } | null>(null);
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
     const el = trackRef.current;
-    if (!el) return;
+    if (!el || dragRef.current) return;
     const rect = event.currentTarget.getBoundingClientRect();
     const max = el.scrollWidth - el.clientWidth;
     const thumbWidth = (el.clientWidth / el.scrollWidth) * rect.width;
     const travel = Math.max(1, rect.width - thumbWidth);
     if ((event.target as HTMLElement).closest('[data-thumb]')) {
-      dragRef.current = { x: event.clientX, scrollLeft: el.scrollLeft, factor: max / travel };
-      event.currentTarget.setPointerCapture(event.pointerId);
+      dragRef.current = { pointerId: event.pointerId, x: event.clientX, scrollLeft: el.scrollLeft, factor: max / travel };
+      capturePointer(event.currentTarget, event.pointerId);
     } else {
       el.scrollLeft = ((event.clientX - rect.left - thumbWidth / 2) / travel) * max;
     }
@@ -145,11 +147,13 @@ export function useTrackOverflow(
   const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
     const drag = dragRef.current;
     const el = trackRef.current;
-    if (!drag || !el) return;
+    if (!drag || !el || event.pointerId !== drag.pointerId) return;
     el.scrollLeft = drag.scrollLeft + (event.clientX - drag.x) * drag.factor;
   };
-  const onPointerUp = () => {
+  const onPointerUp = (event: PointerEvent<HTMLDivElement>) => {
+    if (dragRef.current?.pointerId !== event.pointerId) return;
     dragRef.current = null;
+    releasePointer(event.currentTarget, event.pointerId);
   };
 
   const edge = (visible: boolean) => (visible ? '#000' : 'transparent');

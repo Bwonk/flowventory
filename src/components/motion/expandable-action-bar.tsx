@@ -6,7 +6,7 @@
 // card segment varyantları, ayraç, ikon hover'ı parent'tan (useIconHover),
 // Radix trigger'larına `wrap` ile sarılma, basma geri bildirimi 0.99.
 
-import { LayoutGroup, motion, type Transition, useReducedMotion } from 'motion/react';
+import { LayoutGroup, motion, useReducedMotion } from 'motion/react';
 import {
   Fragment,
   type FocusEvent,
@@ -26,6 +26,7 @@ import { useHoverGesture } from '@/lib/hooks/use-hover-gesture';
 import { useTapGesture } from '@/lib/hooks/use-tap-gesture';
 import { TrackSlider, useTrackOverflow } from '@/components/shared/tool-track/track-overflow';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { springOrInstant } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 
 export type ExpandableActionBarVariant = 'ghost' | 'card' | 'ink';
@@ -101,9 +102,6 @@ export interface ExpandableActionBarProps {
   classNames?: ExpandableActionBarClassNames;
 }
 
-/** Kanonik yay (DESIGN.md §6) — yol boyu, etiket açılışı ve vurgu hapı aynı hatta. */
-const SPRING: Transition = { type: 'spring', stiffness: 350, damping: 35 };
-
 const VARIANT_CLASS: Record<ExpandableActionBarVariant, string> = {
   ghost: 'text-muted-foreground hover:text-foreground focus-visible:text-foreground',
   card: 'border border-hairline bg-card text-foreground',
@@ -165,6 +163,9 @@ export function ExpandableActionBar({
   classNames,
 }: ExpandableActionBarProps) {
   const reduce = useReducedMotion();
+  // Kanonik yay (DESIGN.md §6) — yol boyu, etiket açılışı ve vurgu hapı aynı
+  // hatta; reduced-motion'da anlık.
+  const transition = springOrInstant(reduce);
   const layoutId = useId();
   const isMobile = useIsMobile();
   const coarsePointer = useCoarsePointer();
@@ -349,7 +350,7 @@ export function ExpandableActionBar({
         onPointerLeave={onRootPointerLeave}
         onFocus={onRootFocus}
         onBlur={onRootBlur}
-        transition={SPRING}
+        transition={transition}
         style={overlay && collapsedWidth !== null ? { width: collapsedWidth, height: 36 } : undefined}
         className={cn(
           'group/track relative inline-flex max-w-full',
@@ -386,7 +387,7 @@ export function ExpandableActionBar({
             overlay && collapsedWidth !== null && (anchor?.side === 'left' ? 'left-0' : 'right-0'),
             classNames?.track,
           )}
-          transition={SPRING}
+          transition={transition}
         >
           {items.map(item => {
             const isActive = item.active || activeId === item.id;
@@ -438,7 +439,7 @@ export function ExpandableActionBar({
                   onAction?.(item);
                 }}
                 whileTap={reduce || item.disabled ? undefined : { scale: 0.99 }}
-                transition={SPRING}
+                transition={transition}
                 {...item.hoverProps}
                 className={cn(
                   'relative isolate inline-flex h-[30px] min-w-[30px] shrink-0 items-center justify-center overflow-hidden rounded-md px-[9px] text-sm font-medium whitespace-nowrap outline-none transition-[color,background-color] duration-150',
@@ -456,7 +457,7 @@ export function ExpandableActionBar({
                   <motion.span
                     layoutId="action-bar-highlight"
                     className="absolute inset-0 -z-10 rounded-md border border-hairline bg-card"
-                    transition={SPRING}
+                    transition={transition}
                   />
                 ) : null}
 
@@ -491,7 +492,7 @@ export function ExpandableActionBar({
                           filter: isExpanded ? 'blur(0px)' : 'blur(3px)',
                         }
                   }
-                  transition={reduce ? { duration: 0 } : SPRING}
+                  transition={transition}
                   data-label
                   className={cn('inline-block overflow-hidden whitespace-nowrap', classNames?.label)}
                 >

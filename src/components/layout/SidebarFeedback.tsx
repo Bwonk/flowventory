@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { motion, useReducedMotion } from 'motion/react';
 import { toast } from 'sonner';
-import { useSidebar } from '@/components/animate-ui/components/radix/sidebar';
+import { SIDEBAR_TRANSITION_MS, useSidebar } from '@/components/animate-ui/components/radix/sidebar';
 import { Loader } from 'lucide-react';
 import {
   PopoverForm,
@@ -22,6 +22,8 @@ import { TokenHelpers } from '@/helpers/token-helpers';
 import { ApiRequests } from '@/lib/api-requests';
 import { extractErrorMessage } from '@/lib/api-error';
 import { logger } from '@/lib/logger';
+import { EASE_OUT, INSTANT, PRESS_FEEDBACK_CLASS, SPRING } from '@/lib/motion';
+import { cn } from '@/lib/utils';
 
 type FormState = 'idle' | 'loading' | 'success';
 
@@ -29,22 +31,17 @@ const MAX_LENGTH = 2000;
 /** Kapalı yükseklik (tetikleyici satırı, h-9) ve açık panel yüksekliği. */
 const TRIGGER_HEIGHT = 36;
 const PANEL_HEIGHT = 168;
-/** Sidebar'ın kendi genişlik geçişi (bkz. sidebar primitive: duration-400). */
-const SIDEBAR_TRANSITION_MS = 400;
 const SUCCESS_HOLD_MS = 2500;
 const EMPTY_HINT_MS = 2500;
 /**
- * Kapanış eğrisi — sidebar'ın kendi genişlik geçişiyle birebir aynı
- * (bkz. animate-ui sidebar: `duration-400 ease-[cubic-bezier(0.7,-0.15,0.25,1.15)]`).
- * BAŞLARKEN kartı sidebar'la birlikte bu eğriyle "zıplayarak" açılıyor; panel
- * de aynı hisle kapansın diye: önce hafif geri çekilir, sonunda hedefi biraz aşar.
+ * Kapanış: açılıştan hızlı ve sessiz — 200ms güçlü ease-out, taşma yok
+ * (DESIGN.md §6: çıkış girişten kısa).
  */
-const PANEL_CLOSE_MS = 400;
-const BOUNCY_CLOSE = { duration: PANEL_CLOSE_MS / 1000, ease: [0.7, -0.15, 0.25, 1.15] as const };
-const OPEN_SPRING = { type: 'spring' as const, stiffness: 350, damping: 35 };
+const PANEL_CLOSE_MS = 200;
+const PANEL_CLOSE = { duration: PANEL_CLOSE_MS / 1000, ease: EASE_OUT };
 /**
  * Sidebar'ın daralmadan önce bekleyeceği süre: kapanış + panelin DOM'dan
- * kalkması için bir-iki karelik pay (ölçüm: animasyon 400ms, kalkış ~450ms).
+ * kalkması için bir-iki karelik pay.
  */
 const COLLAPSE_WAIT_MS = PANEL_CLOSE_MS + 60;
 
@@ -161,13 +158,13 @@ export function SidebarFeedback() {
       className="relative"
       initial={false}
       animate={{ height: open ? PANEL_HEIGHT : TRIGGER_HEIGHT }}
-      transition={reduceMotion ? { duration: 0 } : open ? OPEN_SPRING : BOUNCY_CLOSE}
+      transition={reduceMotion ? INSTANT : open ? SPRING : PANEL_CLOSE}
     >
       <PopoverForm
         // Tetikleyici sarmalayıcının dibine sabit: alt kenar kapanışta yerinde
         // kaldığı için panel tam satırın üstüne çöker ve solunca satır çıkar.
         className="flex h-full flex-col justify-end"
-        closeTransition={BOUNCY_CLOSE}
+        closeTransition={PANEL_CLOSE}
         collapsedHeight={TRIGGER_HEIGHT}
         title="Geri Bildirim"
         open={open}
@@ -176,7 +173,10 @@ export function SidebarFeedback() {
         width="100%"
         height={`${PANEL_HEIGHT}px`}
         panelClassName="bottom-0 left-0 z-50"
-        triggerClassName="relative h-9 w-full overflow-hidden rounded-lg border-0 bg-transparent px-3 text-sm font-normal text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
+        triggerClassName={cn(
+          'relative h-9 w-full overflow-hidden rounded-lg border-0 bg-transparent px-3 text-sm font-normal text-muted-foreground hover:bg-muted hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0',
+          PRESS_FEEDBACK_CLASS,
+        )}
         triggerChildren={
           <span className="flex min-w-0 items-center" {...hoverProps}>
             <EnvelopeIcon
@@ -204,6 +204,7 @@ export function SidebarFeedback() {
               submit();
             }}
           >
+            {/* Dokunmatikte 16px: iOS 16px altı alana odaklanınca sayfayı büyütür. */}
             <textarea
               ref={textareaRef}
               autoFocus
@@ -215,7 +216,7 @@ export function SidebarFeedback() {
                 if (emptyHint) setEmptyHint(false);
               }}
               aria-label="Geri bildirim mesajı"
-              className="block min-h-0 w-full flex-1 resize-none rounded-t-lg bg-card p-3 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+              className="block min-h-0 w-full flex-1 resize-none rounded-t-lg bg-card p-3 text-base text-foreground outline-none pointer-fine:text-sm placeholder:text-muted-foreground"
             />
             <div className="relative flex h-12 shrink-0 items-center px-[10px]">
               <PopoverFormSeparator />

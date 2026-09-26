@@ -1,12 +1,14 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import { useReducedMotion } from 'motion/react';
 import { PlusIcon } from '@/components/ui/icons/plus';
 import { useIconHover } from '@/components/ui/icons/use-icon-hover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/animate-ui/components/animate/tooltip';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { TrashIcon } from '@/components/ui/icons/trash';
+import { EASE_OUT, PRESS_FEEDBACK_CLASS } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 
 /** Akış kartı yüzeyi (DESIGN.md §5 "Akış kartları"). */
@@ -49,11 +51,27 @@ export const DASHED_ADD =
 export function DashedAddButton({ label, disabled, onClick }: { label: string; disabled?: boolean; onClick: () => void }) {
   const plus = useIconHover();
   return (
-    <button type="button" onClick={onClick} disabled={disabled} className={DASHED_ADD} {...plus.hoverProps}>
+    <button type="button" onClick={onClick} disabled={disabled} className={cn(DASHED_ADD, PRESS_FEEDBACK_CLASS)} {...plus.hoverProps}>
       <PlusIcon ref={plus.ref} size={14} className="flex shrink-0" aria-hidden />
       {label}
     </button>
   );
+}
+
+/**
+ * Kart/aşama giriş-çıkışı (`AnimatePresence initial={false}` içinde): aşağıdan
+ * 8px süzülerek girer, yüksekliği kapanarak çıkar; çıkarken `overflow: hidden`
+ * (dinlenmede kırpmaz — balon, odak halkası taşabilsin). Reduced-motion: yalnız opaklık.
+ */
+export function useFlowItemMotion() {
+  const reduceMotion = useReducedMotion();
+  return {
+    layout: !reduceMotion,
+    initial: reduceMotion ? false : { opacity: 0, y: 8 },
+    animate: { opacity: 1, y: 0 },
+    exit: reduceMotion ? { opacity: 0 } : { opacity: 0, height: 0, overflow: 'hidden' },
+    transition: { duration: 0.2, ease: EASE_OUT },
+  } as const;
 }
 
 /**

@@ -97,13 +97,13 @@ const RectangleGroupIcon = forwardRef<
           animate={controls}
           d="M14.25 8.625C14.25 8.00368 14.7537 7.5 15.375 7.5H20.625C21.2463 7.5 21.75 8.00368 21.75 8.625V16.875C21.75 17.4963 21.2463 18 20.625 18H15.375C14.7537 18 14.25 17.4963 14.25 16.875V8.625Z"
           initial="normal"
-          variants={RECT_VARIANTS(0.1)}
+          variants={RECT_VARIANTS(0.05)}
         />
         <motion.path
           animate={controls}
           d="M3.75 16.125C3.75 15.5037 4.25368 15 4.875 15H10.125C10.7463 15 11.25 15.5037 11.25 16.125V18.375C11.25 18.9963 10.7463 19.5 10.125 19.5H4.875C4.25368 19.5 3.75 18.9963 3.75 18.375V16.125Z"
           initial="normal"
-          variants={RECT_VARIANTS(0.2)}
+          variants={RECT_VARIANTS(0.1)}
         />
       </svg>
     </div>

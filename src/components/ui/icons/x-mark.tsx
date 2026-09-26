@@ -88,7 +88,7 @@ const XMarkIcon = forwardRef<XMarkIconHandle, XMarkIconProps>(
           <motion.path
             animate={controls}
             d="M18 6l-12 12"
-            transition={{ delay: 0.2 }}
+            transition={{ delay: 0.1 }}
             variants={PATH_VARIANTS}
           />
         </svg>

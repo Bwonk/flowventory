@@ -4,8 +4,11 @@ import { Slot } from "radix-ui"
 
 import { cn } from "@/lib/utils"
 
+// Basma geri bildirimi tabanda (DESIGN.md §6: ölçek 0.99'u geçmez) —
+// transform geçiş listesinde, reduced-motion'da ölçek yok; uzun basışta
+// etiket seçilmez / iOS çağrı balonu açılmaz. `link` ölçeklenmez.
 const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap transition-[color,background-color,border-color,box-shadow,opacity] duration-150 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150 ease-out active:scale-[0.99] motion-reduce:active:scale-100 select-none [-webkit-touch-callout:none] outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
@@ -18,7 +21,7 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost:
           "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
-        link: "text-primary underline-offset-4 hover:underline",
+        link: "text-primary underline-offset-4 hover:underline active:scale-100",
         // Araç yolu segmentleri (DESIGN.md §5 "Araç yolu"): bg-muted yol
         // içinde şeffaf segment; yalnız metin rengi değişir.
         segment: "text-muted-foreground hover:text-foreground",

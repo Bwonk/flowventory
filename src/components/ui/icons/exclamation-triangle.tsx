@@ -21,8 +21,7 @@ const EXCLAMATION_VARIANTS: Variants = {
     opacity: [1, 0.4, 1],
     scale: [1, 1.1, 1],
     transition: {
-      duration: 0.8,
-      repeat: Number.POSITIVE_INFINITY,
+      duration: 0.4,
       ease: "easeInOut",
     },
   },

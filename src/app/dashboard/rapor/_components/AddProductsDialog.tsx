@@ -30,11 +30,12 @@ type ProductRow = NonNullable<ListProductsApiResponse['products']>[number];
 const ASSIGN_BATCH_SIZE = 50;
 
 // tw-animate-css değişken override'ları: buton-kökenli büyüme okunaklı olsun
-// diye zoom 0.75'ten başlar/biter; merkez-slide (slide-in-from-bottom) iptal —
-// origin'li zoom'la üst üste binince yörünge eğriliyordu.
+// diye origin tetikleyicide kalır, zoom 0.95'ten başlar/biter; merkez-slide
+// (slide-in-from-bottom) iptal — origin'li zoom'la üst üste binince yörünge
+// eğriliyordu.
 const GROW_FROM_TRIGGER_STYLE = {
-  '--tw-enter-scale': '0.75',
-  '--tw-exit-scale': '0.75',
+  '--tw-enter-scale': '0.95',
+  '--tw-exit-scale': '0.95',
   '--tw-enter-translate-y': '0',
 } as CSSProperties;
 
@@ -204,7 +205,8 @@ export function AddProductsDialog({ token, vendorName, onAssigned, compact, trig
           value={query}
           onChange={e => setQuery(e.target.value)}
           placeholder="Ürün veya SKU ara…"
-          className="h-8 text-sm"
+          // iOS odakta zoom yapmasın: dokunmatikte 16px, ince işaretçide 14px.
+          className="h-8 md:text-base pointer-fine:text-sm"
           disabled={saving}
           autoFocus
         />

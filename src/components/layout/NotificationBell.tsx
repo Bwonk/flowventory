@@ -6,6 +6,13 @@ import { BellIcon } from '@/components/ui/icons/bell';
 import { BellAlertIcon } from '@/components/ui/icons/bell-alert';
 import { useIconHover } from '@/components/ui/icons/use-icon-hover';
 import { useNotifications } from '@/components/layout/notifications-context';
+import { AnimatedNumber } from '@/components/shared/AnimatedNumber';
+import { PRESS_FEEDBACK_CLASS } from '@/lib/motion';
+import { cn } from '@/lib/utils';
+
+/** Rozet tavanı: 100 ve üstü "99+" olarak tek değerde kalır, kaymaz. */
+const BADGE_CAP = 100;
+const formatBadge = (value: number) => (value >= BADGE_CAP ? '99+' : value);
 
 /**
  * Sidebar bildirim zili — okunmamış rozeti taşır ve bildirim drawer'ını açar.
@@ -46,7 +53,10 @@ export function NotificationBell() {
         if (isMobile) setOpenMobile(false);
         setOpen(true);
       }}
-      className="relative flex h-9 w-full items-center rounded-lg px-3 text-sm text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
+      className={cn(
+        'relative flex h-9 w-full items-center rounded-lg px-3 text-sm text-muted-foreground hover:bg-muted hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0',
+        PRESS_FEEDBACK_CLASS,
+      )}
       {...hoverProps}
     >
       <TriggerBell ref={bellRef} size={16} className="flex shrink-0 mr-3 group-data-[collapsible=icon]:mr-0" aria-hidden />
@@ -54,7 +64,7 @@ export function NotificationBell() {
       {unreadCount > 0 && (
         <>
           <span className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-destructive px-1.5 py-0.5 text-[10px] font-medium leading-none text-destructive-foreground tabular-nums group-data-[collapsible=icon]:hidden">
-            {unreadCount > 99 ? '99+' : unreadCount}
+            <AnimatedNumber value={Math.min(unreadCount, BADGE_CAP)} format={formatBadge} />
           </span>
           {/* Icon modunda sayı sığmaz — nokta göster. */}
           <span className="absolute right-1 top-1 hidden size-2 rounded-full bg-status-critical group-data-[collapsible=icon]:block" />

@@ -9,26 +9,29 @@ import {
   nextIncompleteIndex,
   useOnboardingSteps,
 } from '@/lib/onboarding';
+import { INSTANT, PRESS_FEEDBACK_CLASS, SPRING } from '@/lib/motion';
+import { cn } from '@/lib/utils';
 
 // Tam genişlik, yön farkındalıklı carousel kaydırması. Giren ve çıkan slayt
-// AYNI spring'i paylaşır ki tek ray üzerinde kayıyormuş hissi doğsun
-// (repo emsali spring: sidebar 350/35). Kenarda hafif fade, sert kesilmeyi
-// yumuşatır — "çıkış girişten sessiz" ilkesi burada bu fade ile sağlanır.
-const SLIDE_SPRING = { type: 'spring', stiffness: 350, damping: 35 } as const;
-
+// AYNI kanonik spring'i paylaşır ki tek ray üzerinde kayıyormuş hissi doğsun.
+// Kenarda hafif fade, sert kesilmeyi yumuşatır — "çıkış girişten sessiz"
+// ilkesi burada bu fade ile sağlanır.
 const slideVariants: Variants = {
   enter: (dir: number) => ({ x: `${dir * 100}%`, opacity: dir === 0 ? 1 : 0.4 }),
   center: {
     x: '0%',
     opacity: 1,
-    transition: { x: SLIDE_SPRING, opacity: { duration: 0.15 } },
+    transition: { x: SPRING, opacity: { duration: 0.15 } },
   },
   exit: (dir: number) => ({
     x: `${dir * -100}%`,
     opacity: 0.4,
-    transition: { x: SLIDE_SPRING, opacity: { duration: 0.15 } },
+    transition: { x: SPRING, opacity: { duration: 0.15 } },
   }),
 };
+
+const ARROW_BUTTON_CLASS =
+  'flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-30';
 
 // prefers-reduced-motion: kayma yok, salt opacity.
 const fadeVariants: Variants = {
@@ -59,6 +62,10 @@ export function OnboardingCard() {
   const [slide, setSlide] = useState<[index: number, dir: number] | null>(null);
   // Son adım da bitti → beat oynadı, kart çıkış animasyonuyla emekli oluyor.
   const [finished, setFinished] = useState(false);
+  // X'e basıldı: kart önce çıkış animasyonunu oynar, dismiss() onExitComplete'te
+  // çağrılır. Doğrudan dismiss() → retired → return null çıkışı atlıyor, sidebar
+  // tek karede zıplıyordu.
+  const [closing, setClosing] = useState(false);
   // Slayt viewport'unun animasyonlu yüksekliği; 'auto' = ilk ölçüm öncesi.
   const [viewportHeight, setViewportHeight] = useState<number | 'auto'>('auto');
 
@@ -164,8 +171,13 @@ export function OnboardingCard() {
 
   return (
     <div className="group-data-[collapsible=icon]:hidden">
-      <AnimatePresence initial={false}>
-        {!finished && (
+      <AnimatePresence
+        initial={false}
+        onExitComplete={() => {
+          if (closing) dismiss();
+        }}
+      >
+        {!finished && !closing && (
           <motion.section
             aria-label="Başlarken kurulum adımları"
             exit={{ opacity: 0, height: 0, transition: { duration: prefersReducedMotion ? 0 : 0.2 } }}
@@ -180,8 +192,11 @@ export function OnboardingCard() {
                 <button
                   type="button"
                   aria-label="Kurulum kartını kapat"
-                  onClick={dismiss}
-                  className="-mr-1 ml-auto rounded-md p-1 text-muted-foreground transition-colors duration-150 hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  onClick={() => setClosing(true)}
+                  className={cn(
+                    '-mr-1 ml-auto rounded-md p-1 text-muted-foreground transition-colors duration-150 hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                    PRESS_FEEDBACK_CLASS,
+                  )}
                 >
                   <X className="size-3.5" aria-hidden />
                 </button>
@@ -191,7 +206,7 @@ export function OnboardingCard() {
                   ile uyar; slaytlar absolute, tam genişlikte kayar. */}
               <motion.div
                 animate={{ height: viewportHeight }}
-                transition={prefersReducedMotion ? { duration: 0 } : SLIDE_SPRING}
+                transition={prefersReducedMotion ? INSTANT : SPRING}
                 className="relative mt-2 overflow-hidden"
               >
                 <AnimatePresence initial={false} custom={dir}>
@@ -226,7 +241,7 @@ export function OnboardingCard() {
                                 initial={{ opacity: 0, scale: 0.8 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 exit={{ opacity: 0, scale: 0.8 }}
-                                transition={{ type: 'spring', stiffness: 350, damping: 35 }}
+                                transition={SPRING}
                                 className="flex"
                               >
                                 <Check className="size-3" aria-hidden />
@@ -237,7 +252,7 @@ export function OnboardingCard() {
                                 initial={{ opacity: 0, scale: 0.8 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 exit={{ opacity: 0, scale: 0.8 }}
-                                transition={{ type: 'spring', stiffness: 350, damping: 35 }}
+                                transition={SPRING}
                               >
                                 {index + 1}
                               </motion.span>
@@ -296,12 +311,15 @@ export function OnboardingCard() {
                       aria-current={i === index ? 'step' : undefined}
                       aria-label={`Adım ${i + 1}: ${s.title}${s.done ? ' (tamamlandı)' : ''}`}
                       onClick={() => goTo(i)}
-                      className="flex h-8 w-4 items-center justify-center rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      className={cn(
+                        'flex h-8 w-4 items-center justify-center rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                        PRESS_FEEDBACK_CLASS,
+                      )}
                     >
                       {i === index ? (
                         <motion.span
                           layoutId={prefersReducedMotion ? undefined : 'onboarding-active-dot'}
-                          transition={SLIDE_SPRING}
+                          transition={SPRING}
                           className="h-1.5 w-3.5 rounded-full bg-foreground"
                         />
                       ) : (
@@ -321,7 +339,7 @@ export function OnboardingCard() {
                     aria-label="Önceki adım"
                     disabled={index === 0}
                     onClick={() => goTo(index - 1)}
-                    className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-30"
+                    className={cn(ARROW_BUTTON_CLASS, PRESS_FEEDBACK_CLASS)}
                   >
                     <ChevronLeft className="size-3.5" aria-hidden />
                   </button>
@@ -330,7 +348,7 @@ export function OnboardingCard() {
                     aria-label="Sonraki adım"
                     disabled={index === total - 1}
                     onClick={() => goTo(index + 1)}
-                    className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-30"
+                    className={cn(ARROW_BUTTON_CLASS, PRESS_FEEDBACK_CLASS)}
                   >
                     <ChevronRight className="size-3.5" aria-hidden />
                   </button>

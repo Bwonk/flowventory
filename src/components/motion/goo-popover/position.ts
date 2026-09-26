@@ -1,5 +1,6 @@
 'use client';
-// beui.dev/components/motion/popover (popover-position) — birebir.
+// beui.dev/components/motion/popover (popover-position) — birebir; tek fark
+// tetikleyicinin basma ölçeğinin ölçümden çıkarılması (`unscaledRect`).
 
 import { type MutableRefObject, useCallback, useLayoutEffect, useState } from 'react';
 
@@ -27,6 +28,28 @@ function sameLayout(a: PortalLayout | null, b: PortalLayout) {
   );
 }
 
+/**
+ * Tetikleyicinin basma ölçeği (`active:scale-[0.99]`, CSS `scale`) çıkarılmış
+ * kutusu. Açılış click'te ölçülür — tetikleyici o an ölçekten geri dönerken;
+ * ham rect'le goo kopyası ve panel yarım piksel kayık kalıyordu. Ölçek
+ * merkezden olduğu için merkez sabit, boyut ölçeğe bölünür.
+ */
+function unscaledRect(element: HTMLElement) {
+  const rect = element.getBoundingClientRect();
+  const scale = getComputedStyle(element).scale;
+  if (!scale || scale === 'none') return rect;
+  const [sx = 1, sy = sx] = scale.split(' ').map(Number);
+  if (!sx || !sy || (sx === 1 && sy === 1)) return rect;
+  const width = rect.width / sx;
+  const height = rect.height / sy;
+  return {
+    left: rect.left + (rect.width - width) / 2,
+    top: rect.top + (rect.height - height) / 2,
+    width,
+    height,
+  };
+}
+
 /** Tetikleyiciyi ve portallanmış paneli viewport koordinatlarında ölçer. */
 export function usePopoverPortalPosition<TriggerElement extends HTMLElement, ContentElement extends HTMLElement>(
   triggerRef: MutableRefObject<TriggerElement | null>,
@@ -40,7 +63,7 @@ export function usePopoverPortalPosition<TriggerElement extends HTMLElement, Con
     const content = contentRef.current;
     if (!trigger || !content) return;
 
-    const rect = trigger.getBoundingClientRect();
+    const rect = unscaledRect(trigger);
     const next: PortalLayout = {
       trigger: {
         left: rect.left,

@@ -2,7 +2,7 @@
 // beui.dev/components/motion/popover — Flowventory uyarlaması (DESIGN.md §5 "Goo
 // açılır panel", §6). Kaynaktan farklar: export'lar GooPopover* (ui/popover ile
 // çakışmasın); yarıçap 8/6 (rounded-lg/rounded-md), boyun 8px, gooStrength 5, z-50;
-// morph yayı kanonik 350/35. Oturunca (progress = 1) goo filtresi ve clip kapanır,
+// morph yayı kanonik 350/35 (kapanış 700/50 — aynı sönüm, ~%30 kısa). Oturunca (progress = 1) goo filtresi ve clip kapanır,
 // panel standart açılır yüzey olur (border-hairline + bg-popover + shadow-md) —
 // kaynakta kenarlık/gölge yoktu ve filtre dinlenirken köşeleri fazla yuvarlıyordu;
 // akarken konturu gövdenin 1px dışında kalan ikinci bg-hairline goo katmanı çizer.
@@ -36,6 +36,7 @@ import { createPortal } from 'react-dom';
 import { type DismissBehavior, useDismiss } from '@/lib/hooks/use-dismiss';
 import { type HoverGesture, useHoverGesture } from '@/lib/hooks/use-hover-gesture';
 import { useTapGesture } from '@/lib/hooks/use-tap-gesture';
+import { INSTANT, SPRING } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 import { usePopoverPortalPosition } from './position';
 import {
@@ -56,8 +57,11 @@ import {
 
 type TriggerMode = 'click' | 'hover';
 
-/** DESIGN.md §6 kanonik spring. */
-const GOO_SPRING = { type: 'spring' as const, stiffness: 350, damping: 35 };
+/**
+ * Kapanış yayı: açılışla aynı karakter (ζ≈0.94, taşmasız) ama ~%30 kısa —
+ * çıkış girişten hızlı. Açılış kanonik `SPRING` (DESIGN.md §6).
+ */
+const GOO_CLOSE_SPRING = { type: 'spring' as const, stiffness: 700, damping: 50 };
 const HOVER_CLOSE_DELAY = 120;
 /** Gövdenin hairline kontur katmanından içeri çekilmesi (px) — oturan panelin 1px kenarlığıyla aynı yer. */
 const HAIRLINE = 1;
@@ -217,7 +221,7 @@ export function GooPopover({
     let cancelled = false;
     settled.set(0);
     const custom = open ? transitionRef.current?.open : transitionRef.current?.close;
-    const animation = animate(progress, open ? 1 : 0, reduce ? { duration: 0 } : (custom ?? GOO_SPRING));
+    const animation = animate(progress, open ? 1 : 0, reduce ? INSTANT : (custom ?? (open ? SPRING : GOO_CLOSE_SPRING)));
     animation.then(() => {
       if (cancelled) return;
       if (open) settled.set(1);

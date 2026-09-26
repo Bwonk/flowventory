@@ -2,6 +2,7 @@
 
 import { useId, useRef, type ReactNode } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
+import { springOrInstant } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 import { TrackSlider, useTrackOverflow } from './track-overflow';
 
@@ -48,7 +49,7 @@ export function SegmentedTrack<T extends string>({
     activeValue: value,
     itemCount: options.length,
   });
-  const transition = reduceMotion ? { duration: 0 } : { type: 'spring' as const, stiffness: 350, damping: 35 };
+  const transition = springOrInstant(reduceMotion);
 
   return (
     <div className={cn('group/track relative min-w-0', className)}>
@@ -75,7 +76,7 @@ export function SegmentedTrack<T extends string>({
               aria-label={option['aria-label']}
               onClick={() => onChange(option.value)}
               className={cn(
-                'relative flex h-full shrink-0 items-center gap-1.5 rounded-md font-medium whitespace-nowrap transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.99]',
+                'relative flex h-full shrink-0 items-center gap-1.5 rounded-md font-medium whitespace-nowrap transition-[color,transform] duration-150 ease-out outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.99] motion-reduce:active:scale-100 select-none [-webkit-touch-callout:none]',
                 size === 'md' ? 'px-3 text-sm' : 'px-2.5 text-xs',
                 active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
               )}

@@ -18,6 +18,7 @@ import {
 import { PaperAirplaneIcon } from '@/components/ui/icons/paper-airplane';
 import { useIconHover } from '@/components/ui/icons/use-icon-hover';
 import { cn } from '@/lib/utils';
+import { springOrInstant } from '@/lib/motion';
 import { formatPrice } from '@/lib/currency';
 import type { PurchaseReportVendor } from '@/app/api/reports/purchase/route';
 import type { BasketLine } from './basket';
@@ -56,7 +57,7 @@ export function BulkSendDialog({ token, groups, onVendorSent }: BulkSendDialogPr
     const timer = setTimeout(() => setDone(false), 3000);
     return () => clearTimeout(timer);
   }, [done]);
-  const swap = reduceMotion ? { duration: 0 } : ({ type: 'spring', stiffness: 350, damping: 35 } as const);
+  const swap = springOrInstant(reduceMotion);
 
   const ready = groups.filter(g => g.email);
   const skipped = groups.filter(g => !g.email);
@@ -91,7 +92,10 @@ export function BulkSendDialog({ token, groups, onVendorSent }: BulkSendDialogPr
       setDone(true);
       toast.success(`${sent.length} tedarikçiye sipariş gönderildi`);
     }
-    if (failed.length > 0) toast.error(`Gönderilemedi: ${failed.join(', ')}`);
+    // Dialog kapandı; başarısız tedarikçi listesi kaybolmasın — kalıcı toast.
+    if (failed.length > 0) {
+      toast.error(`Gönderilemedi: ${failed.join(', ')}`, { duration: Infinity, closeButton: true });
+    }
   };
 
   return (
@@ -119,9 +123,9 @@ export function BulkSendDialog({ token, groups, onVendorSent }: BulkSendDialogPr
             {done ? (
               <motion.span
                 key="done"
-                initial={{ opacity: 0, scale: 0.25, filter: 'blur(4px)' }}
+                initial={{ opacity: 0, scale: 0.95, filter: 'blur(2px)' }}
                 animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-                exit={{ opacity: 0, scale: 0.25, filter: 'blur(4px)' }}
+                exit={{ opacity: 0, scale: 0.95, filter: 'blur(2px)' }}
                 transition={swap}
                 className="flex items-center gap-1.5"
               >
@@ -131,9 +135,9 @@ export function BulkSendDialog({ token, groups, onVendorSent }: BulkSendDialogPr
             ) : (
               <motion.span
                 key="send"
-                initial={{ opacity: 0, scale: 0.25, filter: 'blur(4px)' }}
+                initial={{ opacity: 0, scale: 0.95, filter: 'blur(2px)' }}
                 animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-                exit={{ opacity: 0, scale: 0.25, filter: 'blur(4px)' }}
+                exit={{ opacity: 0, scale: 0.95, filter: 'blur(2px)' }}
                 transition={swap}
                 className="flex items-center gap-1.5"
               >

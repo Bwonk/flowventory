@@ -1,7 +1,8 @@
 'use client';
 
-import { useRef, type ReactNode } from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { useState, type ReactNode } from 'react';
+import { AnimatePresence, motion, useReducedMotion, type Variants } from 'motion/react';
+import { springOrInstant } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 
 interface AnimatedNumberProps {
@@ -20,21 +21,34 @@ interface AnimatedNumberProps {
  */
 export function AnimatedNumber({ value, format = v => String(v), className }: AnimatedNumberProps) {
   const reduceMotion = useReducedMotion();
-  const previous = useRef(value);
-  const direction = value >= previous.current ? 1 : -1;
-  previous.current = value;
-  const offset = reduceMotion ? 0 : 10 * direction;
-  const transition = reduceMotion ? { duration: 0 } : { type: 'spring' as const, stiffness: 350, damping: 35 };
+  // Yön, önceki değer state'te tutularak render sırasında türetilir (React'in
+  // "önceki render'dan bilgi saklama" kalıbı). Ref'i render'da yazmak
+  // StrictMode'un çift render'ında yönü hep +1'e düşürüyordu.
+  const [previous, setPrevious] = useState(value);
+  const [direction, setDirection] = useState<1 | -1>(1);
+  if (value !== previous) {
+    setPrevious(value);
+    setDirection(value > previous ? 1 : -1);
+  }
+  const offset = reduceMotion ? 0 : 10;
+  // Çıkan sayı `custom` ile GÜNCEL yönü okur — kendi girişindeki yönü değil.
+  const variants: Variants = {
+    enter: (dir: number) => ({ y: offset * dir, opacity: 0 }),
+    center: { y: 0, opacity: 1 },
+    exit: (dir: number) => ({ y: -offset * dir, opacity: 0 }),
+  };
 
   return (
     <span className={cn('relative inline-grid overflow-hidden align-baseline tabular-nums', className)}>
-      <AnimatePresence initial={false} mode="popLayout">
+      <AnimatePresence initial={false} mode="popLayout" custom={direction}>
         <motion.span
           key={value}
-          initial={{ y: offset, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: -offset, opacity: 0 }}
-          transition={transition}
+          custom={direction}
+          variants={variants}
+          initial="enter"
+          animate="center"
+          exit="exit"
+          transition={springOrInstant(reduceMotion)}
           className="[grid-area:1/1] inline-block"
         >
           {format(value)}

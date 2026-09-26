@@ -13,7 +13,8 @@ import { ApiRequests } from '@/lib/api-requests';
  * 1. Sunucu (MerchantSettings tablosu) — tek doğru kaynak.
  * 2. localStorage — hızlı ilk boyama + sekmeler arası senkron cache'i.
  * Sunucudan gelen değer localStorage'a yazılır; değişiklik önce localStorage'a
- * (anında UI) sonra sunucuya (fire-and-forget) gider.
+ * (anında UI) sonra sunucuya gider. Sunucu yazımı başarısızsa değer geri
+ * alınır ve `setThreshold` false döner — çağıran kullanıcıya bildirir.
  */
 export interface StockThreshold {
   min: number;
@@ -66,7 +67,8 @@ export function useStockThreshold(): {
   threshold: StockThreshold;
   /** localStorage okunduktan sonra true — ilk boyamadaki varsayılan-değer zıplamasını gizlemek için. */
   hydrated: boolean;
-  setThreshold: (value: Partial<StockThreshold>) => void;
+  /** İyimser uygular, sunucuya yazar; başarısızsa önceki değere döner ve false verir. */
+  setThreshold: (value: Partial<StockThreshold>) => Promise<boolean>;
 } {
   const [threshold, setState] = useState<StockThreshold>(DEFAULT_STOCK_THRESHOLD);
   const [hydrated, setHydrated] = useState(false);
@@ -108,27 +110,34 @@ export function useStockThreshold(): {
     };
   }, []);
 
-  const setThreshold = useCallback((value: Partial<StockThreshold>) => {
-    setState(prev => {
-      const next = normalizeThreshold({ ...prev, ...value });
-      writeLocalThreshold(next);
+  // Yan etki setState updater'ının DIŞINDA: StrictMode updater'ı iki kez
+  // çağırıp iki istek atıyordu. Önceki değer localStorage cache'inden okunur
+  // (her yazım oradan geçer; state ile aynı).
+  const setThreshold = useCallback(async (value: Partial<StockThreshold>) => {
+    const prev = readStockThreshold();
+    const next = normalizeThreshold({ ...prev, ...value });
+    writeLocalThreshold(next);
+    setState(next);
 
-      // Sunucuya kalıcı yaz (fire-and-forget; hata UI'ı bloklamaz).
-      void (async () => {
-        try {
-          const token = await TokenHelpers.getTokenForIframeApp();
-          if (!token) return;
-          await ApiRequests.merchantSettings.update(token, {
-            criticalThreshold: next.min,
-            warningThreshold: next.max,
-          });
-        } catch (error) {
-          logger.error('Stok eşiği sunucuya kaydedilemedi', { error });
-        }
-      })();
-
-      return next;
-    });
+    try {
+      const token = await TokenHelpers.getTokenForIframeApp();
+      if (!token) throw new Error('Missing iframe token');
+      await ApiRequests.merchantSettings.update(token, {
+        criticalThreshold: next.min,
+        warningThreshold: next.max,
+      });
+      return true;
+    } catch (error) {
+      logger.error('Stok eşiği sunucuya kaydedilemedi', { error });
+      // Sunucu tek doğru kaynak: yazılamayan değer bir sonraki açılışta sessizce
+      // geri dönerdi — şimdi geri al. Bu arada daha yeni bir değer yazıldıysa ona dokunma.
+      const current = readStockThreshold();
+      if (current.min === next.min && current.max === next.max) {
+        writeLocalThreshold(prev);
+        setState(prev);
+      }
+      return false;
+    }
   }, []);
 
   return { threshold, hydrated, setThreshold };

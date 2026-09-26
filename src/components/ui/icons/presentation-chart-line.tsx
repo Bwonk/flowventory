@@ -24,7 +24,7 @@ const LINE_VARIANTS: Variants = {
     opacity: [0, 1],
     pathLength: [0, 1],
     transition: {
-      duration: 0.4,
+      duration: 0.3,
       ease: "easeInOut",
       opacity: { duration: 0.1 },
     },

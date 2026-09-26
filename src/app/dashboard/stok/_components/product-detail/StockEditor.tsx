@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Check, Loader2, Pencil, X } from 'lucide-react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
 import { extractErrorMessage } from '@/lib/api-error';
@@ -9,6 +10,8 @@ import { ApiRequests } from '@/lib/api-requests';
 import type { VariantStockLocation } from '@/lib/products/product';
 import { MAX_STOCK } from '@/lib/rules/types';
 import { daysOfCover, VELOCITY_WINDOW_DAYS } from '@/lib/stock-history/projection';
+import { springOrInstant } from '@/lib/motion';
+import { AnimatedNumber } from '@/components/shared/AnimatedNumber';
 import { InfoTip } from '@/components/shared/InfoTip';
 import { NumberStepper } from '@/components/shared/NumberStepper';
 import { Button } from '@/components/ui/button';
@@ -35,6 +38,11 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
  */
 
 const rowClass = 'flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2';
+
+/** Dokunmatikte hover-duraklatma yok; "Geri Al"a yetişecek kadar uzun kalır. */
+const UNDO_TOAST_MS = 10_000;
+/** İkon takası (DESIGN.md §6 ikon swap motifi). */
+const ICON_SWAP = { opacity: 0, scale: 0.95, filter: 'blur(2px)' };
 
 const formatDelta = (delta: number) => (delta > 0 ? `+${delta}` : `${delta}`);
 const formatVelocity = (v: number) => v.toLocaleString('tr-TR', { maximumFractionDigits: 1 });
@@ -69,6 +77,7 @@ const LocationRow: React.FC<{
   const [draft, setDraft] = useState(currentStock);
   const [saving, setSaving] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const reduceMotion = useReducedMotion();
 
   const dirty = draft !== currentStock;
   const delta = draft - currentStock;
@@ -107,19 +116,29 @@ const LocationRow: React.FC<{
       setEditing(false);
       onDraftChange?.(null);
 
-      const undo = async () => {
+      // Geri al aynı toast'ta sürer: yükleniyor → sonuç (ayrı toast açılmaz).
+      const undo = async (toastId: string | number) => {
+        toast.loading('Geri alınıyor…', { id: toastId, action: undefined });
         try {
           await writeStock(previous);
           onCommitted(previous);
-          toast.success('Geri alındı');
+          toast.success('Geri alındı', { id: toastId, duration: 4000 });
         } catch (error) {
           logger.error('Stock undo failed', { variantId, error });
-          toast.error('Geri alınamadı.');
+          toast.error('Geri alınamadı.', { id: toastId, duration: 4000 });
         }
       };
 
-      toast.success(`Stok güncellendi: ${previous} → ${next}`, {
-        action: { label: 'Geri Al', onClick: undo },
+      const toastId = toast.success(`Stok güncellendi: ${previous} → ${next}`, {
+        duration: UNDO_TOAST_MS,
+        action: {
+          label: 'Geri Al',
+          onClick: event => {
+            // Toast kapanmasın; yerinde "Geri alınıyor…"a dönüşür.
+            event.preventDefault();
+            void undo(toastId);
+          },
+        },
       });
     } catch (error) {
       logger.error('Stock update failed', { variantId, error });
@@ -164,11 +183,22 @@ const LocationRow: React.FC<{
                 title="Kaydet"
                 className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-primary text-primary-foreground transition-colors hover:bg-foreground disabled:opacity-50"
               >
-                {saving ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
-                ) : (
-                  <Check className="h-3.5 w-3.5" aria-hidden />
-                )}
+                <AnimatePresence initial={false} mode="popLayout">
+                  <motion.span
+                    key={saving ? 'saving' : 'idle'}
+                    initial={ICON_SWAP}
+                    animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+                    exit={ICON_SWAP}
+                    transition={springOrInstant(reduceMotion)}
+                    className="flex"
+                  >
+                    {saving ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                    ) : (
+                      <Check className="h-3.5 w-3.5" aria-hidden />
+                    )}
+                  </motion.span>
+                </AnimatePresence>
               </button>
             </PopoverTrigger>
             <PopoverContent container={portalContainer} align="start" className="w-64 p-3">
@@ -217,7 +247,9 @@ const LocationRow: React.FC<{
         </>
       ) : (
         <>
-          <p className="text-sm font-semibold tabular-nums text-foreground">{currentStock} adet</p>
+          <p className="text-sm font-semibold tabular-nums text-foreground">
+            <AnimatedNumber value={currentStock} /> adet
+          </p>
           <button
             type="button"
             onClick={() => {
@@ -288,7 +320,9 @@ export const StockEditor: React.FC<{
           <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
             TOPLAM STOK
           </p>
-          <p className="text-sm font-semibold tabular-nums text-foreground">{total} adet</p>
+          <p className="text-sm font-semibold tabular-nums text-foreground">
+            <AnimatedNumber value={total} /> adet
+          </p>
           <span className="text-xs text-muted-foreground">{locations.length} depo</span>
         </div>
       )}

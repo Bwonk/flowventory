@@ -1,8 +1,9 @@
 'use client';
-// Goo panel içi eylem menüsü parçaları — `ui/dropdown-menu` öğeleriyle aynı görünüm
+// Goo panel içi eylem menüsü parçaları — shadcn `DropdownMenuItem` görünümüyle aynı
 // (radix menü context'i goo panelde yok). DESIGN.md §5 "Goo açılır panel".
 
 import type { ComponentProps } from 'react';
+import { PRESS_FEEDBACK_CLASS } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 import { useGooPopoverClose } from './index';
 
@@ -28,6 +29,7 @@ export function GooMenuItem({ className, onSelect, variant = 'default', ...props
         variant === 'destructive' &&
           'text-destructive hover:bg-destructive/10 focus-visible:bg-destructive/10 [&_svg]:text-destructive!',
         className,
+        PRESS_FEEDBACK_CLASS,
       )}
       {...props}
     />

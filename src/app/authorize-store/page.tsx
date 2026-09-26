@@ -40,11 +40,11 @@ const AuthorizeStorePage: React.FC = () => {
   );
 
   return (
-    <main className="min-h-[100vh] flex flex-col items-center justify-center p-6">
+    <main className="min-h-svh flex flex-col items-center justify-center p-6">
       <div className="flex w-full max-w-md flex-col items-center gap-8">
         <div className="flex flex-col items-center gap-3">
           <BrandLogo variant="mark" priority className="h-20 w-20 rounded-2xl" />
-          <p className="text-[15px] font-semibold tracking-tight text-primary">Flowventory</p>
+          <p className="text-[15px] font-semibold text-primary">Flowventory</p>
         </div>
         <Card className="w-full">
           <CardHeader>
@@ -67,9 +67,10 @@ const AuthorizeStorePage: React.FC = () => {
                 autoCapitalize="none"
                 aria-invalid={showError || undefined}
               />
-              {showError && (
-                <p className="text-sm text-destructive">An error occurred. Please try again.</p>
-              )}
+              {/* Space is reserved: status is read after mount (static page), so the error must not push the button down. */}
+              <p className="min-h-5 text-sm text-destructive" aria-live="polite">
+                {showError ? "An error occurred. Please try again." : null}
+              </p>
             </CardContent>
             <CardFooter>
               <Button type="submit" disabled={!storeName.trim()} className="w-full">

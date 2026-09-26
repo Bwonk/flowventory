@@ -1,7 +1,8 @@
 'use client';
 
 import { Rectangle } from 'recharts';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
+import { INSTANT } from '@/lib/motion';
 
 interface BarProps {
   index?: number;
@@ -24,6 +25,12 @@ const COLLAPSED_SCALE = 0.1;
  */
 export const BarShape = (props: BarProps) => {
   const { fill, x, y, width, height, index, value, isActive } = props;
+  const reduceMotion = useReducedMotion();
+  // reduced-motion: bar anında açılır/kapanır, etiket yalnız opaklıkla belirir.
+  const labelHidden = reduceMotion
+    ? { opacity: 0 }
+    : { opacity: 0, y: -10, filter: 'blur(3px)' };
+  const labelShown = reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0, filter: 'blur(0px)' };
 
   const xPos = Number(x || 0);
   const yPos = Number(y || 0);
@@ -48,21 +55,22 @@ export const BarShape = (props: BarProps) => {
           initial={{ scaleX: isActive ? COLLAPSED_SCALE : 1 }}
           animate={{ scaleX: isActive ? 1 : COLLAPSED_SCALE }}
           exit={{ scaleX: COLLAPSED_SCALE }}
-          transition={{ type: 'spring', stiffness: 200, damping: 25 }}
+          transition={reduceMotion ? INSTANT : { type: 'spring', stiffness: 200, damping: 25 }}
           style={{
             transformOrigin: `${centerX}px ${centerY}px`,
             transformBox: 'fill-box',
           }}
         />
       </AnimatePresence>
-      {isActive && (
-        <AnimatePresence>
+      {/* Presence koşulun dışında: içeride olunca etiketin çıkışı hiç oynamıyordu. */}
+      <AnimatePresence>
+        {isActive && (
           <motion.text
             className="font-mono"
             key={`text-${index}`}
-            initial={{ opacity: 0, y: -10, filter: 'blur(3px)' }}
-            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-            exit={{ opacity: 0, y: -10, filter: 'blur(3px)' }}
+            initial={labelHidden}
+            animate={labelShown}
+            exit={labelHidden}
             transition={{ duration: 0.2 }}
             x={centerX}
             y={yPos - 8}
@@ -72,8 +80,8 @@ export const BarShape = (props: BarProps) => {
           >
             {value}
           </motion.text>
-        </AnimatePresence>
-      )}
+        )}
+      </AnimatePresence>
     </>
   );
 };

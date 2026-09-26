@@ -4,6 +4,7 @@ import { motion, useAnimation } from "motion/react";
 import type { HTMLAttributes } from "react";
 import { forwardRef, useCallback, useImperativeHandle, useRef } from "react";
 import { cn } from "@/lib/utils";
+import { ICON_SPRING } from "@/components/ui/icons/icon-motion";
 
 export interface PlusIconHandle {
   startAnimation: () => void;
@@ -65,7 +66,7 @@ const PlusIcon = forwardRef<PlusIconHandle, PlusIconProps>(
           strokeLinecap="round"
           strokeLinejoin="round"
           strokeWidth="1.5"
-          transition={{ type: "spring", stiffness: 100, damping: 15 }}
+          transition={ICON_SPRING}
           variants={{
             normal: {
               rotate: 0,

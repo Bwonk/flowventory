@@ -1,8 +1,14 @@
 'use client';
 
 import * as React from 'react';
-import { AnimatePresence, motion, type Transition } from 'motion/react';
+import {
+  AnimatePresence,
+  motion,
+  useReducedMotion,
+  type Transition,
+} from 'motion/react';
 
+import { INSTANT, SPRING } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 
 type HighlightMode = 'children' | 'parent';
@@ -129,7 +135,7 @@ function Highlight<T extends React.ElementType = 'div'>({
     onValueChange,
     className,
     style,
-    transition = { type: 'spring', stiffness: 350, damping: 35 },
+    transition: transitionProp = SPRING,
     hover = false,
     click = true,
     enabled = true,
@@ -138,6 +144,11 @@ function Highlight<T extends React.ElementType = 'div'>({
     exitDelay = 200,
     mode = 'children',
   } = props;
+
+  // reduced-motion: hap kaymaz, çıkış gecikmesi de yok — durum anında değişir.
+  const reduceMotion = useReducedMotion();
+  const transition: Transition = reduceMotion ? INSTANT : transitionProp;
+  const effectiveExitDelay = reduceMotion ? 0 : exitDelay;
 
   const localRef = React.useRef<HTMLDivElement>(null);
   React.useImperativeHandle(ref, () => localRef.current as HTMLDivElement);
@@ -283,7 +294,9 @@ function Highlight<T extends React.ElementType = 'div'>({
                   opacity: 0,
                   transition: {
                     ...transition,
-                    delay: (transition?.delay ?? 0) + (exitDelay ?? 0) / 1000,
+                    delay:
+                      (transition?.delay ?? 0) +
+                      (effectiveExitDelay ?? 0) / 1000,
                   },
                 }}
                 transition={transition}
@@ -314,7 +327,7 @@ function Highlight<T extends React.ElementType = 'div'>({
         transition,
         disabled,
         enabled,
-        exitDelay,
+        exitDelay: effectiveExitDelay,
         setBounds: safeSetBounds,
         clearBounds,
         activeClassName: activeClassNameState,
@@ -421,7 +434,11 @@ function HighlightItem<T extends React.ElementType>({
     id ?? value ?? element.props?.['data-value'] ?? element.props?.id ?? itemId;
   const isActive = activeValue === childValue;
   const isDisabled = disabled === undefined ? contextDisabled : disabled;
-  const itemTransition = transition ?? contextTransition;
+  const reduceMotion = useReducedMotion();
+  const itemTransition = reduceMotion
+    ? INSTANT
+    : (transition ?? contextTransition);
+  const itemExitDelay = reduceMotion ? 0 : (exitDelay ?? contextExitDelay ?? 0);
 
   const localRef = React.useRef<HTMLDivElement>(null);
   React.useImperativeHandle(ref, () => localRef.current as HTMLDivElement);
@@ -546,7 +563,7 @@ function HighlightItem<T extends React.ElementType>({
                     ...itemTransition,
                     delay:
                       (itemTransition?.delay ?? 0) +
-                      (exitDelay ?? contextExitDelay ?? 0) / 1000,
+                      itemExitDelay / 1000,
                   },
                 }}
                 {...dataAttributes}
@@ -608,7 +625,7 @@ function HighlightItem<T extends React.ElementType>({
                   ...itemTransition,
                   delay:
                     (itemTransition?.delay ?? 0) +
-                    (exitDelay ?? contextExitDelay ?? 0) / 1000,
+                    itemExitDelay / 1000,
                 },
               }}
               {...dataAttributes}

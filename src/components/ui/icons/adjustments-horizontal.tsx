@@ -5,6 +5,7 @@ import { motion, useAnimation } from "motion/react";
 import type { HTMLAttributes } from "react";
 import { forwardRef, useCallback, useImperativeHandle, useRef } from "react";
 import { cn } from "@/lib/utils";
+import { ICON_SPRING } from "@/components/ui/icons/icon-motion";
 
 export interface AdjustmentsHorizontalIconHandle {
   startAnimation: () => void;
@@ -16,12 +17,7 @@ interface AdjustmentsHorizontalIconProps
   size?: number;
 }
 
-const DEFAULT_TRANSITION: Transition = {
-  type: "spring",
-  stiffness: 100,
-  damping: 12,
-  mass: 0.4,
-};
+const DEFAULT_TRANSITION: Transition = ICON_SPRING;
 
 const AdjustmentsHorizontalIcon = forwardRef<
   AdjustmentsHorizontalIconHandle,

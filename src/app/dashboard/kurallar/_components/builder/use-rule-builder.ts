@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useReducer } from 'react';
+import { useCallback, useMemo, useReducer, useState } from 'react';
 import type { TrackingRuleItem } from '@/app/api/rules/route';
 import { defaultAction, hasActionType } from '@/lib/rules/actions-catalog';
 import { defaultCondition } from '@/lib/rules/catalog';
@@ -17,11 +17,23 @@ import {
   type RuleLogic,
   type RuleMetric,
   type RuleScope,
-  type RuleStage,
   type RuleWindowHours,
-  type RuleWorkflow,
 } from '@/lib/rules/types';
-import { removeStageAt, restoreStageAt } from './stage-ops';
+import {
+  keyAction,
+  keyCondition,
+  newKey,
+  removeStageAt,
+  restoreStageAt,
+  stripKeys,
+  withKeys,
+  type BuilderAction,
+  type BuilderConditionNode,
+  type BuilderStage,
+  type BuilderWorkflow,
+} from './stage-ops';
+
+export type { BuilderStage } from './stage-ops';
 
 export interface BuilderState {
   name: string;
@@ -29,7 +41,8 @@ export interface BuilderState {
   targetId: string | null;
   targetLabel: string | null;
   granularity: RuleGranularity;
-  workflow: RuleWorkflow;
+  /** Anahtarlı workflow — kayıtta `stripKeys` ile düz `RuleWorkflow`'a döner. */
+  workflow: BuilderWorkflow;
   cooldownHours: RuleWindowHours;
   resetHours: RuleWindowHours;
   maxRunsPerDay: number;
@@ -39,18 +52,18 @@ export interface BuilderState {
 type Action =
   | { type: 'patch'; patch: Partial<BuilderState> }
   | { type: 'setScope'; scope: RuleScope }
-  | { type: 'addStage'; stage: RuleStage }
+  | { type: 'addStage'; stage: BuilderStage }
   | { type: 'removeStage'; stage: number }
-  | { type: 'restoreStage'; index: number; stage: RuleStage }
-  | { type: 'addCondition'; stage: number; condition: RuleCondition }
+  | { type: 'restoreStage'; index: number; stage: BuilderStage }
+  | { type: 'addCondition'; stage: number; node: BuilderConditionNode }
   | { type: 'updateCondition'; stage: number; index: number; condition: RuleCondition }
   | { type: 'setConnector'; stage: number; index: number; op: RuleLogic }
   | { type: 'removeCondition'; stage: number; index: number }
-  | { type: 'addAction'; stage: number; action: RuleAction }
+  | { type: 'addAction'; stage: number; action: BuilderAction }
   | { type: 'updateAction'; stage: number; index: number; action: RuleAction }
   | { type: 'removeAction'; stage: number; index: number };
 
-function mapStage(state: BuilderState, stageIndex: number, fn: (stage: RuleStage) => RuleStage): BuilderState {
+function mapStage(state: BuilderState, stageIndex: number, fn: (stage: BuilderStage) => BuilderStage): BuilderState {
   return {
     ...state,
     workflow: { stages: state.workflow.stages.map((s, i) => (i === stageIndex ? fn(s) : s)) },
@@ -76,7 +89,7 @@ function reducer(state: BuilderState, action: Action): BuilderState {
     }
     case 'addCondition':
       return mapStage(state, action.stage, s =>
-        s.conditions.length >= MAX_CONDITIONS ? s : { ...s, conditions: [...s.conditions, { op: 'and', condition: action.condition }] },
+        s.conditions.length >= MAX_CONDITIONS ? s : { ...s, conditions: [...s.conditions, action.node] },
       );
     case 'updateCondition':
       return mapStage(state, action.stage, s => ({
@@ -99,7 +112,7 @@ function reducer(state: BuilderState, action: Action): BuilderState {
     case 'updateAction':
       return mapStage(state, action.stage, s => ({
         ...s,
-        actions: s.actions.map((a, i) => (i === action.index ? action.action : a)),
+        actions: s.actions.map((a, i) => (i === action.index ? { ...action.action, key: a.key } : a)),
       }));
     case 'removeAction':
       return mapStage(state, action.stage, s => ({ ...s, actions: s.actions.filter((_, i) => i !== action.index) }));
@@ -120,7 +133,7 @@ function initialState({ rule, template, leadTimeDays }: BuilderInit): BuilderSta
       targetId: rule.targetId,
       targetLabel: rule.targetLabel,
       granularity: rule.granularity,
-      workflow: rule.workflow,
+      workflow: withKeys(rule.workflow),
       cooldownHours: rule.cooldownHours,
       resetHours: rule.resetHours,
       maxRunsPerDay: rule.maxRunsPerDay,
@@ -128,7 +141,7 @@ function initialState({ rule, template, leadTimeDays }: BuilderInit): BuilderSta
     };
   }
   const base = { scope: 'all' as const, targetId: null, targetLabel: null, enabled: true };
-  if (template) return { ...base, ...template.rule };
+  if (template) return { ...base, ...template.rule, workflow: withKeys(template.rule.workflow) };
   return {
     ...base,
     name: '',
@@ -136,15 +149,20 @@ function initialState({ rule, template, leadTimeDays }: BuilderInit): BuilderSta
     cooldownHours: 24,
     resetHours: 168,
     maxRunsPerDay: 1,
-    workflow: {
+    workflow: withKeys({
       stages: [
         {
           conditions: [{ op: 'and', condition: defaultCondition('stock_below', { leadTimeDays }) }],
           actions: [defaultAction('notify')],
         },
       ],
-    },
+    }),
   };
+}
+
+/** Kirlilik karşılaştırması için anahtarsız anlık görüntü. */
+function snapshot(state: BuilderState): string {
+  return JSON.stringify({ ...state, workflow: stripKeys(state.workflow) });
 }
 
 export type ToInputResult = { input: RuleInput; issue: null } | { input: null; issue: string };
@@ -166,18 +184,20 @@ export function useRuleBuilder(init: BuilderInit) {
       dispatch({
         type: 'addStage',
         stage: {
-          conditions: [{ op: 'and', condition: defaultCondition('stock_drop_since_stage', { leadTimeDays }) }],
-          actions: [defaultAction('email')],
+          key: newKey(),
+          conditions: [keyCondition({ op: 'and', condition: defaultCondition('stock_drop_since_stage', { leadTimeDays }) })],
+          actions: [keyAction(defaultAction('email'))],
         },
       }),
     [leadTimeDays],
   );
   const removeStage = useCallback((stage: number) => dispatch({ type: 'removeStage', stage }), []);
   /** "Geri al": kaldırılan aşamayı eski sırasına koyar (sınır doluysa etkisiz). */
-  const restoreStage = useCallback((index: number, stage: RuleStage) => dispatch({ type: 'restoreStage', index, stage }), []);
+  const restoreStage = useCallback((index: number, stage: BuilderStage) => dispatch({ type: 'restoreStage', index, stage }), []);
 
   const addCondition = useCallback(
-    (stage: number) => dispatch({ type: 'addCondition', stage, condition: defaultCondition('stock_below', { leadTimeDays }) }),
+    (stage: number) =>
+      dispatch({ type: 'addCondition', stage, node: keyCondition({ op: 'and', condition: defaultCondition('stock_below', { leadTimeDays }) }) }),
     [leadTimeDays],
   );
   const setMetric = useCallback(
@@ -192,7 +212,7 @@ export function useRuleBuilder(init: BuilderInit) {
   const setConnector = useCallback((stage: number, index: number, op: RuleLogic) => dispatch({ type: 'setConnector', stage, index, op }), []);
   const removeCondition = useCallback((stage: number, index: number) => dispatch({ type: 'removeCondition', stage, index }), []);
 
-  const addAction = useCallback((stage: number, type: RuleActionType) => dispatch({ type: 'addAction', stage, action: defaultAction(type) }), []);
+  const addAction = useCallback((stage: number, type: RuleActionType) => dispatch({ type: 'addAction', stage, action: keyAction(defaultAction(type)) }), []);
   const setActionType = useCallback(
     (stage: number, index: number, type: RuleActionType) => dispatch({ type: 'updateAction', stage, index, action: defaultAction(type) }),
     [],
@@ -202,10 +222,15 @@ export function useRuleBuilder(init: BuilderInit) {
 
   const hasStockAction = hasActionType(state.workflow, 'adjust_stock');
 
+  // Kirli taslak: açılıştaki hâlden farklı her şey (yeni kuralda eklenen her şey).
+  const [initialSnapshot] = useState(() => snapshot(state));
+  const isDirty = useMemo(() => snapshot(state) !== initialSnapshot, [state, initialSnapshot]);
+
   const toInput = useCallback(
     (stockWriteConsent: boolean): ToInputResult => {
       const parsed = ruleInputSchema.safeParse({
         ...state,
+        workflow: stripKeys(state.workflow),
         granularity: hasActionType(state.workflow, 'adjust_stock') ? 'variant' : state.granularity,
         stockWriteConsent,
       });
@@ -218,6 +243,7 @@ export function useRuleBuilder(init: BuilderInit) {
   return {
     state,
     hasStockAction,
+    isDirty,
     patch,
     setScope,
     addStage,

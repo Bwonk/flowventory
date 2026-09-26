@@ -23,7 +23,7 @@ const CART_VARIANTS: Variants = {
     transition: {
       duration: 0.3,
       ease: "easeInOut",
-      y: { repeat: 1, delay: 0.1, duration: 0.4 },
+      y: { repeat: 1, delay: 0.05, duration: 0.15 },
     },
   },
 };

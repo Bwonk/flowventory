@@ -16,8 +16,8 @@ interface ClipboardDocumentListIconProps
   size?: number;
 }
 
-const DOT_DURATION = 0.1;
-const LINE_DURATION = 0.3;
+const DOT_DURATION = 0.05;
+const LINE_DURATION = 0.08;
 
 const CREATE_DOT_VARIANTS = (delay: number): Variants => ({
   normal: {

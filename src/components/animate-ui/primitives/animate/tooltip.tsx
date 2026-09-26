@@ -5,6 +5,7 @@ import {
   motion,
   AnimatePresence,
   LayoutGroup,
+  useReducedMotion,
   type Transition,
   type HTMLMotionProps,
 } from 'motion/react';
@@ -21,6 +22,7 @@ import {
 } from '@floating-ui/react';
 
 import { getStrictContext } from '@/lib/get-strict-context';
+import { EASE_OUT, INSTANT } from '@/lib/motion';
 import { Slot, type WithAsChild } from '@/components/animate-ui/primitives/animate/slot';
 
 type Side = 'top' | 'bottom' | 'left' | 'right';
@@ -37,11 +39,20 @@ type TooltipData = {
   id: string;
 };
 
+type ShowTooltipOptions = {
+  /** `openDelay`'i atla (ör. AlertTip — çağıran taraf açıyor, hover yok). */
+  immediate?: boolean;
+  /** Gecikmesiz ve animasyonsuz aç (klavye odağı). */
+  instant?: boolean;
+};
+
 type GlobalTooltipContextType = {
-  showTooltip: (data: TooltipData) => void;
+  showTooltip: (data: TooltipData, options?: ShowTooltipOptions) => void;
   hideTooltip: () => void;
   hideImmediate: () => void;
   currentTooltip: TooltipData | null;
+  /** Güncel balon animasyonsuz mu açılmalı (sıcak geçiş / klavye odağı). */
+  currentInstant: boolean;
   transition: Transition;
   globalId: string;
   setReferenceEl: (el: HTMLElement | null) => void;
@@ -76,12 +87,25 @@ function getResolvedSide(placement: Side | `${Side}-${Align}`) {
   return placement as Side;
 }
 
+/** Giriş/çıkışta balon tetikleyiciye doğru 4px kayık durur. */
 function initialFromSide(side: Side): Partial<Record<'x' | 'y', number>> {
-  if (side === 'top') return { y: 15 };
-  if (side === 'bottom') return { y: -15 };
-  if (side === 'left') return { x: 15 };
-  return { x: -15 };
+  if (side === 'top') return { y: 4 };
+  if (side === 'bottom') return { y: -4 };
+  if (side === 'left') return { x: 4 };
+  return { x: -4 };
 }
+
+/** Ölçek tetikleyiciye bakan kenardan büyür (top → alt kenar, right → sol kenar…). */
+const ORIGIN_FROM_SIDE: Record<Side, string> = {
+  top: 'bottom center',
+  bottom: 'top center',
+  left: 'right center',
+  right: 'left center',
+};
+
+/** Giriş 125ms, çıkış 100ms güçlü ease-out; ölçek 0.97'den (asla 0'dan değil). */
+const ENTER_TRANSITION: Transition = { duration: 0.125, ease: EASE_OUT };
+const EXIT_TRANSITION: Transition = { duration: 0.1, ease: EASE_OUT };
 
 type TooltipProviderProps = {
   children: React.ReactNode;
@@ -96,45 +120,67 @@ function TooltipProvider({
   id,
   openDelay = 700,
   closeDelay = 300,
-  transition = { type: 'spring', stiffness: 300, damping: 35 },
+  transition = ENTER_TRANSITION,
 }: TooltipProviderProps) {
   const globalId = React.useId();
-  const [currentTooltip, setCurrentTooltip] =
-    React.useState<TooltipData | null>(null);
+  const [current, setCurrent] = React.useState<{
+    data: TooltipData;
+    instant: boolean;
+  } | null>(null);
+  // Callback'ler state kimliğine bağlanmasın diye güncel balon ref'te de tutulur.
+  const openRef = React.useRef(false);
   const timeoutRef = React.useRef<number | null>(null);
   const lastCloseTimeRef = React.useRef<number>(0);
   const referenceElRef = React.useRef<HTMLElement | null>(null);
 
+  const commit = React.useCallback((data: TooltipData, instant: boolean) => {
+    openRef.current = true;
+    setCurrent({ data, instant });
+  }, []);
+
+  const close = React.useCallback(() => {
+    // Sıcak pencere yalnız gerçekten açık bir balon kapanınca başlar; açılmadan
+    // geçilen tetikleyici sonrakini gecikmesiz açtırmasın.
+    if (openRef.current) lastCloseTimeRef.current = Date.now();
+    openRef.current = false;
+    setCurrent(null);
+  }, []);
+
   const showTooltip = React.useCallback(
-    (data: TooltipData) => {
+    (data: TooltipData, options: ShowTooltipOptions = {}) => {
+      // Gizli balon (ör. genişlemiş sidebar'ın kapalı-hal tooltip'i) hiç
+      // "güncel" olmaz: görünmez balondan anlık geçiş yapılmasın.
+      if (data.contentProps?.hidden) return;
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      if (currentTooltip !== null) {
-        setCurrentTooltip(data);
+      // Balon açıkken ya da az önce kapandıysa sonraki gecikmesiz ve
+      // animasyonsuz açılır — tetikleyiciler arasında kayma/morph yok.
+      const warm =
+        openRef.current || Date.now() - lastCloseTimeRef.current < closeDelay;
+      if (warm || options.instant) {
+        commit(data, true);
         return;
       }
-      const now = Date.now();
-      const delay = now - lastCloseTimeRef.current < closeDelay ? 0 : openDelay;
+      if (options.immediate) {
+        commit(data, false);
+        return;
+      }
       timeoutRef.current = window.setTimeout(
-        () => setCurrentTooltip(data),
-        delay,
+        () => commit(data, false),
+        openDelay,
       );
     },
-    [openDelay, closeDelay, currentTooltip],
+    [openDelay, closeDelay, commit],
   );
 
   const hideTooltip = React.useCallback(() => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    timeoutRef.current = window.setTimeout(() => {
-      setCurrentTooltip(null);
-      lastCloseTimeRef.current = Date.now();
-    }, closeDelay);
-  }, [closeDelay]);
+    timeoutRef.current = window.setTimeout(close, closeDelay);
+  }, [closeDelay, close]);
 
   const hideImmediate = React.useCallback(() => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    setCurrentTooltip(null);
-    lastCloseTimeRef.current = Date.now();
-  }, []);
+    close();
+  }, [close]);
 
   const setReferenceEl = React.useCallback((el: HTMLElement | null) => {
     referenceElRef.current = el;
@@ -160,7 +206,8 @@ function TooltipProvider({
         showTooltip,
         hideTooltip,
         hideImmediate,
-        currentTooltip,
+        currentTooltip: current?.data ?? null,
+        currentInstant: current?.instant ?? false,
         transition,
         globalId: id ?? globalId,
         setReferenceEl,
@@ -206,7 +253,7 @@ function TooltipArrow({
 }: TooltipArrowProps) {
   const { side, align, open } = useRenderedTooltip();
   const { context, arrowRef } = useFloatingContext();
-  const { transition, globalId } = useGlobalTooltip();
+  const { transition } = useGlobalTooltip();
   React.useImperativeHandle(ref, () => arrowRef.current as SVGSVGElement);
 
   const deg = { top: 0, right: 90, bottom: 180, left: -90 }[side];
@@ -220,7 +267,7 @@ function TooltipArrow({
       data-align={align}
       data-slot="tooltip-arrow"
       style={{ rotate: deg }}
-      layoutId={withTransition ? `tooltip-arrow-${globalId}` : undefined}
+      // layoutId yok: ok balonla birlikte anında yer değiştirir, kaymaz.
       transition={withTransition ? transition : undefined}
       {...props}
     />
@@ -234,13 +281,15 @@ function TooltipPortal(props: TooltipPortalProps) {
 }
 
 function TooltipOverlay() {
-  const { currentTooltip, transition, globalId, referenceElRef } =
+  const { currentTooltip, currentInstant, transition, referenceElRef } =
     useGlobalTooltip();
+  const reduceMotion = useReducedMotion();
 
   const [rendered, setRendered] = React.useState<{
     data: TooltipData | null;
     open: boolean;
-  }>({ data: null, open: false });
+    instant: boolean;
+  }>({ data: null, open: false, instant: false });
 
   const arrowRef = React.useRef<SVGSVGElement | null>(null);
 
@@ -263,11 +312,11 @@ function TooltipOverlay() {
 
   React.useEffect(() => {
     if (currentTooltip) {
-      setRendered({ data: currentTooltip, open: true });
+      setRendered({ data: currentTooltip, open: true, instant: currentInstant });
     } else {
-      setRendered((p) => (p.data ? { ...p, open: false } : p));
+      setRendered((p) => (p.data ? { ...p, open: false, instant: false } : p));
     }
-  }, [currentTooltip]);
+  }, [currentTooltip, currentInstant]);
 
   React.useLayoutEffect(() => {
     if (referenceElRef.current) {
@@ -279,6 +328,14 @@ function TooltipOverlay() {
   const ready = x != null && y != null;
   const Component = rendered.data?.contentAsChild ? Slot : motion.div;
   const resolvedSide = getResolvedSide(context.placement);
+
+  // reduced-motion: yalnız opaklık. Aksi halde 0.97 ölçek + 4px kayma.
+  const hiddenState = reduceMotion
+    ? { opacity: 0 }
+    : { opacity: 0, scale: 0.97, ...initialFromSide(resolvedSide) };
+  const shownState = reduceMotion
+    ? { opacity: 1 }
+    : { opacity: 1, scale: 1, x: 0, y: 0 };
 
   return (
     <AnimatePresence mode="wait">
@@ -313,34 +370,26 @@ function TooltipOverlay() {
                   data-side={resolvedSide}
                   data-align={rendered.data.align}
                   data-state={rendered.open ? 'open' : 'closed'}
-                  layoutId={`tooltip-content-${globalId}`}
-                  initial={{
-                    opacity: 0,
-                    scale: 0,
-                    ...initialFromSide(rendered.data.side),
-                  }}
+                  // layoutId yok: sıcak geçişte balon tetikleyiciler arasında
+                  // kaymaz, yeni yerinde anında belirir.
+                  initial={rendered.instant ? false : hiddenState}
                   animate={
                     rendered.open
-                      ? { opacity: 1, scale: 1, x: 0, y: 0 }
-                      : {
-                          opacity: 0,
-                          scale: 0,
-                          ...initialFromSide(rendered.data.side),
+                      ? {
+                          ...shownState,
+                          transition: rendered.instant ? INSTANT : transition,
                         }
+                      : { ...hiddenState, transition: EXIT_TRANSITION }
                   }
-                  exit={{
-                    opacity: 0,
-                    scale: 0,
-                    ...initialFromSide(rendered.data.side),
-                  }}
+                  exit={{ ...hiddenState, transition: EXIT_TRANSITION }}
                   onAnimationComplete={() => {
                     if (!rendered.open)
-                      setRendered({ data: null, open: false });
+                      setRendered({ data: null, open: false, instant: false });
                   }}
-                  transition={transition}
                   {...rendered.data.contentProps}
                   style={{
                     position: 'relative',
+                    transformOrigin: ORIGIN_FROM_SIDE[resolvedSide],
                     ...(rendered.data.contentProps?.style || {}),
                   }}
                 />
@@ -431,6 +480,24 @@ function TooltipContent({ asChild = false, ...props }: TooltipContentProps) {
 
 type TooltipTriggerProps = WithAsChild<HTMLMotionProps<'div'>>;
 
+type ChildHandlers = Pick<
+  React.HTMLAttributes<HTMLElement>,
+  'onMouseEnter' | 'onMouseLeave' | 'onFocus' | 'onBlur' | 'onPointerDown'
+>;
+
+/**
+ * Odak klavyeden mi geldi — fareyle tıklamada balon odaktan açılmaz.
+ * Tetikleyici sarmalayıcı olabilir (odak çocuktan kabarır), `target` bakılır.
+ */
+function isKeyboardFocus(target: EventTarget) {
+  if (!(target instanceof Element)) return false;
+  try {
+    return target.matches(':focus-visible');
+  } catch {
+    return true;
+  }
+}
+
 function TooltipTrigger({
   ref,
   onMouseEnter,
@@ -458,40 +525,74 @@ function TooltipTrigger({
     setReferenceEl,
   } = useGlobalTooltip();
 
+  // Gizli balonun (ör. genişlemiş sidebar) tetikleyicisi global duruma dokunmaz.
+  const disabled = Boolean(contentProps.hidden);
+
+  // asChild'da Slot, çocuğun aynı adlı dinleyicilerini bizimkilerle ezer;
+  // çocuğunkileri (ör. useIconHover `hoverProps`) de biz çağırırız.
+  const child: ChildHandlers | undefined =
+    asChild && React.isValidElement<ChildHandlers>(props.children)
+      ? props.children.props
+      : undefined;
+  const childMouseEnter = child?.onMouseEnter;
+  const childMouseLeave = child?.onMouseLeave;
+  const childFocus = child?.onFocus;
+  const childBlur = child?.onBlur;
+  const childPointerDown = child?.onPointerDown;
+
   const triggerRef = React.useRef<HTMLDivElement>(null);
   React.useImperativeHandle(ref, () => triggerRef.current as HTMLDivElement);
 
   const suppressNextFocusRef = React.useRef(false);
 
-  const handleOpen = React.useCallback(() => {
-    if (!triggerRef.current) return;
-    setReferenceEl(triggerRef.current);
-    const rect = triggerRef.current.getBoundingClientRect();
-    showTooltip({
+  const handleOpen = React.useCallback(
+    (instant = false) => {
+      if (!triggerRef.current || disabled) return;
+      setReferenceEl(triggerRef.current);
+      const rect = triggerRef.current.getBoundingClientRect();
+      showTooltip(
+        {
+          contentProps,
+          contentAsChild,
+          rect,
+          side,
+          sideOffset,
+          align,
+          alignOffset,
+          id,
+        },
+        { instant },
+      );
+    },
+    [
+      disabled,
+      showTooltip,
+      setReferenceEl,
       contentProps,
       contentAsChild,
-      rect,
       side,
       sideOffset,
       align,
       alignOffset,
       id,
-    });
-  }, [
-    showTooltip,
-    setReferenceEl,
-    contentProps,
-    contentAsChild,
-    side,
-    sideOffset,
-    align,
-    alignOffset,
-    id,
-  ]);
+    ],
+  );
+
+  const isCurrent = currentTooltip?.id === id;
+
+  const handleHide = React.useCallback(() => {
+    if (!disabled || isCurrent) hideTooltip();
+  }, [disabled, isCurrent, hideTooltip]);
+
+  // Açıkken gizlenen balon (ör. sidebar genişledi) ekranda asılı kalmasın.
+  React.useEffect(() => {
+    if (disabled && isCurrent) hideImmediate();
+  }, [disabled, isCurrent, hideImmediate]);
 
   const handlePointerDown = React.useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
       onPointerDown?.(e);
+      childPointerDown?.(e);
       if (currentTooltip?.id === id) {
         suppressNextFocusRef.current = true;
         hideImmediate();
@@ -500,40 +601,45 @@ function TooltipTrigger({
         });
       }
     },
-    [onPointerDown, currentTooltip?.id, id, hideImmediate],
+    [onPointerDown, childPointerDown, currentTooltip?.id, id, hideImmediate],
   );
 
   const handleMouseEnter = React.useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
       onMouseEnter?.(e);
+      childMouseEnter?.(e);
       handleOpen();
     },
-    [handleOpen, onMouseEnter],
+    [handleOpen, onMouseEnter, childMouseEnter],
   );
 
   const handleMouseLeave = React.useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
       onMouseLeave?.(e);
-      hideTooltip();
+      childMouseLeave?.(e);
+      handleHide();
     },
-    [hideTooltip, onMouseLeave],
+    [handleHide, onMouseLeave, childMouseLeave],
   );
 
   const handleFocus = React.useCallback(
     (e: React.FocusEvent<HTMLDivElement>) => {
       onFocus?.(e);
+      childFocus?.(e);
       if (suppressNextFocusRef.current) return;
-      handleOpen();
+      // Yalnız klavye odağı açar; anında ve animasyonsuz (Tab'da balon kaymaz).
+      if (isKeyboardFocus(e.target)) handleOpen(true);
     },
-    [handleOpen, onFocus],
+    [handleOpen, onFocus, childFocus],
   );
 
   const handleBlur = React.useCallback(
     (e: React.FocusEvent<HTMLDivElement>) => {
       onBlur?.(e);
-      hideTooltip();
+      childBlur?.(e);
+      handleHide();
     },
-    [hideTooltip, onBlur],
+    [handleHide, onBlur, childBlur],
   );
 
   const Component = asChild ? Slot : motion.div;

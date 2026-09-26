@@ -3,6 +3,7 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/animate-ui/components/animate/tooltip';
 import { InformationCircleIcon } from '@/components/ui/icons/information-circle';
 import { useIconHover } from '@/components/ui/icons/use-icon-hover';
+import { PRESS_FEEDBACK_CLASS } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 
 interface InfoTipProps {
@@ -38,6 +39,7 @@ export function InfoTip({ text, side = 'right', size = 'md', ariaPrefix = 'Bilgi
             'flex shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
             small ? 'size-4' : 'size-6',
             className,
+            PRESS_FEEDBACK_CLASS,
           )}
           {...hoverProps}
         >

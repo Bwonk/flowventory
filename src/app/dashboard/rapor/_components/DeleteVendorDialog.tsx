@@ -69,7 +69,7 @@ export function DeleteVendorDialog({ token, vendorId, vendorName, onDeleted }: D
           <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={deleting}>
             Vazgeç
           </Button>
-          <Button type="button" onClick={remove} disabled={deleting}>
+          <Button type="button" variant="destructive" onClick={remove} disabled={deleting}>
             {deleting ? 'Siliniyor…' : 'Sil'}
           </Button>
         </DialogFooter>

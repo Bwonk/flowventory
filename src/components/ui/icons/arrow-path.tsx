@@ -5,6 +5,7 @@ import { motion, useAnimation } from "motion/react";
 import type { HTMLAttributes } from "react";
 import { forwardRef, useCallback, useImperativeHandle, useRef } from "react";
 import { cn } from "@/lib/utils";
+import { ICON_SPRING } from "@/components/ui/icons/icon-motion";
 
 export interface ArrowPathIconHandle {
   startAnimation: () => void;
@@ -18,14 +19,11 @@ interface ArrowPathIconProps extends HTMLAttributes<HTMLDivElement> {
 const ROTATE_VARIANTS: Variants = {
   normal: {
     rotate: 0,
+    transition: ICON_SPRING,
   },
   animate: {
     rotate: 50,
-    transition: {
-      type: "spring",
-      stiffness: 250,
-      damping: 25,
-    },
+    transition: ICON_SPRING,
   },
 };
 

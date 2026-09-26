@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -14,6 +14,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { EditableTitle } from '@/components/shared/EditableTitle';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useTargetOptions } from '../../hooks/use-target-options';
 import { FlowCanvas } from './FlowCanvas';
 import { StockConsentDialog } from './StockConsentDialog';
@@ -42,6 +43,19 @@ export function RuleBuilderPage({ token, mode, rule, template, notificationEmail
   const [saving, setSaving] = useState(false);
   const [issue, setIssue] = useState<string | null>(null);
   const [consentOpen, setConsentOpen] = useState(false);
+  const [discardOpen, setDiscardOpen] = useState(false);
+  const { isDirty } = builder;
+
+  // Kaydedilmemiş taslak varken sekme kapanır/yenilenirse tarayıcı sorsun.
+  useEffect(() => {
+    if (!isDirty) return;
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [isDirty]);
 
   // Kayıtlı kural zaten stok yazıyorsa onay önceden verilmiştir.
   const consentGiven = rule?.actionTypes.includes('adjust_stock') ?? false;
@@ -101,7 +115,17 @@ export function RuleBuilderPage({ token, mode, rule, template, notificationEmail
           <>
             {extraActions}
             <Button asChild variant="outline" disabled={saving}>
-              <Link href="/dashboard/kurallar">Vazgeç</Link>
+              <Link
+                href="/dashboard/kurallar"
+                onClick={event => {
+                  // Kirli taslak tek tıkla gitmesin: önce sor (yeni sekmede açma serbest).
+                  if (!isDirty || event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
+                  event.preventDefault();
+                  setDiscardOpen(true);
+                }}
+              >
+                Vazgeç
+              </Link>
             </Button>
             <Button onClick={requestSave} disabled={saving}>
               {saving ? 'Kaydediliyor…' : mode === 'edit' ? 'Kaydet' : 'Kural ekle'}
@@ -130,6 +154,25 @@ export function RuleBuilderPage({ token, mode, rule, template, notificationEmail
         onOpenChange={setConsentOpen}
         onConfirm={() => void save(true)}
       />
+
+      <Dialog open={discardOpen} onOpenChange={setDiscardOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Kaydedilmemiş değişiklikler silinsin mi?</DialogTitle>
+            <DialogDescription>
+              {mode === 'edit' ? 'Kural son kaydedilen hâliyle kalır.' : 'Taslaktaki aşamalar, koşullar ve aksiyonlar kaybolur.'}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setDiscardOpen(false)}>
+              Vazgeç
+            </Button>
+            <Button type="button" variant="destructive" onClick={() => router.push('/dashboard/kurallar')}>
+              Sil ve çık
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PageContainer>
   );
 }

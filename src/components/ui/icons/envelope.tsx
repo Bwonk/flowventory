@@ -22,7 +22,7 @@ const SVG_VARIANTS: Variants = {
   animate: {
     rotate: [0, -5, 5, -3, 3, 0],
     transition: {
-      duration: 0.5,
+      duration: 0.3,
       ease: "easeInOut",
     },
   },

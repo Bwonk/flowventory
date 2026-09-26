@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { useStockThreshold, DEFAULT_STOCK_THRESHOLD } from '@/lib/stock-threshold';
 import { Dropdown } from '@/components/shared/filters/Dropdown';
 import { NumberStepper } from '@/components/shared/NumberStepper';
@@ -79,7 +80,10 @@ export const ThresholdControl: React.FC = () => {
             <button
               type="button"
               onClick={() => {
-                setThreshold({ min: tempCritical, max: tempWarning });
+                // İyimser uygulanır, panel hemen kapanır; sunucu yazamazsa eşik geri döner.
+                void setThreshold({ min: tempCritical, max: tempWarning }).then(ok => {
+                  if (!ok) toast.error('Stok eşiği kaydedilemedi, önceki değere dönüldü. Tekrar deneyin.');
+                });
                 close();
               }}
               disabled={hasError}

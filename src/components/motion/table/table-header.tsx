@@ -3,6 +3,7 @@
 import { ChevronUp, GripVertical } from 'lucide-react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { AnimatedCheckbox } from '@/components/shared/AnimatedCheckbox';
+import { PRESS_FEEDBACK_CLASS } from '@/lib/motion';
 import { TOUCH_GESTURE_CLASS } from '@/lib/touch';
 import { cn } from '@/lib/utils';
 import { TableMenu } from './table-menu';
@@ -143,7 +144,10 @@ export function TableHeader<T>({
                     onClick={() => onToggleSort(column.key)}
                     data-active={active}
                     data-direction={active ? sort?.direction : undefined}
-                    className="group/sort relative inline-flex min-w-0 items-center rounded-sm whitespace-nowrap transition-colors duration-150 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[active=true]:text-foreground"
+                    className={cn(
+                      'group/sort relative inline-flex min-w-0 items-center rounded-sm whitespace-nowrap hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[active=true]:text-foreground',
+                      PRESS_FEEDBACK_CLASS,
+                    )}
                   >
                     <span className="truncate">{column.header}</span>
                     {/* Ok hücre padding'inin içine mutlak konumlanır: kolon genişliği düz başlıkla aynı, hover'da hiçbir şey kaymaz. */}

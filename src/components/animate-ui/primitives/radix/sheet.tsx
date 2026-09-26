@@ -2,10 +2,17 @@
 
 import * as React from 'react';
 import { Dialog as SheetPrimitive } from 'radix-ui';
-import { AnimatePresence, motion, type HTMLMotionProps } from 'motion/react';
+import {
+  AnimatePresence,
+  motion,
+  useReducedMotion,
+  type HTMLMotionProps,
+  type Transition,
+} from 'motion/react';
 
 import { getStrictContext } from '@/lib/get-strict-context';
 import { useControlledState } from '@/hooks/use-controlled-state';
+import { EASE_DRAWER, EASE_OUT, SPRING } from '@/lib/motion';
 
 type SheetContextType = {
   isOpen: boolean;
@@ -67,8 +74,10 @@ type SheetOverlayProps = Omit<
 > &
   HTMLMotionProps<'div'>;
 
+// Perde yalnız opaklıkla gelir (blur yok — tam ekran filtre pahalı);
+// reduced-motion'da da aynı, zaten hareket içermiyor.
 function SheetOverlay({
-  transition = { duration: 0.2, ease: 'easeInOut' },
+  transition = { duration: 0.2, ease: EASE_OUT },
   ...props
 }: SheetOverlayProps) {
   return (
@@ -76,9 +85,9 @@ function SheetOverlay({
       <motion.div
         key="sheet-overlay"
         data-slot="sheet-overlay"
-        initial={{ opacity: 0, filter: 'blur(4px)' }}
-        animate={{ opacity: 1, filter: 'blur(0px)' }}
-        exit={{ opacity: 0, filter: 'blur(4px)' }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
         transition={transition}
         {...props}
       />
@@ -93,21 +102,43 @@ type SheetContentProps = React.ComponentProps<typeof SheetPrimitive.Content> &
     side?: Side;
   };
 
+/** Kenar dışı konum — tam `transform` dizesi: x/y kısaltması ana iş
+ * parçacığında karelenir, tam dize donanım hızlandırmalı oynatılabilir. */
+const OFFSCREEN_TRANSFORM: Record<Side, string> = {
+  right: 'translateX(100%)',
+  left: 'translateX(-100%)',
+  top: 'translateY(-100%)',
+  bottom: 'translateY(100%)',
+};
+
+const ONSCREEN_TRANSFORM: Record<Side, string> = {
+  right: 'translateX(0%)',
+  left: 'translateX(0%)',
+  top: 'translateY(0%)',
+  bottom: 'translateY(0%)',
+};
+
+/** Çıkış girişten hızlı ve sessiz: 200ms çekmece eğrisi, taşma yok. */
+const EXIT_TRANSITION: Transition = { duration: 0.2, ease: EASE_DRAWER };
+
+/** reduced-motion: kayma yok, salt opaklık. */
+const REDUCED_TRANSITION: Transition = { duration: 0.15, ease: EASE_OUT };
+
 function SheetContent({
   side = 'right',
-  transition = { type: 'spring', stiffness: 150, damping: 22 },
+  transition = SPRING,
   style,
   children,
   ...props
 }: SheetContentProps) {
-  const axis = side === 'left' || side === 'right' ? 'x' : 'y';
+  const reduceMotion = useReducedMotion();
 
-  const offscreen: Record<Side, { x?: string; y?: string; opacity: number }> = {
-    right: { x: '100%', opacity: 0 },
-    left: { x: '-100%', opacity: 0 },
-    top: { y: '-100%', opacity: 0 },
-    bottom: { y: '100%', opacity: 0 },
-  };
+  const hidden = reduceMotion
+    ? { opacity: 0 }
+    : { transform: OFFSCREEN_TRANSFORM[side], opacity: 0 };
+  const shown = reduceMotion
+    ? { opacity: 1 }
+    : { transform: ONSCREEN_TRANSFORM[side], opacity: 1 };
 
   const positionStyle: Record<Side, React.CSSProperties> = {
     right: { insetBlock: 0, right: 0 },
@@ -122,15 +153,18 @@ function SheetContent({
         key="sheet-content"
         data-slot="sheet-content"
         data-side={side}
-        initial={offscreen[side]}
-        animate={{ [axis]: 0, opacity: 1 }}
-        exit={offscreen[side]}
+        initial={hidden}
+        animate={shown}
+        exit={{
+          ...hidden,
+          transition: reduceMotion ? REDUCED_TRANSITION : EXIT_TRANSITION,
+        }}
         style={{
           position: 'fixed',
           ...positionStyle[side],
           ...style,
         }}
-        transition={transition}
+        transition={reduceMotion ? REDUCED_TRANSITION : transition}
       >
         {children}
       </motion.div>

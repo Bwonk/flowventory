@@ -5,6 +5,7 @@ import { useReducedMotion } from 'motion/react';
 import { CheckIcon, type CheckIconHandle } from '@/components/ui/icons/check';
 import { PencilIcon } from '@/components/ui/icons/pencil';
 import { useIconHover } from '@/components/ui/icons/use-icon-hover';
+import { PRESS_FEEDBACK_CLASS } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 
 interface EditableTitleProps {
@@ -109,7 +110,7 @@ export function EditableTitle({ value, onChange, placeholder, maxLength = 80, 'a
               aria-label="Kaydet"
               onMouseDown={e => e.preventDefault()}
               onClick={() => inputRef.current?.blur()}
-              className="flex shrink-0 rounded-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className={cn('flex shrink-0 rounded-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring', PRESS_FEEDBACK_CLASS)}
             >
               <CheckIcon ref={checkRef} size={16} className="flex" aria-hidden />
             </button>
@@ -119,7 +120,7 @@ export function EditableTitle({ value, onChange, placeholder, maxLength = 80, 'a
             type="button"
             onClick={start}
             aria-label={`${ariaLabel}: ${value || placeholder} — düzenle`}
-            className="inline-flex min-w-0 max-w-full items-center gap-2 text-left focus-visible:outline-none"
+            className={cn('inline-flex min-w-0 max-w-full items-center gap-2 text-left focus-visible:outline-none', PRESS_FEEDBACK_CLASS)}
           >
             <span className={cn('truncate', value ? 'text-foreground' : 'text-muted-foreground')}>{value || placeholder}</span>
             <PencilIcon ref={pencil.ref} size={16} className={ICON_CLASS} aria-hidden />

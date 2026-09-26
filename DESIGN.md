@@ -81,7 +81,7 @@ uygulaması (ikas paneli) dark modu bize iletmez.
 
 Sınır çizgileri gölgenin yerini alır: yüzeyler `border border-hairline` ile
 ayrılır, `shadow-*` kullanılmaz. İki sanksiyonlu istisna: açılır katmanlar
-(`Popover`, `Dialog`, `DropdownMenu` — shadcn'in kendi `shadow-md`'si kalır)
+(`Popover`, `Dialog`, goo açılır paneli — shadcn'in kendi `shadow-md`'si kalır)
 ve floating sidebar + bildirim
 drawer "pill"i (`shadow-sm` — canvas üzerinde yüzen kalıcı katman, Freeform
 tarzı derinlik; bilinçli istisna). Kart içinde kart gerekiyorsa ikinci
@@ -391,7 +391,14 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   Koşul/aksiyon kaldırmada bildirim yok — tek kart, yeniden eklemek bir tık. Kaldırılan şeyin başlık satırının sağında durur: kartta
   `-mr-2 -mt-2`, kutusuz aşama başlığında `mr-2` (+ satırda `px-px`) ile tüm
   çöp ikonları aynı dikey hizaya oturur. Ekle butonları kesikli hairline kart; kart giriş/çıkışı
-  `AnimatePresence` + `layout`, 200ms easeOut, `useReducedMotion`'da anlık.
+  `AnimatePresence` + `layout`, 200ms `EASE_OUT` (`useFlowItemMotion()`,
+  flow-primitives), `useReducedMotion`'da yalnız opaklık. Hareket **kart
+  başınadır**: her koşul (bağlacıyla), aksiyon ve aşama kararlı bir istemci
+  anahtarıyla (`key`, `stage-ops.ts` `withKeys`/`stripKeys`) sarılır — index
+  anahtarı yasak (silinen yerine son kart çıkıyordu); anahtar API yüküne
+  girmez. Tetikleyici kartının "Değiştir" bölümü yükseklik açılımıyla gelir.
+  Taslak kirliyken "Vazgeç" onay Dialog'u açar ("Sil ve çık" destructive) ve
+  `beforeunload` koruması devrededir.
   Geçmiş başlıkta "Geçmiş" butonu → sağ `Sheet`.
 - **Sayı alanı (`NumberStepper`):**
   [src/components/shared/NumberStepper.tsx](src/components/shared/NumberStepper.tsx) —
@@ -435,11 +442,33 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
 
 ## 6. Hareket
 
-- Sidebar aç/kapa animasyonu animate-ui bileşeninden gelir (`motion`
-  spring'leri) —
+- **Token'lar — tek kaynak:** [src/lib/motion.ts](src/lib/motion.ts)
+  (`SPRING` = kanonik 350/35, `INSTANT`, `springOrInstant(reduce)`,
+  `EASE_OUT` `(0.23,1,0.32,1)`, `EASE_IN_OUT` `(0.77,0,0.175,1)`,
+  `EASE_DRAWER` `(0.32,0.72,0,1)`, `PRESS_FEEDBACK_CLASS`) ve
+  `globals.css @theme` (`ease-out` / `ease-in-out` Tailwind'in zayıf
+  varsayılanlarını ezer, `ease-drawer` utility'si). Spring'i ya da eğriyi
+  elle yazmak yasak. Arayüz hareketi 300ms altında; `scale(0)` yok (en az
+  0.95); çıkış girişten kısa; klavyeyle tetiklenen hareket animasyonsuz
+  (Emil Kowalski kuralları, `.claude/skills/review-animations`).
+- Sidebar aç/kapa: aralık + panel + bildirim drawer klibi **aynı** 250ms
+  `ease-drawer` (`SIDEBAR_TRANSITION_MS`) — taşma/geri sekme yok. ⌘/Ctrl+B
+  ile açıp kapatma **anlık** (`data-instant`), reduced-motion'da da anlık.
+  Aralık `width`'le çalışır (ikon şeridi gerçek 48px yerleşim ister; bilinçli).
+  Menü hover'ı kayan hap değil, 150ms zemin rengi —
   [src/components/animate-ui/components/radix/sidebar.tsx](src/components/animate-ui/components/radix/sidebar.tsx).
-- Katman giriş/çıkışları shadcn'in `tw-animate-css` keyframe'leriyle kalır
-  (dialog, popover, sheet). `motion` yalnızca animate-ui bileşenlerinde,
+- Katmanlar: `Dialog` 200ms açılır / 150ms kapanır (`ease-out`, zoom 95);
+  `Popover` 150 / 100ms; `Sheet` (shadcn) 300 / 200ms `ease-drawer`;
+  bildirim drawer'ı ve mobil sidebar animate-ui Motion sheet'i (`SPRING`
+  giriş, 200ms `EASE_DRAWER` çıkış, perde yalnız opaklık). Reduced-motion'da
+  zoom/kayma düşer, kısa fade kalır; `reduced-transparency:` perdede blur'u
+  kaldırıp `bg-black/60` yapar. Perde tonu her yerde `bg-black/40`.
+- **Tooltip** (animate-ui primitive): ilk balon 500ms gecikmeyle, sonra
+  (açıkken ya da kapanış penceresinde) komşular **anlık ve animasyonsuz**;
+  balon tetikleyiciler arasında süzülmez. Giriş 125ms `EASE_OUT`, opaklık +
+  `scale 0.97` + 4px, köken tetikleyiciye bakan kenar; çıkış 100ms. Klavye
+  odağıyla (yalnız `:focus-visible`) anlık açılır. Doğrulama uyarısı
+  (`AlertTip`) gecikmesiz açılır. `motion` yalnızca animate-ui bileşenlerinde,
   `src/components/ui/icons/` altındaki animasyonlu ikonlarda ve sidebar
   onboarding kartının slayt geçişinde
   ([src/components/layout/OnboardingCard.tsx](src/components/layout/OnboardingCard.tsx)),
@@ -449,9 +478,9 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   sidebar geri bildirim paneli: satırdan yukarı büyür, kapanışta aşağı çöküp
   satıra solar; upstream'deki `layoutId` morph'u yazıyı ölçeklediği için yok)
   ve `motion/goo-popover` morph'unda (§5 "Goo açılır panel" — tek `progress`
-  değeri clip-path + SVG goo filtresini sürer, `spring 350/35`; yazı
-  ölçeklenmez, clip'le açılır ve opaklığı ilerlemeyi izler, kapanış aynı eğriyi
-  tersten oynar; `prefers-reduced-motion`'da filtresiz ve anlık);
+  değeri clip-path + SVG goo filtresini sürer, açılış `SPRING` (350/35); yazı
+  ölçeklenmez, clip'le açılır ve opaklığı ilerlemeyi izler, kapanış aynı
+  karakterde ama ~%30 kısa spring'le (700/50) tersten oynar; `prefers-reduced-motion`'da filtresiz ve anlık);
   ikisi bilinçli olarak birlikte yaşar — yeni animasyon için önce mevcut
   utility'ye bak.
 - **Slayt (carousel) motifi** — onboarding kartı emsaldir: yön farkındalıklı
@@ -471,13 +500,16 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   `hoverProps` al, `hoverProps`'u satıra/butona yay. İkona `ref` bağlandığı
   anda kendi hover'ı kapanır. 16px'lik ikonun kendisine hover beklemek
   kullanılabilirlik hatası; ayrıca `Button` içindeki
-  `[&_svg]:pointer-events-none` bunu zaten imkânsız kılar.
+  `[&_svg]:pointer-events-none` bunu zaten imkânsız kılar. Elle sürülen
+  hover'da olayı ilet (`onPointerEnter(e)` + `onMouseEnter(e)`) ki dokunuş
+  ikonu oynatmasın. İkon hover'ı ≤300ms (dekoratif en çok 400ms), spring'li
+  ikonlar ortak `ICON_SPRING` (icons/icon-motion.ts, 350/28); sonsuz döngü yok.
 - **Metrik paneli motifi** — dashboard'daki tek seferlik giriş ve metre
   animasyonları sanksiyonludur: karolar ve band `globals.css`'teki
-  `animate-enter` utility'siyle (opacity + 8px translateY + blur, 80ms
-  `--stagger`) sırayla girer; Stok Sağlığı metresinin segmentleri ilk boyamada
-  `motion` spring'iyle (bounce 0, ~120ms stagger) genişliğe açılır; legend
-  hover'ı ilgili segmenti bırakıp diğerlerini `opacity-35`'e söndürür
+  `animate-enter` utility'siyle (320ms `ease-out`, opacity + 8px translateY +
+  blur, 80ms `--stagger`) sırayla girer; Stok Sağlığı metresinin segmentleri
+  ilk boyamada `scaleX` 0→1 (`origin-left`, genişlik sabit) `SPRING` ve 80ms
+  stagger ile açılır; legend hover'ı (yalnız fare — dokunuşta takılı kalmaz) ilgili segmenti bırakıp diğerlerini `opacity-35`'e söndürür
   (`transition-opacity duration-150`). Her üçü `prefers-reduced-motion`'da
   kapalıdır (`animate-enter` CSS'te, metre `useReducedMotion` ile). Bu desen
   sayfa açılışına özeldir — state değişimlerinde yeniden tetiklenmez.
@@ -508,8 +540,24 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   boyamada ve reduced-motion'da anlık. −/+ kontrolü
   [src/components/shared/NumberStepper.tsx](src/components/shared/NumberStepper.tsx):
   sayıya tıklayınca yerinde giriş açılır.
-- Hover/press geçişleri: `transition-colors duration-150`; asla
-  `transition-all`. Basma geri bildirimi `active:scale-[0.99]`'u geçmez.
+- Hover geçişleri: `transition-colors duration-150`; asla
+  `transition-all`. **Basma geri bildirimi her basılabilir öğede vardır**:
+  `Button` tabanında yerleşik, diğerlerinde `PRESS_FEEDBACK_CLASS` (`cn`'in
+  sonuna) — `active:scale-[0.99]` (üst sınır), transform geçişli 150ms,
+  reduced-motion'da ölçeksiz, `select-none` + iOS çağrı balonu kapalı.
+  Tarayıcının dokunma flaşı globalde kapalı (`-webkit-tap-highlight-color`),
+  butonlar `touch-action: manipulation`.
+- **Durum ve geri bildirim:** mutasyon hatası asla sessiz değildir
+  (`toast.error`, gerekirse geri alma ile). "Geri Al" toast'ı 10sn durur;
+  tıklanınca aynı toast `loading → sonuç` olur (aynı `id`, `action: undefined`).
+  Kısmi hata toast'ı kalıcıdır (`duration: Infinity` + kapatma). Geçersiz
+  alan Kaydet'i sessizce kilitlemez: satır içi mesaj + `aria-invalid`
+  (yazmayı bırakınca / alandan çıkınca). Kalıcı silme onayı `variant="destructive"`.
+  Toaster `bottom-center` (sağ sepet çekmecesinin altlığını örtmez).
+- **Dokunmatik:** input'lar kaba işaretçide 16px (`md:pointer-fine:text-sm`
+  — iOS odak yakınlaştırması yok); ana kaydırıcı ve iç listeler
+  `overscroll-contain` (kaydırma iframe'den ikas sayfasına taşmaz); ikon
+  hover'ı yalnız fare/kalemde oynar.
 - `prefers-reduced-motion` her girişte ve press efektinde saygı görür; ikon
   animasyonlarında bu kontrol `useIconHover` içinde merkezîdir — kullanım
   noktasında tekrarlama.

@@ -4,6 +4,7 @@ import { useEffect, useRef, type ReactNode, type RefObject } from 'react';
 import { ChevronUp, Loader } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion, type Transition } from 'motion/react';
 import { CheckIcon, type CheckIconHandle } from '@/components/ui/icons/check';
+import { INSTANT, PRESS_FEEDBACK_CLASS, SPRING } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 
 /**
@@ -19,9 +20,6 @@ import { cn } from '@/lib/utils';
  * Yerleşim kararları (genişlik, konum, kök sarmalayıcı) prop'lara açıldı —
  * upstream'deki 300px'lik demo sarmalayıcısı kaldırıldı.
  */
-
-/** DESIGN.md §6 kanonik spring. */
-const SPRING = { type: 'spring' as const, stiffness: 350, damping: 35 };
 
 type PopoverFormProps = {
   open: boolean;
@@ -75,7 +73,7 @@ export function PopoverForm({
   // sırasıyla paneli yeniden açıyordu.
   useClickOutside([ref, triggerRef], () => setOpen(false));
 
-  const layoutTransition = reduceMotion ? { duration: 0 } : SPRING;
+  const layoutTransition = reduceMotion ? INSTANT : SPRING;
 
   // Kapanış: yükseklik `closeTransition` ile çöker; panel, sürenin son
   // bölümünde şeffaflaşıp altındaki tetikleyici satırını ortaya çıkarır.
@@ -193,7 +191,10 @@ export function PopoverFormButton({ loading, text = 'submit' }: { loading: boole
     <button
       type="submit"
       disabled={loading}
-      className="ml-auto flex h-7 items-center justify-center overflow-hidden rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground transition-colors duration-150 hover:bg-primary/90 active:scale-[0.99] disabled:opacity-50"
+      className={cn(
+        'ml-auto flex h-7 items-center justify-center overflow-hidden rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50',
+        PRESS_FEEDBACK_CLASS,
+      )}
     >
       <AnimatePresence mode="popLayout" initial={false}>
         <motion.span
@@ -201,7 +202,7 @@ export function PopoverFormButton({ loading, text = 'submit' }: { loading: boole
           initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -25 }}
           animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
           exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 25 }}
-          transition={reduceMotion ? { duration: 0 } : SPRING}
+          transition={reduceMotion ? INSTANT : SPRING}
           className="flex w-full items-center justify-center"
         >
           {loading ? <Loader className="size-3 animate-spin" /> : <span>{text}</span>}

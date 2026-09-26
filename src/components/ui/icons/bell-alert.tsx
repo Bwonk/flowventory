@@ -17,7 +17,10 @@ interface BellAlertIconProps extends HTMLAttributes<HTMLDivElement> {
 
 const SVG_VARIANTS: Variants = {
   normal: { rotate: 0 },
-  animate: { rotate: [0, -10, 10, -10, 0] },
+  animate: {
+    rotate: [0, -10, 10, -10, 0],
+    transition: { duration: 0.4, ease: "easeInOut" },
+  },
 };
 
 const BellAlertIcon = forwardRef<BellAlertIconHandle, BellAlertIconProps>(

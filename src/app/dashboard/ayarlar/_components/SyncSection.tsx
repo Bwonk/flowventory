@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { ApiRequests } from '@/lib/api-requests';
 import { markStoreSynced } from '@/lib/onboarding';
 import { SettingsSection } from './SettingsSection';
+import { StatusText } from './StatusText';
 
 type UiPhase = 'idle' | 'syncing' | 'success' | 'error';
 
@@ -79,10 +80,14 @@ export function SyncSection({ token }: SyncSectionProps) {
 
         <span aria-live="polite">
           {phase === 'success' && successMessage && (
-            <span className="text-sm text-status-healthy">{successMessage}</span>
+            <StatusText key={successMessage} tone="success">
+              {successMessage}
+            </StatusText>
           )}
           {phase === 'error' && errorMessage && (
-            <span className="text-sm text-destructive">{errorMessage}</span>
+            <StatusText key={errorMessage} tone="error">
+              {errorMessage}
+            </StatusText>
           )}
         </span>
       </div>

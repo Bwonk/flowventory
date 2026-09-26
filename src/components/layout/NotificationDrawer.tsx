@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
+import { cn } from '@/lib/utils';
 import { AlertTriangle, Bell, CheckCheck, RotateCcw, X } from 'lucide-react';
 import {
   Sheet,
@@ -27,6 +28,9 @@ import { NotificationSwipeList } from '@/components/layout/NotificationSwipeList
 // collapse/expand animasyonundaki faz farkı bu bindirmeyle gizlenir.
 const CLIP_LEFT_EXPANDED = `calc(${SIDEBAR_WIDTH} - 1rem)`;
 const CLIP_LEFT_COLLAPSED = `calc(${SIDEBAR_WIDTH_ICON} + 2px)`;
+// Clip `left`'i sabit (açık konum) tutar, daralmada transform ile kayar —
+// `left` geçişi her karede yerleşim hesaplatıyordu.
+const CLIP_SHIFT_COLLAPSED = `translateX(calc(${CLIP_LEFT_COLLAPSED} - ${CLIP_LEFT_EXPANDED}))`;
 
 /** API son 50 kaydı döndürür — listenin kesildiğini kullanıcıya söyleriz. */
 const LIST_CAP = 50;
@@ -55,7 +59,7 @@ export function NotificationDrawer() {
     toggleRead,
     dismissOne,
   } = useNotifications();
-  const { state, isMobile } = useSidebar();
+  const { state, isMobile, instant } = useSidebar();
 
   // Panel açıkken göreli zaman etiketleri dakikada bir tazelenir; kapalıyken
   // sayaç çalışmaz.
@@ -82,8 +86,9 @@ export function NotificationDrawer() {
     }
   };
 
-  // Collapse/expand'de drawer açık kalır ve clip container'ın transition-[left]'i
-  // sidebar'ın 400ms genişlik animasyonunu birebir takip eder. Yalnızca
+  // Collapse/expand'de drawer açık kalır ve clip container'ın transform
+  // geçişi sidebar'ınkini birebir takip eder (250ms ease-drawer; klavye
+  // kısayolunda ve reduced-motion'da ikisi de anlık). Yalnızca
   // masaüstü ↔ mobil geçişinde kapat: iki mod tamamen farklı konumlanıyor.
   const isMobileRef = useRef(isMobile);
   useEffect(() => {
@@ -104,7 +109,7 @@ export function NotificationDrawer() {
   };
 
   // Masaüstünde drawer'ın hizalandığı kenar — sidebar durumuna göre.
-  const clipLeft = state === 'collapsed' ? CLIP_LEFT_COLLAPSED : CLIP_LEFT_EXPANDED;
+  const clipTransform = state === 'collapsed' ? CLIP_SHIFT_COLLAPSED : 'none';
 
   let body: ReactNode;
   if (status === 'loading') {
@@ -189,7 +194,7 @@ export function NotificationDrawer() {
           </SheetClose>
         </div>
       </div>
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-x-none">{body}</div>
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">{body}</div>
     </>
   );
 
@@ -203,12 +208,7 @@ export function NotificationDrawer() {
         <SheetPortal>
           {isMobile ? (
             <>
-              <SheetOverlay
-                className="fixed inset-0 z-50 bg-black/50"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-              />
+              <SheetOverlay className="fixed inset-0 z-50 bg-black/40 reduced-transparency:bg-black/60" />
               <SheetContent
                 side="left"
                 aria-modal="true"
@@ -225,24 +225,22 @@ export function NotificationDrawer() {
               {/* Backdrop tüm ekranı kaplar; sidebar (z-10) ve drawer (z-9)
                   üstünde boyandığı için aydınlık kalır, aradaki 8px canvas
                   boşluğu kararır → pill gerçekten yüzüyormuş gibi okunur. */}
-              <SheetOverlay
-                className="fixed inset-0 z-[8] bg-black/50"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-              />
+              <SheetOverlay className="fixed inset-0 z-[8] bg-black/40 reduced-transparency:bg-black/60" />
               {/* Clip container: drawer'ın x:-100%→0 kayışını kırpar ki floating
                   sidebar ile canvas arasındaki 8px boşlukta parlamasın. z-[9]
                   sidebar'ın (z-10) altı → arkasından çıkıyormuş gibi görünür.
-                  0.5rem panel altına bindirilir; transition-[left] sidebar
+                  0.5rem panel altına bindirilir; transform geçişi sidebar
                   collapse/expand animasyonuyla aynı süre/easing'de takip eder.
                   data-notification-drawer globals.css'teki dikiş kuralının
                   anahtarı: bu div DOM'da olduğu sürece (exit animasyonu dahil)
                   sidebar panelinin sağ köşeleri düz, sağ hairline'ı gizli kalır. */}
               <div
                 data-notification-drawer
-                className="pointer-events-none fixed inset-y-2 right-0 z-[9] overflow-hidden transition-[left] duration-400 ease-[cubic-bezier(0.75,0,0.25,1)] motion-reduce:transition-none print:hidden"
-                style={{ left: clipLeft }}
+                className={cn(
+                  'pointer-events-none fixed inset-y-2 right-0 z-[9] overflow-hidden transition-transform duration-250 ease-drawer motion-reduce:transition-none print:hidden',
+                  instant && 'transition-none',
+                )}
+                style={{ left: CLIP_LEFT_EXPANDED, transform: clipTransform }}
               >
                 <SheetContent
                   side="left"

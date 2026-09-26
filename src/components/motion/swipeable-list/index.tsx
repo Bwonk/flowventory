@@ -26,6 +26,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { INSTANT, PRESS_FEEDBACK_CLASS, SPRING } from '@/lib/motion';
 import { TOUCH_GESTURE_CONTENT_CLASS } from '@/lib/touch';
 import { cn } from '@/lib/utils';
 import type {
@@ -53,10 +54,8 @@ export type {
  * Bırakınca oturma yayı — kanonik 350/35 (DESIGN.md §6). restDelta/restSpeed
  * beui'den: 56px'lik kısa yolda yayın kuyruğunu erken keser, yüzey "titremez".
  */
-const SPRING: Transition = {
-  type: 'spring',
-  stiffness: 350,
-  damping: 35,
+const SETTLE_SPRING: Transition = {
+  ...SPRING,
   restDelta: 0.5,
   restSpeed: 10,
 };
@@ -68,7 +67,6 @@ const COLLAPSE: Transition = {
 };
 /** Sonradan eklenen satırın girişi: yalnız opaklık, yükseklik anlık (ilk boyamada hiç yok). */
 const ENTER: Transition = { opacity: { duration: 0.15 }, height: { duration: 0 } };
-const INSTANT: Transition = { duration: 0 };
 
 const ACTION_TONE_CLASS: Record<SwipeActionTone, string> = {
   neutral: 'text-muted-foreground hover:text-foreground',
@@ -139,6 +137,7 @@ function SwipeActionButton<T>({
         'disabled:pointer-events-none disabled:opacity-50',
         ACTION_TONE_CLASS[action.tone ?? 'neutral'],
         className,
+        PRESS_FEEDBACK_CLASS,
       )}
       style={{ width: actionWidth }}
     >
@@ -207,7 +206,7 @@ function SwipeableListRow<T>({
       }
 
       animationRef.current = animate(x, nextX, {
-        ...SPRING,
+        ...SETTLE_SPRING,
         velocity: clampReleaseVelocity(velocity),
         onComplete: () => x.set(nextX),
       });

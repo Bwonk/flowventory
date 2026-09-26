@@ -20,7 +20,7 @@ const VARIANTS: Variants = {
   animate: {
     translateY: [0, 2, 0],
     transition: {
-      duration: 0.5,
+      duration: 0.25,
       times: [0, 0.4, 1],
     },
   },

@@ -36,7 +36,7 @@ const HomePage: React.FC<HomePageProps> = ({ token, products = [], analytics, vi
         <div className="mx-auto flex max-w-7xl items-center justify-center px-4 py-32 sm:px-6 lg:px-8">
           <div className="flex max-w-md flex-col items-center gap-4 text-center">
             <MonoLabel>Flowventory</MonoLabel>
-            <h1 className="text-4xl font-normal leading-none tracking-[-0.03em] text-primary sm:text-5xl">
+            <h1 className="text-4xl font-normal leading-tight tracking-[-0.03em] text-primary sm:text-5xl">
               Kimlik Doğrulama Gerekli
             </h1>
             <p className="text-[16px] leading-[1.5] text-muted-foreground">
