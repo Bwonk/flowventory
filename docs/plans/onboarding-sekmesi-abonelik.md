@@ -6,7 +6,9 @@
 > 2) kurulum adımları (TipsList), 3) koyu plan kartı (`PlanCard`, kullanıcının referans görseli ink zemine çevrildi). Sidebar satırı popup açar;
 > kilit ekranı ve Ayarlar "Planı gör" plan adımına açar; ilk açılışta popup bir kez kendiliğinden açılır. Aşağıdaki §4–§5 sayfa tasarımı tarihsel.
 > **Revizyon 2:** "sidebarda tab buton olması hoş değil" — nav'daki "Başlarken" satırı + rozet kaldırıldı; footer'daki eski kayan kart
-> (`OnboardingCard`) aynen geri geldi (kısa açıklamalar `shortDescription`). `onboarding-nav.ts` ve roket ikonu silindi.
+> (`OnboardingCard`) aynen geri geldi. `onboarding-nav.ts` ve roket ikonu silindi.
+> **Revizyon 3:** "kurulum adımları popup'ta çıkmalı, sidebar'da sadece popup'a yönlendirecek bir şey" — kart launcher'a çevrildi
+> (Appcues beacon / Userpilot kapalı checklist / Stripe kalıbı): sayaç + sıradaki adım + segment çubuğu; tıklayınca popup 2. adımda.
 > Durum: **uygulandı** (27 Eyl 2026, Faz 0–5; push/deploy edilmedi). Canlı QA ve ödeme akışı teyidi: DEVIR-NOTLARI §J.
 > Plandan sapmalar: Faz 1+2 tek commit (kart silinmeden hook değişemiyordu); `ChoiceGroup` alınmadı (TR'de dönem seçimi yok — YAGNI);
 > `useControllableState` yerine yerel eşdeğer (`radix-ui/internal` moduleResolution'da çözülmüyor); kart girişinde `animate-enter`

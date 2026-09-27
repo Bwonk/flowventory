@@ -15,6 +15,8 @@ import { springOrInstant } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 
 export const ONBOARDING_TOTAL_STEPS = 3;
+/** Kurulum adımı (sidebar launcher kartı doğrudan buraya açar). */
+export const ONBOARDING_SETUP_STEP = 2;
 /** Abonelik adımı (kilit ekranı ve Ayarlar doğrudan buraya açar). */
 export const ONBOARDING_PLAN_STEP = 3;
 
