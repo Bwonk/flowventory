@@ -1,7 +1,7 @@
 # ikas App Preflight — Flowventory (/Users/yigitozen/orca/flowventory)
 
 **Karar:** Düzeltmelerden sonra (bölüm 7) bu kural setine göre koddaki Blocker kalmadı. Açık kalanlar: Partner paneli beyanları (bölüm 3) ve paylaşımlı rate-limit store'u (U11, kısmi).
-**Uygulama şekli:** §4 (a) panel içi dashboard (stok, analiz, kurallar, rapor) · **Plan:** ücretsiz (`getMerchantLicence` / `store/app/payment` yok)
+**Uygulama şekli:** §4 (a) panel içi dashboard (stok, analiz, kurallar, rapor) · **Plan:** tek ücretli plan + 14 gün deneme (27 Eyl 2026: `getMerchantLicence` + `createMerchantAppPayment` + `store/app/payment` eklendi; plan key Partner panelde deploy'da tanımlanacak — o zamana dek faturalandırma kapalı)
 **Mod:** tam · **Scanner:** 35 route, 11 client page · **Git:** 2 untracked (`.claude/settings.json`, `RESEND-KURULUM.md`) · Tarih: 2026-09-25 · Skill: ikas-app-preflight 0.3.9 · SDK: admin-api-client 2.0.11, app-helpers 1.0.10
 
 ## Bir bakışta

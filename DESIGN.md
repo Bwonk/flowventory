@@ -425,19 +425,36 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   genişlik verme. Negatif kenar boşluğu kabukta değil `h1`'de: kabukta
   `max-w-full` ile birlikte kendini 8px daraltıp her başlığı kırpıyordu.
   Ayrı "ad" alanı açma.
-- **Sidebar onboarding kartı:**
-  [src/components/layout/OnboardingCard.tsx](src/components/layout/OnboardingCard.tsx);
-  beyaz sidebar yüzeyi üzerinde ikinci seviye `bg-muted` zemin — çerçevesiz,
-  gölgesiz (kart-içinde-kart kuralı). Sonuç: muted zeminde `hover:bg-muted`
-  görünmez, içteki tüm hover yüzeyleri `hover:bg-card`. Daraltılmış ikon
-  modunda kart tamamen gizlenir. Hit alanı istisnası: 240px sidebar'daki
-  kompakt kontrol kümesinde (3 nokta + 2 ok) 40px hedef uygulanamaz — nokta
-  16×32, ok 28px; bilinçli ve sınırlı sapma, sayfa gövdesindeki kontrollere
-  genellenmez. İlerleme ayrı bir sayaçta değil noktalarda yaşar ve **durum
-  rengiyle değil mürekkep tonuyla** kodlanır: aktif = `bg-foreground` hap,
-  tamamlandı = `bg-muted-foreground` nokta, bekliyor = `bg-hairline` nokta.
-  Yeşil yalnızca slayt içindeki rozette (check) kullanılır; başlık üstü çizili.
-
+- **Başlarken rehberi (setup guide):**
+  [src/components/ui/onboarding.tsx](src/components/ui/onboarding.tsx) — cult-ui
+  `onboarding` uyarlaması (doğrusal sihirbaz değil, **checklist**); sayfa
+  `/dashboard/baslarken`, emsal
+  [SetupGuide.tsx](src/app/dashboard/baslarken/_components/SetupGuide.tsx).
+  Tek kolon `mx-auto max-w-3xl`; kart olağan hairline kart, başlık şeridi
+  `h-12 border-b` (başlık + sağda mono "2 / 4 tamamlandı"), altında ilerleme
+  pill'leri, sonra `divide-y` adım listesi. Adım = akordeon satırı (tek adım
+  açık): numara/tik rozeti `size-5` + başlık + ↓ oku; açıkken açıklama +
+  **tek birincil aksiyon** (derin link, ink `sm` buton) + opsiyonel ghost
+  ikincil ("Varsayılanı kullan"). İlerleme durum rengiyle değil **mürekkep
+  tonuyla**: pill tamam `bg-muted-foreground`, açık adım `bg-foreground`,
+  bekliyor `bg-hairline`; yeşil yalnız tik rozetinde (`bg-success`), tamamlanan
+  başlık muted + üstü çizili. Açık adım tamamlanınca 900ms sonra sıradaki eksik
+  adım açılır; hepsi bitince kart "Kurulum tamam — …" satırına çöker (konfeti
+  yok). Klavye: ↑/↓/Home/End başlıklar arası, Enter/Space aç-kapa. Sidebar'da
+  karşılığı nav'ın en üstündeki "Başlarken" satırı + mono `text-[10px]`
+  `SidebarMenuBadge` ("2/4", "Deneme", "Bitti"); kurulum bitti ve abonelik
+  aktifse satır çöker (opaklık 150ms + yükseklik 200ms `EASE_OUT`). Footer'da
+  onboarding kartı yok.
+- **Abonelik kartı:**
+  [src/components/billing/SubscriptionPanel.tsx](src/components/billing/SubscriptionPanel.tsx)
+  (Başlarken'de tam, Ayarlar `#plan`'da `compact`). Başlık şeridinde durum
+  `Badge` (deneme `info`, aktif `success`, bitiyor `warning`, bitti
+  `critical`); plan adı + özellik listesi (ink tik) ve sağda KPI dilinde fiyat
+  (`font-mono text-2xl tabular-nums`) + "/ yıl + KDV" InfoTip (oranlama). Kalan
+  deneme günü **statik metin** — geri sayım animasyonu yok. Tek plan, dönem
+  seçici yok. Deneme bitince Başlarken/Ayarlar dışında kilit ekranı
+  ([SubscriptionGate.tsx](src/components/layout/SubscriptionGate.tsx)):
+  soluk kilit ikonu + başlık + açıklama + ink CTA — sessiz 403 yok.
 ---
 
 ## 6. Hareket
@@ -470,8 +487,8 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   odağıyla (yalnız `:focus-visible`) anlık açılır. Doğrulama uyarısı
   (`AlertTip`) gecikmesiz açılır. `motion` yalnızca animate-ui bileşenlerinde,
   `src/components/ui/icons/` altındaki animasyonlu ikonlarda ve sidebar
-  onboarding kartının slayt geçişinde
-  ([src/components/layout/OnboardingCard.tsx](src/components/layout/OnboardingCard.tsx)),
+  Başlarken rehberinin akordeon/rozet geçişlerinde
+  ([src/components/ui/onboarding.tsx](src/components/ui/onboarding.tsx)),
   `motion/swipeable-list` sürükleme jestinde (repodaki tek `drag` kullanımı) ve
   `PopoverForm`'un büyüme/çökme geçişinde
   ([src/components/ui/popover-form.tsx](src/components/ui/popover-form.tsx) —
@@ -483,18 +500,16 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   karakterde ama ~%30 kısa spring'le (700/50) tersten oynar; `prefers-reduced-motion`'da filtresiz ve anlık);
   ikisi bilinçli olarak birlikte yaşar — yeni animasyon için önce mevcut
   utility'ye bak.
-- **Slayt (carousel) motifi** — onboarding kartı emsaldir: yön farkındalıklı
-  **tam genişlik** kaydırma; giren ve çıkan slayt aynı `spring 350/35`'i
-  paylaşır (tek ray hissi), kenarda hafif fade (opacity 0.4↔1, 0.15s) sert
-  kesilmeyi yumuşatır — "çıkış girişten sessiz" ilkesi burada bu fade ile
-  sağlanır; blur yok. Viewport yüksekliği aktif slaytın içeriğine aynı spring
-  ile uyar (ResizeObserver ölçümlü) — metin asla kırpılmaz. Aktif nokta hap
-  morph'u `layoutId` + aynı spring ile noktadan noktaya taşınır.
-  `AnimatePresence initial={false}` → ilk boyamada animasyon yok; rozet/ikon
-  takasları `mode="popLayout"` + spring; `prefers-reduced-motion` → kayma
-  yerine salt cross-fade, yükseklik ve hap anlık. İkon dışı animasyonlarda
-  `useReducedMotion()` doğrudan `motion/react`'ten alınır — `useIconHover`
-  yalnızca ikon animasyonları içindir.
+- **Akordeon motifi** — Başlarken rehberi emsaldir: panel yüksekliği
+  `auto`'ya kanonik `SPRING` (350/35) ile açılır/çöker, içerik opaklığı
+  150ms (çıkış 100ms); ok `rotate-180` CSS 200ms `ease-out`. Numara ↔ tik
+  rozeti `AnimatePresence mode="popLayout"` + opacity/scale 0.8↔1 + `SPRING`
+  (`AnimatedCheckbox` aynı dili paylaşır). `AnimatePresence initial={false}` →
+  ilk boyamada animasyon yok. `prefers-reduced-motion` → yükseklik anlık,
+  yalnız opaklık. Otomatik sıradaki adıma geçiş 900ms beklemeden sonra olur
+  (zamanlama; reduced-motion'da da korunur) ve kullanıcı başka adım açarsa
+  iptal edilir. İkon dışı animasyonlarda `useReducedMotion()` doğrudan
+  `motion/react`'ten alınır — `useIconHover` yalnızca ikon animasyonları içindir.
 - **İkon animasyonu daima parent'tan sürülür:**
   [useIconHover()](src/components/ui/icons/use-icon-hover.ts) ile `ref` +
   `hoverProps` al, `hoverProps`'u satıra/butona yay. İkona `ref` bağlandığı

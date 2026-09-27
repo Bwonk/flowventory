@@ -114,8 +114,15 @@ dev branch'ine bağlanmak yeterli. Şema değişikliğinde: `pnpm prisma migrate
 - [ ] Panel açınca rozet sıfırlanıyor mu; aynı bildirim aynı gün tekrar oluşmuyor mu
 - [ ] (Resend key girildiyse) e-posta geliyor mu — Ayarlar'dan adres + toggle
 
-### J) Onboarding
-- [ ] 3 adımın durumları doğru mu; adım tamamlanınca ✓; ✕ ile kapatınca geri gelmiyor mu
+### J) Başlarken + abonelik (27 Eyl 2026 — docs/plans/onboarding-sekmesi-abonelik.md)
+- [ ] Nav'da en üstte "Başlarken" + "n/4" rozeti; ikon modunda rozet gizli, tooltip "Başlarken · n/4"
+- [ ] 4 adım başka tarayıcıda da doğru (sync/tracker/threshold sunucudan); adım tamamlanınca ✓ + ~1 sn sonra sıradaki adım açılıyor
+- [ ] "Varsayılanı kullan (5/10)" eşik adımını tamamlıyor
+- [ ] Hepsi bitince "Kurulum tamam" satırı; "Rehberi gizle" → abone değilse satır "Deneme" rozetiyle kalıyor
+- [ ] İlk açılışta (yeni kurulum) Genel Bakış yerine Başlarken açılıyor, sonraki girişlerde açılmıyor
+- [ ] Abonelik kartı: "Deneme · N gün kaldı", ₺980 / yıl + KDV; `IKAS_PLAN_KEY` boşken "yakında" notu, kilit yok
+- [ ] (Plan key girildikten sonra) "Aboneliği başlat" → ikas ödeme ekranı açılıyor mu (`startMerchantPayment` teyidi) → ödeme sonrası kart "Aktif", zilde "Aboneliğin aktif"
+- [ ] Deneme bitmiş + abone değil → Başlarken/Ayarlar dışında kilit ekranı; kaldır-kur denemeyi sıfırlamıyor
 
 ### M) Zamanlanmış özet raporu
 - [ ] Ayarlar → E-posta bildirimleri: Günlük/Haftalık + gün/saat kaydediliyor, sayfa yenilenince korunuyor
@@ -187,7 +194,7 @@ Plan: `docs/plans/kurallar-v3-aksiyon-workflow.md` (K1 VE önceliği, K2 hedef b
 | **RLS (satır düzeyi güvenlik)** | Lansman şartı mı? (mentöre sorulacak) | Kod her sorguyu `merchantId` ile filtreliyor + cross-tenant testi var. RLS ikinci katman: Prisma'da her sorguyu `set_config`'li transaction'a sarmak + cron/webhook/OAuth için bypass rolü gerekir |
 | **Tracker yazma kuyruğu** | Ölçüm | Mentör "ufak kuyruk" önerdi; Postgres eşzamanlı upsert'i kaldırdığı için şimdilik yok. Serverless'ta bellek içi kuyruk çalışmaz → gerekirse Vercel Queues / Upstash |
 | **4.5 i18n (TR/EN)** | Hedef pazar/dil kararı | Tüm string'ler Türkçe; App Store'a yurtdışı hedefiyle çıkmadan önce. Yarım çeviri yapma — tek seferde |
-| **4.7 Faturalandırma** | Fiyat/plan kararı | ikas `createMerchantAppPayment` + `getMerchantLicence` akışı; karar sonrası ~1 gün |
+| ~~**4.7 Faturalandırma**~~ | ✅ Karar (27 Eyl 2026): tek plan, yıllık 980 TL + KDV, 14 gün deneme | Kod hazır (Başlarken sekmesi + `src/lib/billing/`). **Deploy'da kullanıcı adımı:** Partner panelde plan oluştur → key'i Vercel env `IKAS_PLAN_KEY`'e yaz; "Bildirim Adresi" = `/api/ikas/webhook`. `startMerchantPayment` ikas'a teyit edilecek |
 | **Sentry / hata izleme** | Hesap + DSN | Logger hazır (prod'da JSON); Sentry eklemek ~15 dk |
 
 ### Plandan kalan küçük teknik borçlar

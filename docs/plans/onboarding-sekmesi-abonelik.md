@@ -1,6 +1,10 @@
 # Başlarken sekmesi + abonelik başlatma
 
-> Durum: **onaylandı, uygulanıyor** (27 Eyl 2026). §8 fazları sırayla.
+> Durum: **uygulandı** (27 Eyl 2026, Faz 0–5; push/deploy edilmedi). Canlı QA ve ödeme akışı teyidi: DEVIR-NOTLARI §J.
+> Plandan sapmalar: Faz 1+2 tek commit (kart silinmeden hook değişemiyordu); `ChoiceGroup` alınmadı (TR'de dönem seçimi yok — YAGNI);
+> `useControllableState` yerine yerel eşdeğer (`radix-ui/internal` moduleResolution'da çözülmüyor); kart girişinde `animate-enter`
+> kullanılmadı (DESIGN.md: KPI karolarına mahsus); ikas codegen preset'i liste içi enum'ları atlıyordu → `patches/@ikas__admin-api-client.patch`;
+> webhook abonelik durumu saklamaz, yalnız PAID'de "Aboneliğin aktif" bildirimi üretir; `AppTrial` yoksa ilk abonelik sorgusunda da oluşur (mevcut kurulumlar için backfill yok).
 > Kararlar (kullanıcı, 27 Eyl 2026): **tek ücretli plan + deneme süresi** · sidebar kartı kalkar, yerine **nav'da "Başlarken" satırı + ilerleme rozeti** · önce belge, sonra fazlı uygulama · **deneme 14 gün** · **yıllık 980 TL** (KDV hariç) · nav ikonu `@heroicons-animated/rocket-launch` · Partner panel planı **gerçek deploy'da** oluşturulur (§6.2 "faturalandırma kapalı" modu).
 > Bağlam: DEVIR-NOTLARI §4.6 Onboarding + §4.7 Faturalandırma (şimdiye dek "fiyat/plan kararı" bekliyordu).
 
