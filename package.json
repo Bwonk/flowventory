@@ -93,6 +93,9 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "@prisma/client"
-    ]
+    ],
+    "patchedDependencies": {
+      "@ikas/admin-api-client": "patches/@ikas__admin-api-client.patch"
+    }
   }
 }

@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  '@ikas/admin-api-client':
+    hash: c315cc79a314c50e7c084534bdb48df87d180d3b9b8c6031c6488c10173d54c6
+    path: patches/@ikas__admin-api-client.patch
+
 importers:
 
   .:
@@ -13,7 +18,7 @@ importers:
         version: 0.27.20(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       '@ikas/admin-api-client':
         specifier: ^2.0.11
-        version: 2.0.11(@graphql-codegen/cli@5.0.7(@parcel/watcher@2.5.1)(@types/node@24.3.0)(enquirer@2.4.1)(graphql@16.11.0)(typescript@5.8.3))(@graphql-codegen/plugin-helpers@5.1.1(graphql@16.11.0))(@graphql-tools/utils@10.8.6(graphql@16.11.0))(graphql-request@7.2.0(graphql@16.11.0))(graphql@16.11.0)
+        version: 2.0.11(patch_hash=c315cc79a314c50e7c084534bdb48df87d180d3b9b8c6031c6488c10173d54c6)(@graphql-codegen/cli@5.0.7(@parcel/watcher@2.5.1)(@types/node@24.3.0)(enquirer@2.4.1)(graphql@16.11.0)(typescript@5.8.3))(@graphql-codegen/plugin-helpers@5.1.1(graphql@16.11.0))(@graphql-tools/utils@10.8.6(graphql@16.11.0))(graphql-request@7.2.0(graphql@16.11.0))(graphql@16.11.0)
       '@ikas/app-helpers':
         specifier: ^1.0.6
         version: 1.0.10
@@ -7633,7 +7638,7 @@ snapshots:
 
   '@humanwhocodes/retry@0.4.3': {}
 
-  '@ikas/admin-api-client@2.0.11(@graphql-codegen/cli@5.0.7(@parcel/watcher@2.5.1)(@types/node@24.3.0)(enquirer@2.4.1)(graphql@16.11.0)(typescript@5.8.3))(@graphql-codegen/plugin-helpers@5.1.1(graphql@16.11.0))(@graphql-tools/utils@10.8.6(graphql@16.11.0))(graphql-request@7.2.0(graphql@16.11.0))(graphql@16.11.0)':
+  '@ikas/admin-api-client@2.0.11(patch_hash=c315cc79a314c50e7c084534bdb48df87d180d3b9b8c6031c6488c10173d54c6)(@graphql-codegen/cli@5.0.7(@parcel/watcher@2.5.1)(@types/node@24.3.0)(enquirer@2.4.1)(graphql@16.11.0)(typescript@5.8.3))(@graphql-codegen/plugin-helpers@5.1.1(graphql@16.11.0))(@graphql-tools/utils@10.8.6(graphql@16.11.0))(graphql-request@7.2.0(graphql@16.11.0))(graphql@16.11.0)':
     dependencies:
       '@graphql-codegen/cli': 5.0.7(@parcel/watcher@2.5.1)(@types/node@24.3.0)(enquirer@2.4.1)(graphql@16.11.0)(typescript@5.8.3)
       '@graphql-codegen/plugin-helpers': 5.1.1(graphql@16.11.0)

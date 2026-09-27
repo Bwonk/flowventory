@@ -1,0 +1,14 @@
+diff --git a/dist/api/preset.js b/dist/api/preset.js
+index ae71a1014ee262b290c18730ab737abcde33d983..d4c4b4fdc00414b6214569fd7801a721db81b943 100644
+--- a/dist/api/preset.js
++++ b/dist/api/preset.js
+@@ -218,7 +218,8 @@ const plugin = (schema, documents, { sourcesWithOperations }, _info) => {
+         if (!selectionSet)
+             return;
+         let objectType = parentType;
+-        if ((0, graphql_1.isNonNullType)(objectType)) {
++        // Liste içindeki nesnelerin enum'ları da toplansın (ör. [MerchantAppSubscription!]).
++        while ((0, graphql_1.isNonNullType)(objectType) || (0, graphql_1.isListType)(objectType)) {
+             objectType = objectType.ofType;
+         }
+         if (!(0, graphql_1.isObjectType)(objectType) && !(0, graphql_1.isInterfaceType)(objectType))
