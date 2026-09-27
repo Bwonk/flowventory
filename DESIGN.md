@@ -433,10 +433,12 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   butonu ve kayan adım slaytı ikisi de reddedildi). Footer'da, beyaz sidebar
   yüzeyinde ikinci seviye `bg-muted` kart (çerçevesiz, gölgesiz); bütünü tek
   buton (`aria-haspopup="dialog"`) → popup kurulum adımında açılır; hover
-  `bg-card/60`. İçerik: mono eyebrow "Başlarken · 2/4" (sayı
-  `AnimatedNumber`), başlık "Kurulumu tamamla" + kayan ok, "Sıradaki: …"
-  (truncate), adım başına 4px segment çubuğu (tamam `bg-foreground` scaleX
-  `SPRING` ile dolar, bekliyor `bg-hairline` — durum rengi değil mürekkep).
+  `bg-card/60`. İçerik: mono eyebrow "Başlarken" (sayaç metni yok — çubuk
+  yeter), başlık "Kurulumu tamamla" + kayan ok, "Sıradaki: …" (truncate),
+  4 segmentli 4px çubuk: tamamlanan adım **sayısı** kadar segment soldan
+  dolar (`bg-foreground` scaleX `SPRING`; boş `bg-hairline` — durum rengi
+  değil mürekkep). Segment adıma bağlı değil: adımlar sırasız yapılabildiği
+  için adım eşlemesi ortada boşluk bırakıp bozuk görünüyordu.
   Sağ üstte ayrı ✕ (kalıcı gizler; çıkış opaklık + yükseklik 200ms). Hepsi
   bitince yeşil tikli "Kurulum tamam" satırı ~1.2 sn kalır, sonra kart çöker
   ve bir daha gelmez. Daraltılmış ikon modunda gizli.

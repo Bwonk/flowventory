@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { Check, ChevronRight, X } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { AnimatedNumber } from '@/components/shared/AnimatedNumber';
 import { useOnboardingDialog } from '@/components/onboarding/onboarding-dialog-context';
 import { ONBOARDING_SETUP_STEP } from '@/components/onboarding/OnboardingDialog';
 import { firstIncompleteIndex, useOnboardingSteps } from '@/lib/onboarding';
@@ -71,11 +70,8 @@ export function OnboardingCard() {
                 PRESS_FEEDBACK_CLASS,
               )}
             >
-              <span className="flex items-center gap-1.5 font-mono text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+              <span className="block font-mono text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                 Başlarken
-                <span className="tabular-nums">
-                  · <AnimatedNumber value={doneCount} />/{total}
-                </span>
               </span>
 
               <span className="mt-1.5 flex items-center gap-1 text-sm font-medium text-foreground">
@@ -105,15 +101,17 @@ export function OnboardingCard() {
                 <span className="mt-0.5 block truncate text-xs text-muted-foreground">Sıradaki: {next.title}</span>
               )}
 
-              {/* İlerleme: adım başına segment — popup'taki pill göstergesiyle
-                  aynı mürekkep dili (tamam = foreground, bekliyor = hairline). */}
+              {/* İlerleme: tamamlanan adım SAYISI kadar segment soldan dolar —
+                  adıma bağlı değil (adımlar sırasız yapılabiliyor; ortada boşluk
+                  bozuk çubuk gibi okunuyordu, QA 27 Eyl 2026). Sayaç metni yok:
+                  çubuk yeterli. Mürekkep dili: dolu = foreground, boş = hairline. */}
               <span className="mt-2.5 flex gap-1" aria-hidden>
-                {steps.map(step => (
+                {steps.map((step, index) => (
                   <span key={step.key} className="h-1 flex-1 overflow-hidden rounded-full bg-hairline">
                     <motion.span
                       className="block h-full origin-left rounded-full bg-foreground"
                       initial={false}
-                      animate={{ scaleX: step.done ? 1 : 0 }}
+                      animate={{ scaleX: index < doneCount ? 1 : 0 }}
                       transition={springOrInstant(reduceMotion)}
                     />
                   </span>
