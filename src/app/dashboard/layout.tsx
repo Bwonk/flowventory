@@ -9,6 +9,7 @@ import { ApiRequests } from '@/lib/api-requests';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { NotificationDrawer } from '@/components/layout/NotificationDrawer';
 import { NotificationsProvider } from '@/components/layout/notifications-context';
+import { SubscriptionGate } from '@/components/layout/SubscriptionGate';
 import { SidebarCollapseGuardProvider, useGuardedSidebarOpen } from '@/components/layout/sidebar-collapse-guard';
 import { BrandLogo } from '@/components/shared/BrandLogo';
 import { Toaster } from '@/components/ui/sonner';
@@ -71,7 +72,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 <SidebarTrigger />
                 <BrandLogo variant="mark" className="h-7 w-7" />
               </header>
-              {children}
+              <SubscriptionGate>{children}</SubscriptionGate>
             </SidebarInset>
             {/* Drawer, sidebar'ın dışında yaşar: mobilde sidebar Sheet'i kapanınca
                 unmount olmaz (bkz. NotificationsProvider). */}

@@ -92,6 +92,18 @@ model MerchantSettings {
   updatedAt         DateTime @updatedAt
 }
 
+// Uygulama deneme süresi (ikas denemeyi tutmaz — uygulama tutar).
+// Uninstall purge'üne BİLEREK dahil değil: kaldır-kur ile deneme sıfırlanmasın.
+// Yalnız merchantId + tarihler; kişisel veri yok. Kurulumda (OAuth callback)
+// ya da ilk abonelik sorgusunda oluşur, bir daha güncellenmez.
+model AppTrial {
+  id         String   @id @default(cuid())
+  merchantId String   @unique
+  startedAt  DateTime @default(now())
+  endsAt     DateTime
+  createdAt  DateTime @default(now())
+}
+
 // Uygulama içi bildirimler (kritik stok, ölü stok, satış artışı).
 // Sync sonrası kurallar değerlendirilir; dedupeKey aynı olayın aynı
 // periyotta tekrar bildirilmesini engeller.

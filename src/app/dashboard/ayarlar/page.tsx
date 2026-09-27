@@ -3,9 +3,11 @@
 import { PageContainer } from '@/components/layout/PageContainer';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/button';
+import { SubscriptionPanel } from '@/components/billing/SubscriptionPanel';
 import { AyarlarSkeleton } from './_components/AyarlarSkeleton';
 import { NotificationSection } from './_components/NotificationSection';
 import { RulesLinkSection } from './_components/RulesLinkSection';
+import { SettingsSection } from './_components/SettingsSection';
 import { SyncSection } from './_components/SyncSection';
 import { TrackingScriptSection } from './_components/TrackingScriptSection';
 import { useAyarlarData } from './hooks/use-ayarlar-data';
@@ -32,8 +34,8 @@ export default function AyarlarPage() {
         </div>
       ) : (
         <section className="divide-y divide-hairline rounded-lg border border-hairline bg-card">
-          {/* Bölüm id="veri-senkron" taşır: Başlarken kartındaki senkron adımı
-              buraya derin bağlanır. */}
+          {/* Bölüm id="veri-senkron" / "takip-scripti" taşır: Başlarken
+              rehberindeki senkron ve script adımları buraya derin bağlanır. */}
           <SyncSection token={token} />
           <TrackingScriptSection token={token} initialStatus={trackingStatus} />
           {/* Bölüm id="bildirim-ayarlari" taşır: bildirim panelinin boş durumu
@@ -55,6 +57,15 @@ export default function AyarlarPage() {
           />
           {/* Kurallar kendi sayfasında (/dashboard/kurallar); burada yalnız yönlendirme. */}
           <RulesLinkSection />
+          {/* Aboneliğin kalıcı evi — Başlarken satırı emekli olduktan sonra da görünür. */}
+          <SettingsSection
+            id="plan"
+            eyebrow="ABONELİK"
+            title="Plan ve abonelik"
+            description="Mevcut planın, deneme süren ve yenileme tarihi."
+          >
+            <SubscriptionPanel compact />
+          </SettingsSection>
         </section>
       )}
     </PageContainer>

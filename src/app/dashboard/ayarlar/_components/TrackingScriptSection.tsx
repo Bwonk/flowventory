@@ -66,7 +66,7 @@ export function TrackingScriptSection({ token, initialStatus }: TrackingScriptSe
           apiUrl: res.data.data.apiUrl,
           updatedAt: new Date().toISOString(),
         });
-        // Sidebar'daki onboarding kartı anında güncellensin.
+        // Başlarken rehberi ve nav rozeti anında güncellensin.
         markTrackerInstalled();
         setPhase('success');
         return;
@@ -90,6 +90,7 @@ export function TrackingScriptSection({ token, initialStatus }: TrackingScriptSe
 
   return (
     <SettingsSection
+      id="takip-scripti"
       eyebrow="STOREFRONT"
       title="Ürün görüntülenme takibi"
       description="Müşteri vitrinine takip scriptini yerleştirir. Ürün sayfası açıldığında görüntülenme sayıları Flowventory'ye yazılır."

@@ -37,7 +37,7 @@ export function SyncSection({ token }: SyncSectionProps) {
       if (res.status === 200 && res.data?.data) {
         const { productCount, salesDayCount } = res.data.data;
         setSuccessMessage(`${productCount} ürün, ${salesDayCount} günlük satış senkronlandı.`);
-        // Sidebar'daki onboarding kartı anında güncellensin.
+        // Başlarken rehberi ve nav rozeti anında güncellensin.
         markStoreSynced();
         setPhase('success');
         return;

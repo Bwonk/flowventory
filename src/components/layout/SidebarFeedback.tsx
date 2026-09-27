@@ -150,9 +150,8 @@ export function SidebarFeedback() {
   return (
     /*
      * Açılınca panel kadar yer kaplar; SidebarContent `flex-1` olduğu için
-     * footer büyüdükçe üst kenarı yukarı kayar ve OnboardingCard panelin
-     * altında kalmak yerine yukarı itilir. Onboarding tamamlanmışsa kart
-     * zaten render edilmiyor (OnboardingCard `return null`), davranış aynı.
+     * footer büyüdükçe üst kenarı yukarı kayar (üstündeki öğeler panelin
+     * altında kalmak yerine yukarı itilir).
      */
     <motion.div
       className="relative"

@@ -1,5 +1,17 @@
 import { BaseGraphQLAPIClient, BaseGraphQLAPIClientOptions, APIResult } from '@ikas/admin-api-client';
 
+export enum MerchantAppPaymentStatusEnum {
+  PAID = "PAID",
+  PAYMENT_FAILED = "PAYMENT_FAILED",
+  WAITING_FOR_PAYMENT = "WAITING_FOR_PAYMENT"
+}
+
+export enum MerchantSubscriptionStatusEnum {
+  ACTIVE = "ACTIVE",
+  REMOVED = "REMOVED",
+  WILL_BE_REMOVED = "WILL_BE_REMOVED"
+}
+
 export enum OrderAdjustmentEnum {
   DECREMENT = "DECREMENT",
   INCREMENT = "INCREMENT"
@@ -75,6 +87,12 @@ export enum StorefrontJSScriptContentTypeEnum {
   SCRIPT = "SCRIPT"
 }
 
+export enum SubscriptionPeriodEnum {
+  MONTHLY = "MONTHLY",
+  ONE_TIME = "ONE_TIME",
+  YEARLY = "YEARLY"
+}
+
 export type BundleProductOrderLineInput = {
   bundleLineId: string;
   bundleLineQuantity: number;
@@ -85,6 +103,10 @@ export type BundleProductOrderLineInput = {
 
 export type BundleProductOrderLineInputVariant = {
   id: string;
+}
+
+export type CreateMerchantAppPaymentWithSubscriptionInput = {
+  storeAppListingSubscriptionKey: string;
 }
 
 export type CreateStorefrontJSScriptInput = {
@@ -658,6 +680,38 @@ export interface ListOrderForAnalyticsQuery {
   listOrder: ListOrderForAnalyticsQueryData;
 }
 
+export type GetMerchantLicenceQueryVariables = {}
+
+export type GetMerchantLicenceQueryData = {
+  appSubscriptions?: Array<{
+  id: string;
+  storeAppId: string;
+  storeAppListingSubscriptionKey: string;
+  status: MerchantSubscriptionStatusEnum;
+  deleted: boolean;
+  lastPaymentDate?: number;
+  lastPaymentPeriod: SubscriptionPeriodEnum;
+  lastPaymentPeriodInDays: number;
+}>;
+}
+
+export interface GetMerchantLicenceQuery {
+  getMerchantLicence: GetMerchantLicenceQueryData;
+}
+
+export type CreateMerchantAppPaymentMutationVariables = {
+  input: CreateMerchantAppPaymentWithSubscriptionInput;
+}
+
+export type CreateMerchantAppPaymentMutationData = {
+  id: string;
+  status: MerchantAppPaymentStatusEnum;
+}
+
+export interface CreateMerchantAppPaymentMutation {
+  createMerchantAppPayment: CreateMerchantAppPaymentMutationData;
+}
+
 export class GeneratedQueries {
   client: BaseGraphQLAPIClient<any>;
 
@@ -799,6 +853,26 @@ export class GeneratedQueries {
 `;
     return this.client.query<Partial<ListOrderForAnalyticsQuery>>({ query, variables });
   }
+
+  async getMerchantLicence(): Promise<APIResult<Partial<GetMerchantLicenceQuery>>> {
+    const query = `
+  query getMerchantLicence {
+    getMerchantLicence {
+      appSubscriptions {
+        id
+        storeAppId
+        storeAppListingSubscriptionKey
+        status
+        deleted
+        lastPaymentDate
+        lastPaymentPeriod
+        lastPaymentPeriodInDays
+      }
+    }
+  }
+`;
+    return this.client.query<Partial<GetMerchantLicenceQuery>>({ query });
+  }
 }
 
 export class GeneratedMutations {
@@ -911,6 +985,18 @@ export class GeneratedMutations {
   }
 `;
     return this.client.mutate<Partial<SaveWebhooksMutation>>({ mutation, variables });
+  }
+
+  async createMerchantAppPayment(variables: CreateMerchantAppPaymentMutationVariables): Promise<APIResult<Partial<CreateMerchantAppPaymentMutation>>> {
+    const mutation = `
+  mutation createMerchantAppPayment($input: CreateMerchantAppPaymentWithSubscriptionInput!) {
+    createMerchantAppPayment(input: $input) {
+      id
+      status
+    }
+  }
+`;
+    return this.client.mutate<Partial<CreateMerchantAppPaymentMutation>>({ mutation, variables });
   }
 }
 

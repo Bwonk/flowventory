@@ -200,3 +200,31 @@ export const LIST_ORDER_FOR_ANALYTICS = gql`
     }
   }
 `;
+// Uygulama aboneliği — mağazanın ikas lisansı ve bu uygulama için alınmış
+// abonelikler. Hak kontrolü `appSubscriptions` üzerinden (status ACTIVE && !deleted).
+export const GET_MERCHANT_LICENCE = gql`
+  query getMerchantLicence {
+    getMerchantLicence {
+      appSubscriptions {
+        id
+        storeAppId
+        storeAppListingSubscriptionKey
+        status
+        deleted
+        lastPaymentDate
+        lastPaymentPeriod
+        lastPaymentPeriodInDays
+      }
+    }
+  }
+`;
+
+// Abonelik ödemesi oluşturur; dönen id `AppBridgeHelper.startMerchantPayment`e verilir.
+export const CREATE_MERCHANT_APP_PAYMENT = gql`
+  mutation createMerchantAppPayment($input: CreateMerchantAppPaymentWithSubscriptionInput!) {
+    createMerchantAppPayment(input: $input) {
+      id
+      status
+    }
+  }
+`;

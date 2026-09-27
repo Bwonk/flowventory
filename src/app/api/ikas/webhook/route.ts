@@ -22,6 +22,15 @@ const webhookSchema = z.object({
   signature: z.string(),
 });
 
+/**
+ * `store/app/payment` yükünden ihtiyacımız olan tek alan. SDK 2.0.11 ile
+ * 2.1.0 arasında yük şekli farklı — gevşek parse, gerisi yoksayılır. Abonelik
+ * durumu burada saklanmaz: kaynak her zaman getMerchantLicence.
+ */
+const appPaymentSchema = z.object({
+  merchantAppPayment: z.object({ _id: z.string().optional(), status: z.string() }),
+});
+
 /** Stok/ürün payload'larından productId çıkarımı için gevşek tip. */
 type ProductishWebhookData = {
   id?: string;
@@ -42,7 +51,10 @@ type ProductishWebhookData = {
  *    - store/order/*  → sipariş verisi "kirli" işaretlenir; bir sonraki
  *      analytics okuması yeniden sync yapar (çift sayma riski yok).
  *    - store/app/deleted → vitrin script'i kaldırılır, merchant'ın tüm verisi
- *      silinir (KVKK/GDPR).
+ *      silinir (KVKK/GDPR). Deneme kaydı (AppTrial) bilerek kalır.
+ *    - store/app/payment → yalnız PAID: uygulama içi "abonelik aktif"
+ *      bildirimi. Bu scope `saveWebhooks` ile kaydedilemez; Partner panel
+ *      "Bildirim Adresi"ne bu uç girilir.
  *
  * Not (eski davranış): stok webhook'u gelen değeri saveVariantStocks ile
  * ikas'a GERİ yazıyordu — bu bir no-op'tu ve kaldırıldı. ikas stok verisinin
@@ -159,6 +171,36 @@ export async function POST(request: NextRequest) {
           prisma.authToken.deleteMany({ where: { merchantId } }),
         ]);
         logger.info('App uninstalled, merchant data purged:', { merchantId });
+        return NextResponse.json({ success: true });
+      }
+
+      case 'store/app/payment': {
+        let payment: z.infer<typeof appPaymentSchema> | null = null;
+        try {
+          const result = appPaymentSchema.safeParse(JSON.parse(webhook.data));
+          payment = result.success ? result.data : null;
+        } catch {
+          payment = null;
+        }
+        if (payment?.merchantAppPayment.status !== 'PAID') {
+          return NextResponse.json({ success: true, skipped: 'not-paid' });
+        }
+        await prisma.notification.upsert({
+          where: {
+            merchantId_dedupeKey: {
+              merchantId: webhook.merchantId,
+              dedupeKey: `subscription-paid:${payment.merchantAppPayment._id ?? webhook.id}`,
+            },
+          },
+          create: {
+            merchantId: webhook.merchantId,
+            type: 'subscription',
+            title: 'Aboneliğin aktif',
+            body: 'Ödemen alındı; Flowventory yıllık planın başladı.',
+            dedupeKey: `subscription-paid:${payment.merchantAppPayment._id ?? webhook.id}`,
+          },
+          update: {},
+        });
         return NextResponse.json({ success: true });
       }
 

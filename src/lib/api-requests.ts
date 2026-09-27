@@ -25,6 +25,9 @@ import { SendVendorReportApiResponse } from '../app/api/vendors/send-report/rout
 import { SyncApiResponse } from '../app/api/sync/route';
 import { DigestTestApiResponse } from '../app/api/digest/test/route';
 import { FeedbackApiResponse } from '../app/api/feedback/route';
+import { OnboardingStatusApiResponse } from '../app/api/onboarding/status/route';
+import { SubscriptionApiResponse } from '../app/api/ikas/subscription/route';
+import { SubscriptionCheckoutApiResponse } from '../app/api/ikas/subscription/checkout/route';
 
 export async function makePostRequest<T>({ url, data, token }: { url: string; data?: Record<string, unknown>; token?: string }) {
   return axios.post<ApiResponseType<T>>(url, data, {
@@ -199,6 +202,16 @@ export const ApiRequests = {
       makeGetRequest<MerchantSettingsApiResponse>({ url: '/api/merchant-settings', token }),
     update: (token: string, settings: Partial<MerchantSettingsApiResponse>) =>
       makePutRequest<MerchantSettingsApiResponse>({ url: '/api/merchant-settings', token, data: settings }),
+  },
+  subscription: {
+    get: (token: string) =>
+      makeGetRequest<SubscriptionApiResponse>({ url: '/api/ikas/subscription', token }),
+    checkout: (token: string) =>
+      makePostRequest<SubscriptionCheckoutApiResponse>({ url: '/api/ikas/subscription/checkout', token }),
+  },
+  onboarding: {
+    getStatus: (token: string) =>
+      makeGetRequest<OnboardingStatusApiResponse>({ url: '/api/onboarding/status', token }),
   },
   trackingScript: {
     getStatus: (token: string) =>

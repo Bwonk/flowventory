@@ -18,6 +18,9 @@ import { Check, ChevronDown } from 'lucide-react';
 import { AnimatedNumber } from '@/components/shared/AnimatedNumber';
 import { PRESS_FEEDBACK_CLASS, SPRING, springOrInstant } from '@/lib/motion';
 import { cn } from '@/lib/utils';
+import { nextOpenKey, type OnboardingStepState } from './onboarding-steps';
+
+export { nextOpenKey, type OnboardingStepState };
 
 /**
  * Kurulum rehberi (checklist) — cult-ui `onboarding` uyarlaması
@@ -37,11 +40,6 @@ import { cn } from '@/lib/utils';
  * TipsList, ChoiceGroup ve doğrusal Navigation parçaları alınmadı.
  */
 
-export interface OnboardingStepState {
-  key: string;
-  done: boolean;
-}
-
 interface OnboardingContextValue {
   steps: ReadonlyArray<OnboardingStepState>;
   openKey: string | null;
@@ -57,20 +55,6 @@ export function useOnboarding(): OnboardingContextValue {
   const ctx = useContext(OnboardingContext);
   if (!ctx) throw new Error('Onboarding parçaları <Onboarding> içinde kullanılmalı');
   return ctx;
-}
-
-/**
- * Açık adım tamamlandığında açılacak sıradaki adım: önce ondan SONRAKİ ilk
- * eksik adım, yoksa baştan ilk eksik adım; hiç eksik yoksa null.
- */
-export function nextOpenKey(
-  steps: ReadonlyArray<OnboardingStepState>,
-  fromKey: string,
-): string | null {
-  const from = steps.findIndex(s => s.key === fromKey);
-  const after = steps.slice(from + 1).find(s => !s.done);
-  if (after) return after.key;
-  return steps.find(s => !s.done)?.key ?? null;
 }
 
 // Tamamlanan adımın tikinin okunması için bekleme — hareket değil zamanlama

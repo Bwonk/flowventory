@@ -1,66 +1,80 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { TokenHelpers } from '@/helpers/token-helpers';
 import { ApiRequests } from '@/lib/api-requests';
+import type { OnboardingStatus } from '@/lib/onboarding-status';
 import { DEFAULT_STOCK_THRESHOLD, useStockThreshold } from '@/lib/stock-threshold';
 
 /**
- * Onboarding ("Başlarken") durumu — sidebar'daki kurulum kartının tek kaynağı.
+ * Onboarding ("Başlarken") durumu — Başlarken sayfasının ve nav rozetinin
+ * tek kaynağı.
  *
  * Desen `stock-threshold.ts` / `currency.ts` ile aynı: storage anahtarları,
- * custom event ve hook tek modülde yaşar; üreticiler (rapor sayfası, script
- * kurulum kartı) mark-helper'ları buradan import eder — layout'a bağımlılık
- * kurmadan kart anında güncellenir.
+ * custom event ve hook tek modülde yaşar; üreticiler (rapor sayfası, ayarlar
+ * kartları) mark-helper'ları buradan import eder — anında güncellenir.
  *
- * Adım tamamlanma kaynakları:
- * - tracker: `GET /api/tracking-script/status` (pozitif sonuç localStorage'a
- *   cache'lenir — kurulan script sökülmez, tekrar sormaya gerek yok).
- * - threshold: `useStockThreshold()` — varsayılan 5/10'dan farklıysa "tamam".
- *   Bilinen sınır: 5/10'u bilinçli seçen mağaza "yapılmadı" görünür; mevcut
- *   davranış, düzeltilmiyor.
+ * Adım tamamlanma kaynakları (sunucu VEYA istemci bayrağı):
+ * - sync / tracker / threshold: `GET /api/onboarding/status` (SyncLog,
+ *   TrackingScriptInstall, MerchantSettings — cihazdan bağımsız). İstemci
+ *   bayrakları (`mark*`) sunucu yanıtı gelmeden iyimser tamamlar.
+ * - threshold ayrıca: canlı `useStockThreshold()` varsayılandan farklıysa ya da
+ *   "Varsayılanı kullan" onayı (`confirmDefaultThreshold`) — 5/10'u bilinçli
+ *   seçen mağaza da tamamlanmış sayılır.
  * - report: rapor sayfası ziyareti (localStorage bayrağı).
  */
 
 const DISMISS_KEY = 'flowventory:onboarding-dismissed'; // mevcut literal — eski kullanıcı ilerlemesi korunur
 const REPORT_KEY = 'flowventory:report-viewed'; // mevcut literal — rapor sayfası yazar
-const TRACKER_KEY = 'flowventory:onboarding-tracker'; // pozitif cache: '1' = kurulu görüldü
-const SYNC_KEY = 'flowventory:store-synced'; // ilk başarılı veri senkronu (ayarlar butonu ya da rapor yüklenişi yazar)
-const COMPLETE_KEY = 'flowventory:onboarding-complete'; // mezun kullanıcı: kart kalıcı kapalı, fetch yok
+const TRACKER_KEY = 'flowventory:onboarding-tracker'; // '1' = kurulu görüldü (iyimser)
+const SYNC_KEY = 'flowventory:store-synced'; // ilk başarılı veri senkronu (iyimser)
+const THRESHOLD_CONFIRMED_KEY = 'flowventory:threshold-confirmed'; // varsayılan eşik bilinçli onaylandı
+const COMPLETE_KEY = 'flowventory:onboarding-complete'; // mezun: tüm adımlar bitti, fetch yok
+const LANDED_KEY = 'flowventory:onboarding-landed'; // ilk açılış yönlendirmesi yapıldı
 const CHANGE_EVENT = 'flowventory:onboarding-change';
 
+export type OnboardingStepKey = 'sync' | 'tracker' | 'threshold' | 'report';
+
 export interface OnboardingStep {
-  key: 'sync' | 'tracker' | 'threshold' | 'report';
+  key: OnboardingStepKey;
   title: string;
   description: string;
   href: string;
+  /** Birincil aksiyon etiketi (emir kipi). */
+  cta: string;
   done: boolean;
 }
 
-/** Dar sidebar için kısa kopya — uzun açıklamalar 214px kolonda 3+ satır olur. */
 const STEP_DEFS = [
   {
     key: 'sync',
     title: 'Mağaza verini senkronla',
-    description: 'Ürünler ve satışlar ikas’tan çekilsin.',
+    description:
+      'Ürünler, stoklar ve son satışlar ikas’tan çekilir. Kurulumda arka planda başlar; bitmediyse buradan elle tetikle.',
     href: '/dashboard/ayarlar#veri-senkron',
+    cta: 'Senkron ayarları',
   },
   {
     key: 'tracker',
     title: 'Takip scriptini kur',
-    description: 'Görüntülenme verisi toplansın.',
-    href: '/dashboard/ayarlar',
+    description:
+      'Vitrindeki ürün görüntülenmeleri toplanır; "çok bakılıp az satan" ürünler Analiz’de görünür.',
+    href: '/dashboard/ayarlar#takip-scripti',
+    cta: 'Scripti kur',
   },
   {
     key: 'threshold',
     title: 'Stok eşiklerini ayarla',
-    description: 'Kritik ve az kalan seviyeleri.',
+    description:
+      'Hangi stok seviyesinin "kritik", hangisinin "az kalan" sayılacağını belirle. Uyarılar, kurallar ve satın alma önerileri bu eşiklere göre çalışır.',
     href: '/dashboard/stok',
+    cta: 'Eşikleri ayarla',
   },
   {
     key: 'report',
-    title: 'Satın alma raporu',
-    description: 'Sipariş önerilerini gör.',
+    title: 'Satın alma raporunu incele',
+    description: 'Satış hızına göre tedarikçi bazlı sipariş önerilerini gör; PDF olarak paylaş.',
     href: '/dashboard/rapor',
+    cta: 'Raporu aç',
   },
 ] as const satisfies ReadonlyArray<Omit<OnboardingStep, 'done'>>;
 
@@ -73,10 +87,11 @@ function readFlag(key: string): boolean {
   }
 }
 
-function writeFlag(key: string): void {
+function writeFlag(key: string, on = true): void {
   if (typeof window === 'undefined') return;
   try {
-    window.localStorage.setItem(key, '1');
+    if (on) window.localStorage.setItem(key, '1');
+    else window.localStorage.removeItem(key);
   } catch {
     // localStorage erişilemezse (private mode) sessiz geç.
   }
@@ -88,72 +103,131 @@ export function markReportViewed(): void {
   writeFlag(REPORT_KEY);
 }
 
-/** Mağaza verisi en az bir kez başarıyla senkronlandı (ayarlar butonu ya da
- *  ilk rapor yüklenişi — sunucu senkronu ensureFreshSync ile zaten yapmıştır). */
+/** Mağaza verisi en az bir kez başarıyla senkronlandı (iyimser — sunucu da bilir). */
 export function markStoreSynced(): void {
   writeFlag(SYNC_KEY);
 }
 
-/** Takip scripti kuruldu — kart anında güncellensin (ayarlar kartı çağırır). */
+/** Takip scripti kuruldu (iyimser — sunucu da bilir). */
 export function markTrackerInstalled(): void {
   writeFlag(TRACKER_KEY);
 }
 
-/** Kartı kalıcı kapat (X butonu). */
+/** Varsayılan 5/10 eşiği bilinçli olarak kullanılacak. */
+export function confirmDefaultThreshold(): void {
+  writeFlag(THRESHOLD_CONFIRMED_KEY);
+}
+
+/** Rehberi gizle ("Rehberi gizle"). */
 export function dismissOnboarding(): void {
   writeFlag(DISMISS_KEY);
 }
 
-/** Kart kalıcı olarak devre dışı mı? (kapatıldı ya da tüm adımlar bitti) */
-export function isOnboardingRetired(): boolean {
-  return readFlag(DISMISS_KEY) || readFlag(COMPLETE_KEY);
+/** Gizlenen rehberi geri getir. */
+export function restoreOnboarding(): void {
+  writeFlag(DISMISS_KEY, false);
 }
 
-/** İlk tamamlanmamış adımın index'i; hepsi bittiyse -1. */
-export function firstIncompleteIndex(steps: ReadonlyArray<{ done: boolean }>): number {
-  return steps.findIndex(s => !s.done);
+/**
+ * İlk açılışta bir kez `true` döner (bayrağı yazar): rehber mezun ya da
+ * gizlenmiş değilse Genel Bakış yerine Başlarken açılsın.
+ */
+export function consumeFirstLanding(): boolean {
+  if (readFlag(LANDED_KEY)) return false;
+  writeFlag(LANDED_KEY);
+  return !readFlag(COMPLETE_KEY) && !readFlag(DISMISS_KEY);
 }
 
-/** `from`dan SONRAKİ ilk tamamlanmamış adım; kalmadıysa -1 (geriye sarmaz). */
-export function nextIncompleteIndex(steps: ReadonlyArray<{ done: boolean }>, from: number): number {
-  for (let i = from + 1; i < steps.length; i++) {
-    if (!steps[i].done) return i;
-  }
-  return -1;
+export interface OnboardingSignals {
+  server: OnboardingStatus | null;
+  storeSynced: boolean;
+  trackerInstalled: boolean;
+  thresholdChanged: boolean;
+  thresholdConfirmed: boolean;
+  reportViewed: boolean;
+  /** Mezun: tüm adımlar bir kez bitti — hepsi tamam sayılır. */
+  complete: boolean;
 }
+
+/** Sunucu + istemci sinyallerinden adım listesini türetir (saf). */
+export function deriveOnboardingSteps(signals: OnboardingSignals): OnboardingStep[] {
+  const { server, complete } = signals;
+  const done: Record<OnboardingStepKey, boolean> = {
+    sync: Boolean(server?.sync) || signals.storeSynced,
+    tracker: Boolean(server?.tracker) || signals.trackerInstalled,
+    threshold: Boolean(server?.threshold) || signals.thresholdChanged || signals.thresholdConfirmed,
+    report: signals.reportViewed,
+  };
+  return STEP_DEFS.map(def => ({ ...def, done: complete || done[def.key] }));
+}
+
+// Sidebar rozeti ve sayfa aynı anda bağlanır — tek uçuşta tek istek.
+let inflight: Promise<OnboardingStatus | null> | null = null;
+
+function fetchServerStatus(): Promise<OnboardingStatus | null> {
+  inflight ??= (async () => {
+    try {
+      const token = await TokenHelpers.getTokenForIframeApp();
+      if (!token) return null;
+      const res = await ApiRequests.onboarding.getStatus(token);
+      return res.data?.data ?? null;
+    } catch {
+      return null;
+    } finally {
+      inflight = null;
+    }
+  })();
+  return inflight;
+}
+
+const EMPTY_STATUS: OnboardingStatus = { sync: false, tracker: false, threshold: false };
 
 export interface OnboardingState {
   steps: OnboardingStep[];
   doneCount: number;
   total: number;
-  /** Tracker durumu henüz bilinmiyor — kart titremesin diye render etme. */
+  /** Sunucu durumu henüz gelmedi — rozet/sayfa titremesin diye bekle. */
   loading: boolean;
-  /** Kalıcı kapalı (dismiss ya da mezuniyet). */
-  retired: boolean;
+  /** Tüm adımlar tamam (bu oturumda ya da daha önce). */
+  complete: boolean;
+  /** Rehber gizlendi. */
+  dismissed: boolean;
   dismiss: () => void;
+  restore: () => void;
 }
 
 /**
  * Onboarding adımlarının canlı durumu. Aynı sekmede `CHANGE_EVENT`, sekmeler
- * arası `storage` event ile senkronize olur; threshold adımı
- * `useStockThreshold`'un kendi canlı senkronundan beslenir.
+ * arası `storage` event ile senkronize olur; eksik adım varken her sayfa
+ * değişiminde sunucu durumu tazelenir (arka plan senkronu, başka sekmede
+ * kurulan script yakalansın).
  */
 export function useOnboardingSteps(): OnboardingState {
-  const [retired, setRetired] = useState(true); // SSR flash önleme: kapalı başla
-  const [trackerInstalled, setTrackerInstalled] = useState<boolean | null>(null);
-  const [reportViewed, setReportViewed] = useState(false);
-  const [storeSynced, setStoreSynced] = useState(false);
+  const [flags, setFlags] = useState({
+    dismissed: false,
+    graduated: true, // SSR flash önleme: ilk boyamada mezun say, fetch yok
+    reportViewed: false,
+    storeSynced: false,
+    trackerInstalled: false,
+    thresholdConfirmed: false,
+    hydrated: false,
+  });
+  const [server, setServer] = useState<OnboardingStatus | null>(null);
   const { threshold } = useStockThreshold();
   const pathname = usePathname();
 
   // Bayrakları oku + değişikliklere abone ol.
   useEffect(() => {
-    const sync = () => {
-      setRetired(isOnboardingRetired());
-      setReportViewed(readFlag(REPORT_KEY));
-      setStoreSynced(readFlag(SYNC_KEY));
-      if (readFlag(TRACKER_KEY)) setTrackerInstalled(true);
-    };
+    const sync = () =>
+      setFlags({
+        dismissed: readFlag(DISMISS_KEY),
+        graduated: readFlag(COMPLETE_KEY),
+        reportViewed: readFlag(REPORT_KEY),
+        storeSynced: readFlag(SYNC_KEY),
+        trackerInstalled: readFlag(TRACKER_KEY),
+        thresholdConfirmed: readFlag(THRESHOLD_CONFIRMED_KEY),
+        hydrated: true,
+      });
     sync();
     window.addEventListener(CHANGE_EVENT, sync);
     window.addEventListener('storage', sync);
@@ -163,91 +237,60 @@ export function useOnboardingSteps(): OnboardingState {
     };
   }, []);
 
-  // Tracker durumunu sunucudan çek — emekli kullanıcı ve pozitif cache'te hiç fetch yok.
-  const fetchTracker = useCallback(async () => {
-    if (isOnboardingRetired() || readFlag(TRACKER_KEY)) {
-      setTrackerInstalled(readFlag(TRACKER_KEY));
-      return;
-    }
-    try {
-      const token = await TokenHelpers.getTokenForIframeApp();
-      if (!token) {
-        setTrackerInstalled(false);
-        return;
-      }
-      const res = await ApiRequests.trackingScript.getStatus(token);
-      const installed = Boolean(res.data?.data?.installed);
-      if (installed) {
-        // Pozitif cache — sonraki yüklemelerde ağ maliyeti sıfır.
-        try {
-          window.localStorage.setItem(TRACKER_KEY, '1');
-        } catch {
-          // Sessiz geç.
-        }
-      }
-      setTrackerInstalled(installed);
-    } catch {
-      setTrackerInstalled(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void fetchTracker();
-  }, [fetchTracker]);
-
-  // Emniyet ağı: ayarlar sayfasından ayrılırken hâlâ kurulu görünmüyorsa bir
-  // kez daha sor — event'imizi atlayan kurulum yolları (başka sekme, tema
-  // editörü) için. Kurulunca cache devreye girer, tekrar sorulmaz.
-  const prevPathRef = useRef(pathname);
-  useEffect(() => {
-    const prev = prevPathRef.current;
-    prevPathRef.current = pathname;
-    if (prev === '/dashboard/ayarlar' && pathname !== prev && trackerInstalled === false) {
-      void fetchTracker();
-    }
-  }, [pathname, trackerInstalled, fetchTracker]);
-
-  const thresholdSet =
+  const thresholdChanged =
     threshold.min !== DEFAULT_STOCK_THRESHOLD.min || threshold.max !== DEFAULT_STOCK_THRESHOLD.max;
 
-  const steps: OnboardingStep[] = STEP_DEFS.map(def => ({
-    ...def,
-    done:
-      def.key === 'sync'
-        ? storeSynced
-        : def.key === 'tracker'
-          ? trackerInstalled === true
-          : def.key === 'threshold'
-            ? thresholdSet
-            : reportViewed,
-  }));
-
+  const steps = deriveOnboardingSteps({
+    server,
+    storeSynced: flags.storeSynced,
+    trackerInstalled: flags.trackerInstalled,
+    thresholdChanged,
+    thresholdConfirmed: flags.thresholdConfirmed,
+    reportViewed: flags.reportViewed,
+    complete: flags.graduated,
+  });
   const doneCount = steps.filter(s => s.done).length;
+  const allDone = doneCount === steps.length;
 
-  // Mezuniyet: hepsi bitti → kalıcı bayrak, kart bir daha maliyet üretmez.
-  // Bilerek CHANGE_EVENT atılmaz: `retired` bu oturumda false kalır ki kart
-  // son adımın "done beat"ini oynatıp kendi çıkış animasyonunu yapabilsin.
+  const refresh = useCallback(async () => {
+    const status = await fetchServerStatus();
+    setServer(status ?? EMPTY_STATUS);
+  }, []);
+
+  // Mezun kullanıcıda ağ maliyeti sıfır; diğerlerinde ilk açılış + eksik
+  // adım varken her sayfa değişimi.
   useEffect(() => {
-    if (!retired && trackerInstalled !== null && doneCount === steps.length) {
+    if (!flags.hydrated) return;
+    if (flags.graduated) {
+      setServer(EMPTY_STATUS);
+      return;
+    }
+    if (server !== null && allDone) return;
+    void refresh();
+    // `server`/`allDone` bilerek dışarıda: yalnız sayfa değişimi tetikler.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flags.hydrated, flags.graduated, pathname, refresh]);
+
+  // Mezuniyet: hepsi bitti → kalıcı bayrak, sonraki oturumlarda fetch yok.
+  // CHANGE_EVENT atılmaz; bu oturumdaki tamamlanma animasyonu bozulmasın.
+  useEffect(() => {
+    if (flags.hydrated && !flags.graduated && server !== null && allDone) {
       try {
         window.localStorage.setItem(COMPLETE_KEY, '1');
       } catch {
         // Sessiz geç.
       }
     }
-  }, [retired, trackerInstalled, doneCount, steps.length]);
-
-  const dismiss = useCallback(() => {
-    dismissOnboarding();
-    setRetired(true);
-  }, []);
+  }, [flags.hydrated, flags.graduated, server, allDone]);
 
   return {
     steps,
     doneCount,
     total: steps.length,
-    loading: trackerInstalled === null,
-    retired,
-    dismiss,
+    loading: !flags.hydrated || server === null,
+    complete: allDone,
+    dismissed: flags.dismissed,
+    dismiss: dismissOnboarding,
+    restore: restoreOnboarding,
   };
 }

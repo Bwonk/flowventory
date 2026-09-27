@@ -12,6 +12,7 @@ import { installOrUpdateTrackingScript, resolvePublicApiUrl } from '@/lib/tracki
 import { registerWebhooks } from '@/lib/sync/register-webhooks';
 import { NextRequest, NextResponse, after } from 'next/server';
 import { runFullSync } from '@/lib/sync/ikas-sync';
+import { ensureTrial } from '@/lib/billing/subscription-service';
 import z from 'zod';
 
 const callbackSchema = z.object({
@@ -153,6 +154,15 @@ export async function GET(request: NextRequest) {
     after(() =>
       runFullSync(merchantId, token).catch(error => {
         logger.error('Initial sync after install failed (non-fatal)', { merchantId, error });
+      }),
+    );
+
+    // Deneme süresi kurulum anında başlar (ikas denemeyi tutmaz). Kayıt varsa
+    // (yeniden kurulum) dokunulmaz; hata kurulumu kırmaz — ilk abonelik
+    // sorgusu kaydı yine oluşturur.
+    after(() =>
+      ensureTrial(merchantId).catch(error => {
+        logger.error('Trial start failed (non-fatal)', { merchantId, error });
       }),
     );
 
