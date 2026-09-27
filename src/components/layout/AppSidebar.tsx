@@ -3,9 +3,9 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Store } from 'lucide-react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { BrandLogo } from '@/components/shared/BrandLogo';
 import { NotificationBell } from './NotificationBell';
+import { OnboardingCard } from './OnboardingCard';
 import { SidebarFeedback } from './SidebarFeedback';
 import { AdjustmentsHorizontalIcon } from '@/components/ui/icons/adjustments-horizontal';
 import { ClipboardDocumentListIcon } from '@/components/ui/icons/clipboard-document-list';
@@ -13,20 +13,13 @@ import { Cog6ToothIcon } from '@/components/ui/icons/cog-6-tooth';
 import { CubeIcon } from '@/components/ui/icons/cube';
 import { PresentationChartLineIcon } from '@/components/ui/icons/presentation-chart-line';
 import { RectangleGroupIcon } from '@/components/ui/icons/rectangle-group';
-import { RocketLaunchIcon } from '@/components/ui/icons/rocket-launch';
 import { useIconHover, type AnimatedIcon } from '@/components/ui/icons/use-icon-hover';
-import { useSubscription } from '@/lib/billing/use-subscription';
-import { useOnboardingDialog } from '@/components/onboarding/onboarding-dialog-context';
-import { useOnboardingSteps } from '@/lib/onboarding';
-import { getOnboardingNavState } from '@/lib/onboarding-nav';
-import { EASE_OUT } from '@/lib/motion';
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
   SidebarMenu,
-  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
@@ -82,63 +75,6 @@ function NavMenuItem({ item, active }: { item: NavItem; active: boolean }) {
 }
 
 /**
- * "Başlarken" satırı — eski footer kartının yerine; sayfaya değil Başlarken
- * popup'ına açılır. Kurulum sürerken ilerleme rozeti ("2/4"), kurulum bitti
- * ama abonelik aktif değilse abonelik rozeti; ikisi de tamamsa satır çöker ve
- * kaybolur (getOnboardingNavState).
- */
-function OnboardingNavItem() {
-  const onboarding = useOnboardingSteps();
-  const { openOnboarding } = useOnboardingDialog();
-  const { summary } = useSubscription();
-  const reduceMotion = useReducedMotion();
-  const { ref, hoverProps } = useIconHover();
-  const { visible, badge } = getOnboardingNavState({
-    doneCount: onboarding.doneCount,
-    total: onboarding.total,
-    complete: onboarding.complete,
-    dismissed: onboarding.dismissed,
-    subscription: summary?.state ?? null,
-  });
-  const tooltip = badge ? `Başlarken · ${badge}` : 'Başlarken';
-
-  return (
-    <AnimatePresence initial={false}>
-      {visible && (
-        <motion.li
-          key="baslarken"
-          data-slot="sidebar-menu-item"
-          data-sidebar="menu-item"
-          className="group/menu-item relative"
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: 'auto' }}
-          exit={{ opacity: 0, height: 0 }}
-          transition={{
-            opacity: { duration: reduceMotion ? 0 : 0.15 },
-            height: { duration: reduceMotion ? 0 : 0.2, ease: EASE_OUT },
-          }}
-        >
-          <SidebarMenuButton
-            tooltip={tooltip}
-            aria-haspopup="dialog"
-            onClick={() => openOnboarding()}
-            {...hoverProps}
-          >
-            <RocketLaunchIcon ref={ref} size={16} className="flex shrink-0" aria-hidden />
-            <span>Başlarken</span>
-          </SidebarMenuButton>
-          {badge && (
-            <SidebarMenuBadge className="font-mono text-[10px] text-muted-foreground">
-              {badge}
-            </SidebarMenuBadge>
-          )}
-        </motion.li>
-      )}
-    </AnimatePresence>
-  );
-}
-
-/**
  * Flowventory ana navigasyon kenar çubuğu (animate-ui radix sidebar).
  * Masaüstünde ikon moduna daralabilir; dar iframe genişliklerinde Sheet olarak açılır.
  */
@@ -160,7 +96,6 @@ export function AppSidebar({ storeName }: AppSidebarProps) {
 
       <SidebarContent>
         <SidebarMenu className="px-2 pt-2">
-          <OnboardingNavItem />
           {NAV_ITEMS.map(item => (
             <NavMenuItem key={item.href} item={item} active={isActive(pathname, item)} />
           ))}
@@ -168,6 +103,7 @@ export function AppSidebar({ storeName }: AppSidebarProps) {
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border">
+        <OnboardingCard />
         <NotificationBell />
         <SidebarFeedback />
         <div className="flex items-center gap-2 overflow-hidden px-2 pb-1">

@@ -1,7 +1,11 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { deriveOnboardingSteps, type OnboardingSignals } from '@/lib/onboarding';
-import { getOnboardingNavState, type OnboardingNavInput } from '@/lib/onboarding-nav';
+import {
+  deriveOnboardingSteps,
+  firstIncompleteIndex,
+  nextIncompleteIndex,
+  type OnboardingSignals,
+} from '@/lib/onboarding';
 
 const signals = (overrides: Partial<OnboardingSignals> = {}): OnboardingSignals => ({
   server: { sync: false, tracker: false, threshold: false },
@@ -46,35 +50,28 @@ describe('deriveOnboardingSteps', () => {
   });
 });
 
-describe('getOnboardingNavState', () => {
-  const nav = (overrides: Partial<OnboardingNavInput> = {}) =>
-    getOnboardingNavState({
-      doneCount: 2,
-      total: 4,
-      complete: false,
-      dismissed: false,
-      subscription: null,
-      ...overrides,
-    });
+const s = (...done: boolean[]) => done.map(d => ({ done: d }));
 
-  it('kurulum sürerken ilerleme rozeti', () => {
-    expect(nav()).toEqual({ visible: true, badge: '2/4' });
-    expect(nav({ subscription: 'active' })).toEqual({ visible: true, badge: '2/4' });
+describe('firstIncompleteIndex', () => {
+  it('hiçbiri bitmemişse 0 döner', () => {
+    expect(firstIncompleteIndex(s(false, false, false))).toBe(0);
   });
 
-  it('kurulum bitti, abonelik denemede → Deneme', () => {
-    expect(nav({ complete: true, subscription: 'trial' })).toEqual({ visible: true, badge: 'Deneme' });
+  it('aradaki eksik adımı bulur', () => {
+    expect(firstIncompleteIndex(s(true, false, true))).toBe(1);
   });
 
-  it('rehber gizlendi ama deneme bitti → Bitti', () => {
-    expect(nav({ dismissed: true, subscription: 'expired' })).toEqual({ visible: true, badge: 'Bitti' });
+  it('hepsi bittiyse -1 döner', () => {
+    expect(firstIncompleteIndex(s(true, true, true))).toBe(-1);
+  });
+});
+
+describe('nextIncompleteIndex', () => {
+  it('tamamlanmış adımların üzerinden atlar', () => {
+    expect(nextIncompleteIndex(s(false, true, false), 0)).toBe(2);
   });
 
-  it('kurulum bitti ve abonelik aktif → satır emekli', () => {
-    expect(nav({ complete: true, subscription: 'active' })).toEqual({ visible: false, badge: null });
-  });
-
-  it('abonelik bilinmezken kurulum bitmişse satır görünmez', () => {
-    expect(nav({ complete: true, subscription: null })).toEqual({ visible: false, badge: null });
+  it('geriye sarmaz: sonrasında eksik yoksa -1 döner', () => {
+    expect(nextIncompleteIndex(s(false, true, true), 0)).toBe(-1);
   });
 });

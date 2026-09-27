@@ -115,7 +115,7 @@ dev branch'ine bağlanmak yeterli. Şema değişikliğinde: `pnpm prisma migrate
 - [ ] (Resend key girildiyse) e-posta geliyor mu — Ayarlar'dan adres + toggle
 
 ### J) Başlarken popup'ı + abonelik (27 Eyl 2026 — docs/plans/onboarding-sekmesi-abonelik.md)
-- [ ] Nav'da en üstte "Başlarken" + "n/4" rozeti; tıklayınca popup açılıyor; ikon modunda rozet gizli, tooltip "Başlarken · n/4"
+- [ ] Sidebar footer'ında kayan "Başlarken" kartı (nav'da tab butonu yok): ok/noktalarla geziliyor, adım tamamlanınca ✓ + ~1 sn sonra sıradaki eksik adıma kayıyor, ✕ ile kapanınca geri gelmiyor, ikon modunda gizli
 - [ ] İlk açılışta popup bir kez kendiliğinden açılıyor, sonraki girişlerde açılmıyor
 - [ ] Adım 1: özellik listesi tıklanınca/İleri ile sağdaki önizleme değişiyor; ←/→ tuşları çalışıyor
 - [ ] Adım 2: 4 adımın durumu başka tarayıcıda da doğru; "Git" butonu popup'ı kapatıp ilgili sayfaya gidiyor; "Varsayılanı kullan (5/10)" eşik adımını tamamlıyor

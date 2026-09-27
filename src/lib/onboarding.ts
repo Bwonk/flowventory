@@ -38,6 +38,8 @@ export interface OnboardingStep {
   key: OnboardingStepKey;
   title: string;
   description: string;
+  /** Dar sidebar kartı için kısa kopya — uzun açıklama 214px kolonda 3+ satır olur. */
+  shortDescription: string;
   href: string;
   /** Birincil aksiyon etiketi (emir kipi). */
   cta: string;
@@ -50,6 +52,7 @@ const STEP_DEFS = [
     title: 'Mağaza verini senkronla',
     description:
       'Ürünler, stoklar ve son satışlar ikas’tan çekilir. Kurulumda arka planda başlar; bitmediyse buradan elle tetikle.',
+    shortDescription: 'Ürünler ve satışlar ikas’tan çekilsin.',
     href: '/dashboard/ayarlar#veri-senkron',
     cta: 'Senkron ayarları',
   },
@@ -58,6 +61,7 @@ const STEP_DEFS = [
     title: 'Takip scriptini kur',
     description:
       'Vitrindeki ürün görüntülenmeleri toplanır; "çok bakılıp az satan" ürünler Analiz’de görünür.',
+    shortDescription: 'Görüntülenme verisi toplansın.',
     href: '/dashboard/ayarlar#takip-scripti',
     cta: 'Scripti kur',
   },
@@ -66,6 +70,7 @@ const STEP_DEFS = [
     title: 'Stok eşiklerini ayarla',
     description:
       'Hangi stok seviyesinin "kritik", hangisinin "az kalan" sayılacağını belirle. Uyarılar, kurallar ve satın alma önerileri bu eşiklere göre çalışır.',
+    shortDescription: 'Kritik ve az kalan seviyeleri.',
     href: '/dashboard/stok',
     cta: 'Eşikleri ayarla',
   },
@@ -73,6 +78,7 @@ const STEP_DEFS = [
     key: 'report',
     title: 'Satın alma raporunu incele',
     description: 'Satış hızına göre tedarikçi bazlı sipariş önerilerini gör; PDF olarak paylaş.',
+    shortDescription: 'Sipariş önerilerini gör.',
     href: '/dashboard/rapor',
     cta: 'Raporu aç',
   },
@@ -138,6 +144,19 @@ export function consumeFirstLanding(): boolean {
   return !readFlag(COMPLETE_KEY) && !readFlag(DISMISS_KEY);
 }
 
+/** İlk tamamlanmamış adımın index'i; hepsi bittiyse -1. */
+export function firstIncompleteIndex(steps: ReadonlyArray<{ done: boolean }>): number {
+  return steps.findIndex(s => !s.done);
+}
+
+/** `from`dan SONRAKİ ilk tamamlanmamış adım; kalmadıysa -1 (geriye sarmaz). */
+export function nextIncompleteIndex(steps: ReadonlyArray<{ done: boolean }>, from: number): number {
+  for (let i = from + 1; i < steps.length; i++) {
+    if (!steps[i].done) return i;
+  }
+  return -1;
+}
+
 export interface OnboardingSignals {
   server: OnboardingStatus | null;
   storeSynced: boolean;
@@ -192,6 +211,12 @@ export interface OnboardingState {
   complete: boolean;
   /** Rehber gizlendi. */
   dismissed: boolean;
+  /**
+   * Sidebar kartı kalıcı kapalı: gizlendi ya da önceki oturumda mezun oldu.
+   * Bu oturumda tamamlanırsa false kalır — kart son adımın tikini ve kendi
+   * çıkış animasyonunu oynatabilsin.
+   */
+  retired: boolean;
   dismiss: () => void;
   restore: () => void;
 }
@@ -290,6 +315,7 @@ export function useOnboardingSteps(): OnboardingState {
     loading: !flags.hydrated || server === null,
     complete: allDone,
     dismissed: flags.dismissed,
+    retired: !flags.hydrated || flags.dismissed || flags.graduated,
     dismiss: dismissOnboarding,
     restore: restoreOnboarding,
   };
