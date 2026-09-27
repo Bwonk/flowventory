@@ -82,6 +82,7 @@ const FEATURES: ReadonlyArray<{
       rows: [
         { label: 'Stok 10’un altına düşerse', value: 'Bildirim' },
         { label: '3 gün içinde 5 daha düşerse', value: 'E-posta' },
+        { label: 'Stok 0’a inerse', value: 'Stok +20' },
       ],
     },
   },
@@ -94,6 +95,7 @@ const FEATURES: ReadonlyArray<{
       eyebrow: 'Son 30 gün',
       rows: [
         { label: 'Keten gömlek', value: '2.140 → 6 satış', tone: 'warning' },
+        { label: 'Keten pantolon', value: '1.320 → 9 satış', tone: 'warning' },
         { label: 'Deri cüzdan', value: '980 → 41 satış', tone: 'healthy' },
       ],
     },
@@ -114,7 +116,7 @@ function OnboardingDialogHeader() {
   return (
     <DialogHeader className="items-center !text-center">
       <p className="font-mono text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-        Başlarken · {currentStep}/{ONBOARDING_TOTAL_STEPS}
+        Başlarken
       </p>
       <DialogTitle className="text-xl font-semibold tracking-tight text-foreground md:text-2xl">
         {config.title}
@@ -174,7 +176,7 @@ function FeatureStep() {
 
       {/* Görsel yerine veri-mürekkep önizlemesi (dekoratif). */}
       <div className="order-1 w-full md:order-2 md:w-1/2" aria-hidden>
-        <div className="relative flex aspect-[4/3] flex-col justify-center overflow-hidden rounded-lg border border-hairline bg-background p-5">
+        <div className="relative aspect-[4/3] overflow-hidden rounded-lg border border-hairline bg-background p-5">
           <AnimatePresence initial={false} mode="wait">
             <motion.div
               key={active.id}
@@ -254,13 +256,7 @@ function SetupStep({ onNavigate }: { onNavigate: (href: string) => void }) {
               </p>
               <p className="mt-0.5 text-sm text-muted-foreground">{step.description}</p>
               {step.key === 'threshold' && !step.done && (
-                <Button
-                  type="button"
-                  size="xs"
-                  variant="ghost"
-                  className="-ml-2 mt-1 text-muted-foreground"
-                  onClick={confirmDefaultThreshold}
-                >
+                <Button type="button" size="xs" variant="outline" className="mt-2" onClick={confirmDefaultThreshold}>
                   Varsayılanı kullan ({DEFAULT_STOCK_THRESHOLD.min}/{DEFAULT_STOCK_THRESHOLD.max})
                 </Button>
               )}
@@ -313,10 +309,12 @@ export function OnboardingDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="w-full max-w-[calc(100dvw-2rem)] border-none bg-transparent p-0 shadow-none sm:max-w-3xl"
+        // Ortalı değil üste sabit: adımların yüksekliği farklı, ortalıyken
+        // adım değişince üst kenar zıplıyordu (QA, 27 Eyl 2026).
+        className="top-4 w-full max-w-[calc(100dvw-2rem)] translate-y-0 border-none bg-transparent p-0 shadow-none sm:top-12 sm:max-w-3xl"
         showCloseButton={false}
       >
-        <div className="max-h-[calc(100dvh-2rem)] w-full overflow-y-auto overscroll-contain rounded-2xl bg-muted p-0.5 md:p-2">
+        <div className="max-h-[calc(100dvh-2rem)] w-full overflow-y-auto overscroll-contain rounded-2xl bg-muted p-0.5 sm:max-h-[calc(100dvh-6rem)] md:p-2">
           <Onboarding
             className="relative"
             value={step}
@@ -326,7 +324,7 @@ export function OnboardingDialog({
             totalSteps={ONBOARDING_TOTAL_STEPS}
           >
             <OnboardingDialogHeader />
-            <div className="my-6 min-h-70">
+            <div className="my-6 min-h-48">
               <Onboarding.Step step={1}>
                 <FeatureStep />
               </Onboarding.Step>

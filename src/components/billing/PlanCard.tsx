@@ -68,9 +68,7 @@ export function PlanCard() {
 
   const ctaLabel = pending
     ? 'Ödeme bekleniyor…'
-    : !summary?.billingEnabled
-      ? 'Abonelik çok yakında'
-      : state === 'will_be_removed'
+    : state === 'will_be_removed'
         ? 'Aboneliği yenile'
         : 'Şimdi abone ol';
 
@@ -118,13 +116,17 @@ export function PlanCard() {
                 Tekrar dene
               </Button>
             </div>
-          ) : state === 'active' ? null : (
+          ) : state === 'active' ? null : !summary?.billingEnabled ? (
+            <p className="rounded-md border border-primary-foreground/15 px-4 py-2 text-center text-sm text-primary-foreground/60">
+              Abonelik çok yakında açılıyor
+            </p>
+          ) : (
             <div className="flex flex-col gap-2 sm:flex-row">
               <Button
                 type="button"
-                className="w-full flex-1 bg-card text-foreground hover:bg-card/90"
+                className="w-full flex-1 bg-card text-foreground hover:bg-card/90 disabled:bg-primary-foreground/10 disabled:text-primary-foreground/60 disabled:opacity-100"
                 onClick={() => void handleCheckout()}
-                disabled={!summary?.billingEnabled || starting || pending}
+                disabled={starting || pending}
               >
                 {ctaLabel}
               </Button>

@@ -446,9 +446,12 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   Navigation, ChoiceGroup, FeatureCarousel, TipsList); yalnız sınıflar bu dile
   çevrildi. Kullanım demonun kalıbıdır:
   [OnboardingDialog.tsx](src/components/onboarding/OnboardingDialog.tsx) —
-  şeffaf `DialogContent` (`sm:max-w-3xl`, kapat X yok; Esc/dış tık kapatır)
+  şeffaf `DialogContent` (`sm:max-w-3xl`, **üste sabit** `top-4 sm:top-12` —
+  ortalıyken adım yükseklikleri farklı olduğu için üst kenar zıplıyordu; adım
+  alanı `min-h-48`; kapat X yok; Esc/dış tık kapatır)
   içinde `bg-muted` dış hale `rounded-2xl p-2` + hairline kart `rounded-lg`
-  (konsantrik 16 = 8 + 8). Başlık ortalı: mono eyebrow "Başlarken · n/3" +
+  (konsantrik 16 = 8 + 8). Başlık ortalı: mono eyebrow "Başlarken" (sayaçsız —
+  konum pill'lerde; kurulum adımındaki "n / 4 tamamlandı" tek sayaç kalır) +
   h2 (`text-xl md:text-2xl font-semibold tracking-tight`) + açıklama + pill
   göstergesi (aktif `bg-foreground`, geçilen `bg-muted-foreground`, bekleyen
   `bg-hairline`). Adımlar: 1) özellik turu (`FeatureCarousel`; seçili öğe
@@ -472,7 +475,11 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   (`primary-foreground/70`), fiyat KPI dilinde `font-mono text-4xl
   tabular-nums` + "/yıllık" + soluk "+ KDV", açıklama, iki kolon özellik
   listesi (tik `primary-foreground/50` — renkli tik yok), tam genişlik
-  **ters buton** (`bg-card text-foreground`; ikinci accent/teal yok), altında
+  **ters buton** (`bg-card text-foreground`; ikinci accent/teal yok; pasifken
+  `bg-primary-foreground/10` + soluk metin, opaklık düşürülmez — koyu zeminde
+  bulanık griye dönüyordu; faturalandırma kapalıyken buton yerine
+  `border-primary-foreground/15` çerçeveli soluk "Abonelik çok yakında
+  açılıyor" etiketi), altında
   statik durum satırı (kalan deneme günü — geri sayım animasyonu yok). Kartın
   altında ortalı `text-xs` oranlama dipnotu. Ayarlar'da yalnız rozet + durum
   satırı + "Planı gör" ([SubscriptionPanel.tsx](src/components/billing/SubscriptionPanel.tsx)).
