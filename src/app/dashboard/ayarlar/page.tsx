@@ -64,7 +64,7 @@ export default function AyarlarPage() {
             title="Plan ve abonelik"
             description="Mevcut planın, deneme süren ve yenileme tarihi."
           >
-            <SubscriptionPanel compact />
+            <SubscriptionPanel />
           </SettingsSection>
         </section>
       )}

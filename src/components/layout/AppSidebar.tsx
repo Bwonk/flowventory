@@ -16,6 +16,7 @@ import { RectangleGroupIcon } from '@/components/ui/icons/rectangle-group';
 import { RocketLaunchIcon } from '@/components/ui/icons/rocket-launch';
 import { useIconHover, type AnimatedIcon } from '@/components/ui/icons/use-icon-hover';
 import { useSubscription } from '@/lib/billing/use-subscription';
+import { useOnboardingDialog } from '@/components/onboarding/onboarding-dialog-context';
 import { useOnboardingSteps } from '@/lib/onboarding';
 import { getOnboardingNavState } from '@/lib/onboarding-nav';
 import { EASE_OUT } from '@/lib/motion';
@@ -80,15 +81,15 @@ function NavMenuItem({ item, active }: { item: NavItem; active: boolean }) {
   );
 }
 
-const BASLARKEN_HREF = '/dashboard/baslarken';
-
 /**
- * "Başlarken" satırı — eski footer kartının yerine. Kurulum sürerken ilerleme
- * rozeti ("2/4"), kurulum bitti ama abonelik aktif değilse abonelik rozeti;
- * ikisi de tamamsa satır çöker ve kaybolur (getOnboardingNavState).
+ * "Başlarken" satırı — eski footer kartının yerine; sayfaya değil Başlarken
+ * popup'ına açılır. Kurulum sürerken ilerleme rozeti ("2/4"), kurulum bitti
+ * ama abonelik aktif değilse abonelik rozeti; ikisi de tamamsa satır çöker ve
+ * kaybolur (getOnboardingNavState).
  */
-function OnboardingNavItem({ pathname }: { pathname: string }) {
+function OnboardingNavItem() {
   const onboarding = useOnboardingSteps();
+  const { openOnboarding } = useOnboardingDialog();
   const { summary } = useSubscription();
   const reduceMotion = useReducedMotion();
   const { ref, hoverProps } = useIconHover();
@@ -99,7 +100,6 @@ function OnboardingNavItem({ pathname }: { pathname: string }) {
     dismissed: onboarding.dismissed,
     subscription: summary?.state ?? null,
   });
-  const active = pathname === BASLARKEN_HREF;
   const tooltip = badge ? `Başlarken · ${badge}` : 'Başlarken';
 
   return (
@@ -118,11 +118,14 @@ function OnboardingNavItem({ pathname }: { pathname: string }) {
             height: { duration: reduceMotion ? 0 : 0.2, ease: EASE_OUT },
           }}
         >
-          <SidebarMenuButton asChild isActive={active} tooltip={tooltip}>
-            <Link href={BASLARKEN_HREF} aria-current={active ? 'page' : undefined} {...hoverProps}>
-              <RocketLaunchIcon ref={ref} size={16} className="flex shrink-0" aria-hidden />
-              <span>Başlarken</span>
-            </Link>
+          <SidebarMenuButton
+            tooltip={tooltip}
+            aria-haspopup="dialog"
+            onClick={() => openOnboarding()}
+            {...hoverProps}
+          >
+            <RocketLaunchIcon ref={ref} size={16} className="flex shrink-0" aria-hidden />
+            <span>Başlarken</span>
           </SidebarMenuButton>
           {badge && (
             <SidebarMenuBadge className="font-mono text-[10px] text-muted-foreground">
@@ -157,7 +160,7 @@ export function AppSidebar({ storeName }: AppSidebarProps) {
 
       <SidebarContent>
         <SidebarMenu className="px-2 pt-2">
-          <OnboardingNavItem pathname={pathname} />
+          <OnboardingNavItem />
           {NAV_ITEMS.map(item => (
             <NavMenuItem key={item.href} item={item} active={isActive(pathname, item)} />
           ))}

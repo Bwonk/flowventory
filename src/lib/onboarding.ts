@@ -29,7 +29,7 @@ const TRACKER_KEY = 'flowventory:onboarding-tracker'; // '1' = kurulu görüldü
 const SYNC_KEY = 'flowventory:store-synced'; // ilk başarılı veri senkronu (iyimser)
 const THRESHOLD_CONFIRMED_KEY = 'flowventory:threshold-confirmed'; // varsayılan eşik bilinçli onaylandı
 const COMPLETE_KEY = 'flowventory:onboarding-complete'; // mezun: tüm adımlar bitti, fetch yok
-const LANDED_KEY = 'flowventory:onboarding-landed'; // ilk açılış yönlendirmesi yapıldı
+const LANDED_KEY = 'flowventory:onboarding-popup-seen'; // ilk açılış popup'ı gösterildi
 const CHANGE_EVENT = 'flowventory:onboarding-change';
 
 export type OnboardingStepKey = 'sync' | 'tracker' | 'threshold' | 'report';
@@ -130,7 +130,7 @@ export function restoreOnboarding(): void {
 
 /**
  * İlk açılışta bir kez `true` döner (bayrağı yazar): rehber mezun ya da
- * gizlenmiş değilse Genel Bakış yerine Başlarken açılsın.
+ * gizlenmiş değilse Başlarken popup'ı kendiliğinden açılsın.
  */
 export function consumeFirstLanding(): boolean {
   if (readFlag(LANDED_KEY)) return false;

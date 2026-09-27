@@ -1,243 +1,137 @@
-'use client';
+"use client";
 
+/**
+ * cult-ui `onboarding` — upstream: github.com/nolly-studio/cult-ui
+ * (apps/www/registry/default/ui/onboarding.tsx). `shadcn add
+ * https://cult-ui.com/r/onboarding.json` cult-ui.com'un bot duvarı (429)
+ * yüzünden çalışmadığından GitHub raw'dan alındı. API upstream'le aynı;
+ * yalnız görsel sınıflar DESIGN.md'ye çevrildi (hairline kart, gölgesiz,
+ * rounded-lg, serif başlık yok, transition-all yok, nokta tonları ink) ve
+ * `@radix-ui/react-use-controllable-state` yerine küçük yerel eşdeğer
+ * kullanıldı (paket doğrudan bağımlılık değil).
+ */
+
+import { cva, type VariantProps } from "class-variance-authority";
+import type * as React from "react";
 import {
+  Children,
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useId,
   useMemo,
-  useRef,
   useState,
-  type ComponentPropsWithoutRef,
-  type KeyboardEvent,
-  type ReactNode,
-} from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { Check, ChevronDown } from 'lucide-react';
-import { AnimatedNumber } from '@/components/shared/AnimatedNumber';
-import { PRESS_FEEDBACK_CLASS, SPRING, springOrInstant } from '@/lib/motion';
-import { cn } from '@/lib/utils';
-import { nextOpenKey, type OnboardingStepState } from './onboarding-steps';
+  type PropsWithChildren,
+  type SetStateAction,
+} from "react";
 
-export { nextOpenKey, type OnboardingStepState };
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
-/**
- * Kurulum rehberi (checklist) — cult-ui `onboarding` uyarlaması
- * (github.com/nolly-studio/cult-ui, registry/default/ui/onboarding.tsx).
- *
- * Upstream doğrusal bir ilk açılış sihirbazıdır (İleri/Geri, aktif olmayan
- * adım unmount). Burada korunanlar: compound API, `data-slot` kancaları,
- * controlled/uncontrolled açık adım (upstream'in `useControllableState`'i
- * yerine küçük yerel eşdeğeri — `radix-ui/internal` bu projenin
- * moduleResolution'ında çözülmüyor) ve
- * `role="progressbar"` pill göstergesi. Değişen: adımların her biri kendi
- * `done` durumunu taşır (sıradan bağımsız), adımlar akordeon öğesidir (tek
- * adım açık, yükseklik geçişli), açık adım tamamlanınca kısa bir bekleyişten
- * sonra sıradaki eksik adım açılır. Görsel dil DESIGN.md'ye çevrildi: hairline
- * kart, gölgesiz, serif başlık / rounded-xl buton / transition-all yok;
- * hareket `src/lib/motion.ts` token'larından. Upstream'in FeatureCarousel,
- * TipsList, ChoiceGroup ve doğrusal Navigation parçaları alınmadı.
- */
-
-interface OnboardingContextValue {
-  steps: ReadonlyArray<OnboardingStepState>;
-  openKey: string | null;
-  setOpenKey: (key: string | null) => void;
-  doneCount: number;
-  total: number;
-  baseId: string;
-}
-
-const OnboardingContext = createContext<OnboardingContextValue | null>(null);
-
-export function useOnboarding(): OnboardingContextValue {
-  const ctx = useContext(OnboardingContext);
-  if (!ctx) throw new Error('Onboarding parçaları <Onboarding> içinde kullanılmalı');
-  return ctx;
-}
-
-// Tamamlanan adımın tikinin okunması için bekleme — hareket değil zamanlama
-// olduğundan reduced-motion'da da korunur (eski sidebar kartıyla aynı süre).
-const DEFAULT_ADVANCE_DELAY_MS = 900;
-
-/** Controlled (`value` verildiyse) ya da iç state; her değişimde `onChange`. */
-function useControllableValue<T>(value: T | undefined, defaultValue: T, onChange?: (next: T) => void) {
-  const [inner, setInner] = useState(defaultValue);
-  const controlled = value !== undefined;
-  const current = controlled ? value : inner;
+/** `@radix-ui/react-use-controllable-state` eşdeğeri (prop / defaultProp / onChange). */
+function useControllableState<T>({
+  prop,
+  defaultProp,
+  onChange,
+}: {
+  prop?: T;
+  defaultProp: T;
+  onChange?: (value: T) => void;
+}) {
+  const [inner, setInner] = useState(defaultProp);
+  const controlled = prop !== undefined;
+  const value = controlled ? prop : inner;
   const setValue = useCallback(
-    (next: T) => {
-      if (!controlled) setInner(next);
-      if (next !== current) onChange?.(next);
+    (next: SetStateAction<T>) => {
+      const resolved =
+        typeof next === "function" ? (next as (prev: T) => T)(value) : next;
+      if (!controlled) setInner(resolved);
+      if (resolved !== value) onChange?.(resolved);
     },
-    [controlled, current, onChange],
+    [controlled, value, onChange]
   );
-  return [current, setValue] as const;
+  return [value, setValue] as const;
 }
 
-// ─── Root ─────────────────────────────────────────────────────────────────
-
-export interface OnboardingProps extends Omit<ComponentPropsWithoutRef<'section'>, 'defaultValue'> {
-  steps: ReadonlyArray<OnboardingStepState>;
-  /** Açık adımın key'i (controlled); null = hepsi kapalı. */
-  value?: string | null;
-  /** Uncontrolled başlangıç; verilmezse ilk eksik adım. */
-  defaultValue?: string | null;
-  onValueChange?: (key: string | null) => void;
-  /** Tüm adımlar bu oturumda tamamlandığında bir kez (açılışta zaten bitmişse çağrılmaz). */
-  onComplete?: () => void;
-  /** Açık adım tamamlanınca sıradakine geçmeden önceki bekleme; 0 = otomatik geçiş yok. */
-  advanceDelayMs?: number;
-}
-
-function OnboardingRoot({
-  steps,
-  value,
-  defaultValue,
-  onValueChange,
-  onComplete,
-  advanceDelayMs = DEFAULT_ADVANCE_DELAY_MS,
-  className,
-  children,
-  ...props
-}: OnboardingProps) {
-  const baseId = useId();
-  const [openKey, setOpenKey] = useControllableValue<string | null>(
-    value,
-    defaultValue !== undefined ? defaultValue : (steps.find(s => !s.done)?.key ?? null),
-    onValueChange,
-  );
-
-  const doneCount = steps.filter(s => s.done).length;
-  const total = steps.length;
-
-  // Zamanlayıcı geri çağrısı en güncel adımları ve callback'leri okusun diye.
-  const latestRef = useRef({ steps, setOpenKey, onComplete });
-  useEffect(() => {
-    latestRef.current = { steps, setOpenKey, onComplete };
-  });
-
-  // Açık adım false→true olduysa bekle, sonra sıradaki eksik adımı aç. Açık
-  // olmayan adımların tamamlanması açık adımı oynatmaz. Zamanlayıcı ref'te:
-  // `steps` her render'da yeni dizi geldiğinden effect temizliğine bağlansa
-  // her yeniden render'da iptal olurdu (ve geçiş bir daha tetiklenmezdi).
-  const prevDoneRef = useRef<Map<string, boolean> | null>(null);
-  const advanceTimerRef = useRef<number | null>(null);
-  useEffect(() => {
-    const prev = prevDoneRef.current;
-    prevDoneRef.current = new Map(steps.map(s => [s.key, s.done]));
-    if (prev === null) return;
-
-    const wasAllDone = prev.size > 0 && [...prev.values()].every(Boolean);
-    if (!wasAllDone && total > 0 && doneCount === total) latestRef.current.onComplete?.();
-
-    if (advanceDelayMs <= 0 || openKey === null || advanceTimerRef.current !== null) return;
-    const openStep = steps.find(s => s.key === openKey);
-    if (!openStep?.done || prev.get(openKey) !== false) return;
-
-    advanceTimerRef.current = window.setTimeout(() => {
-      advanceTimerRef.current = null;
-      const latest = latestRef.current;
-      latest.setOpenKey(nextOpenKey(latest.steps, openKey));
-    }, advanceDelayMs);
-  }, [steps, openKey, advanceDelayMs, doneCount, total]);
-
-  // Açık adım değişince (kullanıcı başka adımı açtı) ya da unmount'ta bekleyen
-  // otomatik geçiş iptal — kullanıcı niyeti önceliklidir.
-  useEffect(
-    () => () => {
-      if (advanceTimerRef.current !== null) {
-        window.clearTimeout(advanceTimerRef.current);
-        advanceTimerRef.current = null;
-      }
+const stepIndicatorVariants = cva("flex items-center justify-center gap-2", {
+  variants: {
+    variant: {
+      dots: "",
+      pills: "",
     },
-    [openKey],
-  );
+  },
+  defaultVariants: {
+    variant: "dots",
+  },
+});
 
-  const context = useMemo<OnboardingContextValue>(
-    () => ({ steps, openKey, setOpenKey, doneCount, total, baseId }),
-    [steps, openKey, setOpenKey, doneCount, total, baseId],
-  );
+const stepDotVariants = cva("rounded-full transition-colors duration-150", {
+  variants: {
+    variant: {
+      dots: "data-[state=active]:bg-foreground data-[state=completed]:bg-muted-foreground data-[state=inactive]:bg-hairline size-2",
+      pills:
+        "data-[state=active]:bg-foreground data-[state=completed]:bg-muted-foreground data-[state=inactive]:bg-hairline h-1 max-w-8 flex-1 rounded-full",
+    },
+  },
+  defaultVariants: {
+    variant: "dots",
+  },
+});
 
-  return (
-    <OnboardingContext.Provider value={context}>
-      <section
-        data-slot="onboarding"
-        className={cn('overflow-hidden rounded-lg border border-hairline bg-card', className)}
-        {...props}
-      >
-        {children}
-      </section>
-    </OnboardingContext.Provider>
-  );
-}
-
-// ─── Header / Progress / StepIndicator ────────────────────────────────────
-
-function OnboardingHeader({ className, ...props }: ComponentPropsWithoutRef<'div'>) {
-  return (
-    <div
-      data-slot="onboarding-header"
-      className={cn('flex h-12 items-center justify-between gap-3 border-b border-hairline px-5', className)}
-      {...props}
-    />
-  );
-}
-
-function OnboardingTitle({ className, ...props }: ComponentPropsWithoutRef<'h2'>) {
-  return (
-    <h2
-      data-slot="onboarding-title"
-      className={cn('text-sm font-medium text-foreground', className)}
-      {...props}
-    />
-  );
-}
-
-/** "2 / 4 tamamlandı" — mono eyebrow dilinde, sayı yön farkındalıklı kayar. */
-function OnboardingProgress({ className, ...props }: ComponentPropsWithoutRef<'p'>) {
-  const { doneCount, total } = useOnboarding();
-  return (
-    <p
-      data-slot="onboarding-progress"
-      className={cn(
-        'shrink-0 font-mono text-[10px] font-medium uppercase tracking-wider text-muted-foreground tabular-nums',
-        className,
-      )}
-      {...props}
-    >
-      <AnimatedNumber value={doneCount} /> / {total} tamamlandı
-    </p>
-  );
+export interface StepIndicatorProps
+  extends
+    React.ComponentPropsWithoutRef<"div">,
+    VariantProps<typeof stepIndicatorVariants>,
+    VariantProps<typeof stepDotVariants> {
+  /** Current step index (1-based) */
+  currentStep: number;
+  /** Total number of steps */
+  totalSteps: number;
+  /** Optional className for each step dot */
+  dotClassName?: string;
 }
 
 /**
- * İlerleme pill'leri — durum rengi değil mürekkep tonu (eski sidebar kartının
- * nokta dili): tamam `bg-muted-foreground`, açık adım `bg-foreground`,
- * bekliyor `bg-hairline`.
+ * Headless step indicator primitive.
+ * Renders a list of step dots with proper ARIA for progress indication.
+ * No visual styling—consumer provides via className.
  */
-function OnboardingStepIndicator({ className, ...props }: ComponentPropsWithoutRef<'div'>) {
-  const { steps, openKey, doneCount, total } = useOnboarding();
+export function StepIndicator({
+  currentStep,
+  totalSteps,
+  variant = "dots",
+  className,
+  dotClassName,
+  ...props
+}: StepIndicatorProps) {
   return (
     <div
+      aria-label={`Adım ${currentStep} / ${totalSteps}`}
+      aria-valuemax={totalSteps}
+      aria-valuemin={1}
+      aria-valuenow={currentStep}
+      className={cn(stepIndicatorVariants({ variant }), className)}
       data-slot="onboarding-step-indicator"
       role="progressbar"
-      aria-label={`Kurulum ilerlemesi: ${doneCount}/${total}`}
-      aria-valuemin={0}
-      aria-valuemax={total}
-      aria-valuenow={doneCount}
-      className={cn('flex items-center gap-1', className)}
       {...props}
     >
-      {steps.map(step => {
-        const state = step.done ? 'completed' : step.key === openKey ? 'active' : 'inactive';
+      {Array.from({ length: totalSteps }, (_, i) => {
+        const stepNumber = i + 1;
+        const isActive = currentStep === stepNumber;
+        const isCompleted = currentStep > stepNumber;
+        let stepState: "active" | "completed" | "inactive" = "inactive";
+        if (isActive) {
+          stepState = "active";
+        } else if (isCompleted) {
+          stepState = "completed";
+        }
         return (
-          <span
-            key={step.key}
+          <div
+            aria-current={isActive ? "step" : undefined}
+            className={cn(stepDotVariants({ variant }), dotClassName)}
             data-slot="onboarding-step-dot"
-            data-state={state}
-            className="h-1 max-w-8 flex-1 rounded-full bg-hairline transition-colors duration-150 data-[state=active]:bg-foreground data-[state=completed]:bg-muted-foreground"
+            data-state={stepState}
+            key={stepNumber}
           />
         );
       })}
@@ -245,178 +139,782 @@ function OnboardingStepIndicator({ className, ...props }: ComponentPropsWithoutR
   );
 }
 
-// ─── Steps / Step ─────────────────────────────────────────────────────────
+// ============================================================================
+// Types
+// ============================================================================
 
-const TRIGGER_SELECTOR = '[data-slot="onboarding-step-trigger"]';
+export interface OnboardingContextValue {
+  /** Current step index (1-based) */
+  currentStep: number;
+  /** Total number of steps */
+  totalSteps: number;
+  /** Sub-step value (e.g. feature carousel index within step 1) */
+  stepValue: number;
+  /** Set current step */
+  setStep: (step: number | ((prev: number) => number)) => void;
+  /** Set step value (sub-step) */
+  setStepValue: (value: number | ((prev: number) => number)) => void;
+  /** Max step value for current step (e.g. feature count - 1) */
+  maxStepValue: number;
+  /** Whether user can proceed to next */
+  canGoNext: boolean;
+  /** Whether user can go back */
+  canGoBack: boolean;
+  /** Navigate to previous step */
+  handleBack: () => void;
+  /** Navigate to next step or advance sub-step */
+  handleNext: () => void;
+  /** Complete onboarding */
+  handleComplete: () => void;
+  /** Callback when onboarding is completed */
+  onComplete?: () => void;
+}
 
-/** Adım listesi — ↑/↓/Home/End adım başlıkları arasında gezdirir. */
-function OnboardingSteps({ className, onKeyDown, ...props }: ComponentPropsWithoutRef<'ol'>) {
-  const handleKeyDown = (e: KeyboardEvent<HTMLOListElement>) => {
-    onKeyDown?.(e);
-    if (e.defaultPrevented) return;
-    const triggers = Array.from(e.currentTarget.querySelectorAll<HTMLButtonElement>(TRIGGER_SELECTOR));
-    const current = triggers.indexOf(document.activeElement as HTMLButtonElement);
-    if (current === -1) return;
-    let next: number | null = null;
-    if (e.key === 'ArrowDown') next = Math.min(current + 1, triggers.length - 1);
-    else if (e.key === 'ArrowUp') next = Math.max(current - 1, 0);
-    else if (e.key === 'Home') next = 0;
-    else if (e.key === 'End') next = triggers.length - 1;
-    if (next === null) return;
-    e.preventDefault();
-    triggers[next]?.focus();
-  };
+// ============================================================================
+// Context
+// ============================================================================
+
+const OnboardingContext = createContext<OnboardingContextValue | null>(null);
+
+function useOnboarding() {
+  const ctx = useContext(OnboardingContext);
+  if (!ctx) {
+    throw new Error(
+      "Onboarding parçaları <Onboarding> içinde kullanılmalı"
+    );
+  }
+  return ctx;
+}
+
+// ============================================================================
+// Root
+// ============================================================================
+
+export interface OnboardingRootProps
+  extends
+    PropsWithChildren,
+    Omit<React.ComponentPropsWithoutRef<"div">, "children"> {
+  /** Controlled step index (1-based) */
+  value?: number;
+  /** Default step index (uncontrolled) */
+  defaultValue?: number;
+  /** Callback when step changes */
+  onValueChange?: (step: number) => void;
+  /** Controlled sub-step value */
+  stepValue?: number;
+  /** Default sub-step value (uncontrolled) */
+  defaultStepValue?: number;
+  /** Callback when sub-step value changes */
+  onStepValueChange?: (value: number) => void;
+  /** Total number of steps */
+  totalSteps: number;
+  /** Max sub-step value for step 1 (e.g. feature count - 1). Default 0 = no sub-steps */
+  maxStepValue?: number;
+  /** Callback when onboarding is completed */
+  onComplete?: () => void;
+  /** Custom logic for whether user can proceed. Receives (step, stepValue). Default: true */
+  canGoNext?: (step: number, stepValue: number) => boolean;
+}
+
+function OnboardingRoot({
+  value: controlledValue,
+  defaultValue = 1,
+  onValueChange,
+  stepValue: controlledStepValue,
+  defaultStepValue = 0,
+  onStepValueChange,
+  totalSteps,
+  maxStepValue: controlledMaxStepValue = 0,
+  onComplete,
+  canGoNext: canGoNextFn,
+  children,
+  className,
+  ...props
+}: OnboardingRootProps) {
+  const [currentStep, setCurrentStep] = useControllableState({
+    prop: controlledValue,
+    defaultProp: defaultValue,
+    onChange: onValueChange,
+  });
+
+  const [stepValue, setStepValueState] = useControllableState({
+    prop: controlledStepValue,
+    defaultProp: defaultStepValue,
+    onChange: onStepValueChange,
+  });
+
+  const maxStepValue = controlledMaxStepValue ?? 0;
+
+  const canGoNext = canGoNextFn ? canGoNextFn(currentStep, stepValue) : true;
+
+  const canGoBack = currentStep > 1 || stepValue > 0;
+
+  const handleNext = useCallback(() => {
+    if (currentStep === 1 && stepValue < maxStepValue) {
+      setStepValueState((prev) => prev + 1);
+    } else if (currentStep < totalSteps) {
+      setStepValueState(0);
+      setCurrentStep((prev) => prev + 1);
+    }
+  }, [
+    currentStep,
+    stepValue,
+    maxStepValue,
+    totalSteps,
+    setStepValueState,
+    setCurrentStep,
+  ]);
+
+  const handleBack = useCallback(() => {
+    if (currentStep === 1 && stepValue > 0) {
+      setStepValueState((prev) => prev - 1);
+    } else if (currentStep === 2) {
+      setCurrentStep(1);
+      setStepValueState(maxStepValue);
+    } else if (currentStep > 1) {
+      setCurrentStep((prev) => prev - 1);
+    }
+  }, [currentStep, stepValue, maxStepValue, setStepValueState, setCurrentStep]);
+
+  const handleComplete = useCallback(() => {
+    onComplete?.();
+  }, [onComplete]);
+
+  const contextValue = useMemo<OnboardingContextValue>(
+    () => ({
+      currentStep,
+      totalSteps,
+      stepValue,
+      setStep: setCurrentStep,
+      setStepValue: setStepValueState,
+      maxStepValue,
+      canGoNext,
+      canGoBack,
+      handleBack,
+      handleNext,
+      handleComplete,
+      onComplete,
+    }),
+    [
+      currentStep,
+      totalSteps,
+      stepValue,
+      setCurrentStep,
+      setStepValueState,
+      maxStepValue,
+      canGoNext,
+      canGoBack,
+      handleBack,
+      handleNext,
+      handleComplete,
+      onComplete,
+    ]
+  );
 
   return (
-    <ol
-      data-slot="onboarding-steps"
-      className={cn('divide-y divide-hairline', className)}
-      onKeyDown={handleKeyDown}
+    <OnboardingContext.Provider value={contextValue}>
+      <div
+        className={cn(
+          "bg-card border-hairline flex flex-col rounded-lg border p-6",
+          className
+        )}
+        data-slot="onboarding"
+        data-state={`step-${currentStep}`}
+        {...props}
+      >
+        {children}
+      </div>
+    </OnboardingContext.Provider>
+  );
+}
+
+// ============================================================================
+// Step
+// ============================================================================
+
+export interface OnboardingStepProps extends React.ComponentPropsWithoutRef<"div"> {
+  /** Step index (1-based) - content renders when currentStep matches */
+  step: number;
+}
+
+function OnboardingStep({
+  step,
+  children,
+  className,
+  ...props
+}: OnboardingStepProps) {
+  const { currentStep } = useOnboarding();
+  const isActive = currentStep === step;
+
+  if (!isActive) {
+    return null;
+  }
+
+  return (
+    <div
+      className={cn(className)}
+      data-slot="onboarding-step"
+      data-state="active"
+      {...props}
+    >
+      {children}
+    </div>
+  );
+}
+
+// ============================================================================
+// StepIndicator
+// ============================================================================
+
+export interface OnboardingStepIndicatorProps extends Omit<
+  React.ComponentProps<typeof StepIndicator>,
+  "currentStep" | "totalSteps"
+> {}
+
+function OnboardingStepIndicator(props: OnboardingStepIndicatorProps) {
+  const { currentStep, totalSteps } = useOnboarding();
+  return (
+    <StepIndicator
+      currentStep={currentStep}
+      totalSteps={totalSteps}
       {...props}
     />
   );
 }
 
-/** Numara ↔ tik rozeti; tik yeşili yalnız burada (DESIGN.md §5). */
-function StepBadge({ number, done }: { number: number; done: boolean }) {
-  const reduceMotion = useReducedMotion();
-  const swap = {
-    initial: { opacity: 0, scale: 0.8 },
-    animate: { opacity: 1, scale: 1 },
-    exit: { opacity: 0, scale: 0.8 },
-    transition: springOrInstant(reduceMotion),
-  };
+// ============================================================================
+// Header
+// ============================================================================
+
+export interface OnboardingHeaderProps extends React.ComponentPropsWithoutRef<"div"> {
+  /** Step title (optional when using children) */
+  title?: string;
+  /** Step description */
+  description?: string;
+  /** Custom header content (overrides title/description) */
+  children?: React.ReactNode;
+}
+
+function OnboardingHeader({
+  title,
+  description,
+  children,
+  className,
+  ...props
+}: OnboardingHeaderProps) {
+  if (children) {
+    return (
+      <div
+        className={cn("text-center", className)}
+        data-slot="onboarding-header"
+        {...props}
+      >
+        {children}
+      </div>
+    );
+  }
+
   return (
-    <span
-      aria-hidden
+    <div
       className={cn(
-        'flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-medium tabular-nums transition-colors duration-150',
-        done ? 'bg-success text-success-foreground' : 'border border-hairline bg-card text-muted-foreground',
+        "flex flex-col gap-1 text-center",
+        "[&_[data-slot=onboarding-title]]:text-foreground [&_[data-slot=onboarding-title]]:text-xl [&_[data-slot=onboarding-title]]:font-semibold [&_[data-slot=onboarding-title]]:tracking-tight",
+        "[&_[data-slot=onboarding-description]]:text-muted-foreground [&_[data-slot=onboarding-description]]:text-sm",
+        className
       )}
+      data-slot="onboarding-header"
+      {...props}
     >
-      <AnimatePresence initial={false} mode="popLayout">
-        {done ? (
-          <motion.span key="check" className="flex" {...swap}>
-            <Check className="size-3" />
-          </motion.span>
-        ) : (
-          <motion.span key="num" {...swap}>
-            {number}
-          </motion.span>
-        )}
-      </AnimatePresence>
-    </span>
+      {title != null && <h2 data-slot="onboarding-title">{title}</h2>}
+      {description && <p data-slot="onboarding-description">{description}</p>}
+    </div>
   );
 }
 
-export interface OnboardingStepProps extends Omit<ComponentPropsWithoutRef<'li'>, 'title'> {
-  stepKey: string;
-  title: ReactNode;
+// ============================================================================
+// Navigation
+// ============================================================================
+
+export interface OnboardingNavigationProps extends React.ComponentPropsWithoutRef<"fieldset"> {
+  /** Back button label */
+  backLabel?: string;
+  /** Next button label */
+  nextLabel?: string;
+  /** Complete button label */
+  completeLabel?: string;
+  /** Override can go next (when not using Root's canGoNext) */
+  canGoNext?: boolean;
+  /** Custom navigation content (use with asChild for full control) */
+  children?: React.ReactNode;
 }
 
-function OnboardingStep({ stepKey, title, className, children, ...props }: OnboardingStepProps) {
-  const { steps, openKey, setOpenKey, baseId } = useOnboarding();
-  const reduceMotion = useReducedMotion();
-  const index = steps.findIndex(s => s.key === stepKey);
-  const done = steps[index]?.done ?? false;
-  const open = openKey === stepKey;
-  const triggerId = `${baseId}-${stepKey}-trigger`;
-  const panelId = `${baseId}-${stepKey}-panel`;
+function OnboardingNavigation({
+  backLabel = "Geri",
+  nextLabel = "İleri",
+  completeLabel = "Başla",
+  canGoNext: canGoNextOverride,
+  children,
+  className,
+  ...props
+}: OnboardingNavigationProps) {
+  const {
+    currentStep,
+    totalSteps,
+    canGoNext: contextCanGoNext,
+    canGoBack,
+    handleBack,
+    handleNext,
+    handleComplete,
+  } = useOnboarding();
+
+  const canGoNext = canGoNextOverride ?? contextCanGoNext;
+  const isLastStep = currentStep === totalSteps;
+
+  if (children) {
+    return (
+      <fieldset
+        className={cn("flex gap-3", className)}
+        data-slot="onboarding-navigation"
+        {...props}
+      >
+        {children}
+      </fieldset>
+    );
+  }
 
   return (
-    <li
-      data-slot="onboarding-step"
-      data-state={open ? 'open' : 'closed'}
-      data-done={done || undefined}
-      className={className}
+    <fieldset
+      aria-label="Adım gezintisi"
+      className={cn("flex gap-3", className)}
+      data-slot="onboarding-navigation"
       {...props}
     >
-      <h3>
-        <button
-          type="button"
-          id={triggerId}
-          data-slot="onboarding-step-trigger"
-          aria-expanded={open}
-          aria-controls={panelId}
-          onClick={() => setOpenKey(open ? null : stepKey)}
-          className={cn(
-            'flex w-full items-center gap-3 px-5 py-3 text-left hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
-            PRESS_FEEDBACK_CLASS,
-          )}
+      <Button
+        aria-label={backLabel}
+        className="flex-1"
+        data-slot="onboarding-back"
+        disabled={!canGoBack}
+        onClick={handleBack}
+        variant="outline"
+      >
+        {backLabel}
+      </Button>
+      {isLastStep ? (
+        <Button
+          aria-label={completeLabel}
+          className="flex-1"
+          data-slot="onboarding-complete"
+          onClick={handleComplete}
         >
-          <StepBadge number={index + 1} done={done} />
-          <span
-            className={cn(
-              'min-w-0 flex-1 text-sm font-medium transition-colors duration-150',
-              done ? 'text-muted-foreground line-through' : 'text-foreground',
-            )}
-          >
-            {title}
-            {done && <span className="sr-only"> (tamamlandı)</span>}
-          </span>
-          <ChevronDown
-            aria-hidden
-            className={cn(
-              'size-4 shrink-0 text-muted-foreground transition-transform duration-200 ease-out motion-reduce:transition-none',
-              open && 'rotate-180',
-            )}
-          />
-        </button>
-      </h3>
+          {completeLabel}
+        </Button>
+      ) : (
+        <Button
+          aria-label={nextLabel}
+          className="flex-1"
+          data-slot="onboarding-next"
+          disabled={!canGoNext}
+          onClick={handleNext}
+        >
+          {nextLabel}
+        </Button>
+      )}
+    </fieldset>
+  );
+}
 
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div
-            key="panel"
-            id={panelId}
-            role="region"
-            aria-labelledby={triggerId}
-            data-slot="onboarding-step-panel"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{
-              height: reduceMotion ? { duration: 0 } : SPRING,
-              opacity: { duration: reduceMotion ? 0 : 0.15 },
-            }}
-            className="overflow-hidden"
-          >
-            {/* Girinti rozet + boşlukla hizalı: px-5 (20) + rozet (20) + gap (12). */}
-            <div className="pb-4 pl-13 pr-5">{children}</div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+// ============================================================================
+// Types
+// ============================================================================
+
+type Orientation = "horizontal" | "vertical" | "grid";
+
+interface ChoiceGroupContextValue {
+  value: string | null;
+  setValue: (value: string) => void;
+  name: string;
+  orientation: Orientation;
+}
+
+// ============================================================================
+// Context
+// ============================================================================
+
+const ChoiceGroupContext = createContext<ChoiceGroupContextValue | null>(null);
+
+function useChoiceGroup() {
+  const ctx = useContext(ChoiceGroupContext);
+  if (!ctx) {
+    throw new Error("ChoiceGroup.Item must be used within ChoiceGroup");
+  }
+  return ctx;
+}
+
+// ============================================================================
+// Root
+// ============================================================================
+
+export interface ChoiceGroupProps extends Omit<
+  React.ComponentPropsWithoutRef<"div">,
+  "defaultValue"
+> {
+  /** Controlled selected value */
+  value?: string | null;
+  /** Default selected value (uncontrolled) */
+  defaultValue?: string | null;
+  /** Callback when selection changes */
+  onValueChange?: (value: string) => void;
+  /** Name for radio group semantics (required for accessibility) */
+  name: string;
+  /** Layout orientation */
+  orientation?: Orientation;
+}
+
+function ChoiceGroupRoot({
+  value: controlledValue,
+  defaultValue = null,
+  onValueChange,
+  name,
+  orientation = "grid",
+  children,
+  className,
+  ...props
+}: ChoiceGroupProps) {
+  const [value, setValueState] = useControllableState({
+    prop: controlledValue ?? undefined,
+    defaultProp: defaultValue ?? null,
+    onChange: (v) => v !== null && onValueChange?.(v),
+  });
+
+  const setValue = useCallback(
+    (v: string) => {
+      setValueState(v);
+    },
+    [setValueState]
+  );
+
+  const contextValue = useMemo<ChoiceGroupContextValue>(
+    () => ({
+      value,
+      setValue,
+      name,
+      orientation,
+    }),
+    [value, setValue, name, orientation]
+  );
+
+  return (
+    <ChoiceGroupContext.Provider value={contextValue}>
+      <div
+        aria-label={name}
+        className={cn(className)}
+        data-orientation={orientation}
+        data-slot="choice-group"
+        role="radiogroup"
+        {...props}
+      >
+        {children}
+      </div>
+    </ChoiceGroupContext.Provider>
+  );
+}
+
+// ============================================================================
+// Item
+// ============================================================================
+
+export interface ChoiceGroupItemProps extends React.ComponentPropsWithoutRef<"label"> {
+  /** Value when this item is selected */
+  value: string;
+}
+
+function ChoiceGroupItemComponent({
+  value: itemValue,
+  children,
+  className,
+  ...props
+}: ChoiceGroupItemProps) {
+  const { value, setValue, name } = useChoiceGroup();
+  const isSelected = value === itemValue;
+
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.currentTarget.checked) {
+        setValue(itemValue);
+      }
+    },
+    [itemValue, setValue]
+  );
+
+  return (
+    <label
+      className={cn(className)}
+      data-slot="choice-group-item"
+      data-state={isSelected ? "selected" : "unselected"}
+      {...props}
+    >
+      <input
+        checked={isSelected}
+        className="sr-only"
+        name={name}
+        onChange={handleChange}
+        type="radio"
+        value={itemValue}
+      />
+      {children}
+    </label>
+  );
+}
+
+ChoiceGroupItemComponent.displayName = "ChoiceGroupItem";
+
+// ============================================================================
+// Export
+// ============================================================================
+
+export const ChoiceGroup = Object.assign(ChoiceGroupRoot, {
+  Item: ChoiceGroupItemComponent,
+});
+
+// ============================================================================
+// Types
+// ============================================================================
+
+interface FeatureCarouselContextValue {
+  value: number;
+  setValue: (value: number | ((prev: number) => number)) => void;
+  totalItems: number;
+  isActive: (index: number) => boolean;
+}
+
+// ============================================================================
+// Context
+// ============================================================================
+
+const FeatureCarouselContext =
+  createContext<FeatureCarouselContextValue | null>(null);
+
+function useFeatureCarousel() {
+  const ctx = useContext(FeatureCarouselContext);
+  if (!ctx) {
+    throw new Error("FeatureCarousel.Item must be used within FeatureCarousel");
+  }
+  return ctx;
+}
+
+// ============================================================================
+// Root
+// ============================================================================
+
+export interface FeatureCarouselProps extends React.ComponentPropsWithoutRef<"div"> {
+  /** Controlled active index */
+  value?: number;
+  /** Default active index (uncontrolled) */
+  defaultValue?: number;
+  /** Callback when active index changes */
+  onValueChange?: (index: number) => void;
+  /** Total number of items (derived from children if not provided) */
+  totalItems?: number;
+}
+
+function FeatureCarouselRoot({
+  value: controlledValue,
+  defaultValue = 0,
+  onValueChange,
+  totalItems: totalItemsProp,
+  children,
+  className,
+  ...props
+}: FeatureCarouselProps) {
+  const [value, setValue] = useControllableState({
+    prop: controlledValue,
+    defaultProp: defaultValue,
+    onChange: onValueChange,
+  });
+
+  const totalItems = totalItemsProp ?? Children.count(children);
+
+  const isActive = useCallback((index: number) => value === index, [value]);
+
+  const contextValue = useMemo<FeatureCarouselContextValue>(
+    () => ({
+      value,
+      setValue,
+      totalItems,
+      isActive,
+    }),
+    [value, setValue, totalItems, isActive]
+  );
+
+  return (
+    <FeatureCarouselContext.Provider value={contextValue}>
+      <div
+        aria-label="Özellikler"
+        className={cn(className)}
+        data-slot="feature-carousel"
+        role="tablist"
+        {...props}
+      >
+        {children}
+      </div>
+    </FeatureCarouselContext.Provider>
+  );
+}
+
+// ============================================================================
+// Item
+// ============================================================================
+
+export interface FeatureCarouselItemProps extends React.ComponentPropsWithoutRef<"button"> {
+  /** Index of this item (0-based) */
+  index: number;
+}
+
+function FeatureCarouselItemComponent({
+  index,
+  children,
+  className,
+  onClick,
+  ...props
+}: FeatureCarouselItemProps) {
+  const { setValue, isActive, totalItems } = useFeatureCarousel();
+  const active = isActive(index);
+
+  const handleClick = useCallback(
+    (e: React.MouseEvent<HTMLButtonElement>) => {
+      setValue(index);
+      onClick?.(e);
+    },
+    [index, setValue, onClick]
+  );
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLButtonElement>) => {
+      if (totalItems <= 1) {
+        return;
+      }
+      if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+        e.preventDefault();
+        setValue((prev) => Math.min(prev + 1, totalItems - 1));
+      } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+        e.preventDefault();
+        setValue((prev) => Math.max(prev - 1, 0));
+      }
+    },
+    [totalItems, setValue]
+  );
+
+  return (
+    <button
+      aria-selected={active}
+      className={cn(className)}
+      data-slot="feature-carousel-item"
+      data-state={active ? "active" : "inactive"}
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
+      role="tab"
+      tabIndex={active ? 0 : -1}
+      type="button"
+      {...props}
+    >
+      {children}
+    </button>
+  );
+}
+
+FeatureCarouselItemComponent.displayName = "FeatureCarouselItem";
+
+// ============================================================================
+// Export
+// ============================================================================
+
+export const FeatureCarousel = Object.assign(FeatureCarouselRoot, {
+  Item: FeatureCarouselItemComponent,
+});
+
+// ============================================================================
+// TipsList
+// ============================================================================
+
+export interface TipsListProps extends React.ComponentPropsWithoutRef<"div"> {
+  /** Optional title/label for the list */
+  title?: string;
+}
+
+/**
+ * Headless tips list primitive.
+ * Renders an ordered list with optional title.
+ * No visual styling—consumer provides via className.
+ */
+function TipsListRoot({ title, children, className, ...props }: TipsListProps) {
+  const titleId = useId();
+  return (
+    <div className={cn(className)} data-slot="tips-list" {...props}>
+      {title && (
+        <p className="sr-only" data-slot="tips-list-title" id={titleId}>
+          {title}
+        </p>
+      )}
+      <ol
+        aria-label={title ? undefined : "İpuçları"}
+        aria-labelledby={title ? titleId : undefined}
+        data-slot="tips-list-items"
+      >
+        {children}
+      </ol>
+    </div>
+  );
+}
+
+// ============================================================================
+// Item
+// ============================================================================
+
+export interface TipsListItemProps extends React.ComponentPropsWithoutRef<"li"> {
+  /** Optional number to display (for custom styling) */
+  number?: number;
+}
+
+function TipsListItemComponent({
+  number,
+  children,
+  className,
+  ...props
+}: TipsListItemProps) {
+  return (
+    <li
+      className={cn(className)}
+      data-number={number}
+      data-slot="tips-list-item"
+      {...props}
+    >
+      {number != null && (
+        <span aria-hidden data-slot="tips-list-item-number">
+          {number}
+        </span>
+      )}
+      {children}
     </li>
   );
 }
 
-function OnboardingStepDescription({ className, ...props }: ComponentPropsWithoutRef<'p'>) {
-  return (
-    <p
-      data-slot="onboarding-step-description"
-      className={cn('max-w-prose text-sm text-muted-foreground', className)}
-      {...props}
-    />
-  );
-}
+// ============================================================================
+// Export
+// ============================================================================
 
-function OnboardingStepActions({ className, ...props }: ComponentPropsWithoutRef<'div'>) {
-  return (
-    <div
-      data-slot="onboarding-step-actions"
-      className={cn('mt-3 flex flex-col items-start gap-2 sm:flex-row sm:items-center', className)}
-      {...props}
-    />
-  );
-}
+export const TipsList = Object.assign(TipsListRoot, {
+  Item: TipsListItemComponent,
+});
+
+// ============================================================================
+// Export
+// ============================================================================
 
 export const Onboarding = Object.assign(OnboardingRoot, {
-  Header: OnboardingHeader,
-  Title: OnboardingTitle,
-  Progress: OnboardingProgress,
-  StepIndicator: OnboardingStepIndicator,
-  Steps: OnboardingSteps,
   Step: OnboardingStep,
-  StepDescription: OnboardingStepDescription,
-  StepActions: OnboardingStepActions,
+  StepIndicator: OnboardingStepIndicator,
+  Header: OnboardingHeader,
+  Navigation: OnboardingNavigation,
 });
+
+export { useOnboarding };

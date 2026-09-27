@@ -425,36 +425,45 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   genişlik verme. Negatif kenar boşluğu kabukta değil `h1`'de: kabukta
   `max-w-full` ile birlikte kendini 8px daraltıp her başlığı kırpıyordu.
   Ayrı "ad" alanı açma.
-- **Başlarken rehberi (setup guide):**
+- **Başlarken popup'ı (onboarding):**
   [src/components/ui/onboarding.tsx](src/components/ui/onboarding.tsx) — cult-ui
-  `onboarding` uyarlaması (doğrusal sihirbaz değil, **checklist**); sayfa
-  `/dashboard/baslarken`, emsal
-  [SetupGuide.tsx](src/app/dashboard/baslarken/_components/SetupGuide.tsx).
-  Tek kolon `mx-auto max-w-3xl`; kart olağan hairline kart, başlık şeridi
-  `h-12 border-b` (başlık + sağda mono "2 / 4 tamamlandı"), altında ilerleme
-  pill'leri, sonra `divide-y` adım listesi. Adım = akordeon satırı (tek adım
-  açık): numara/tik rozeti `size-5` + başlık + ↓ oku; açıkken açıklama +
-  **tek birincil aksiyon** (derin link, ink `sm` buton) + opsiyonel ghost
-  ikincil ("Varsayılanı kullan"). İlerleme durum rengiyle değil **mürekkep
-  tonuyla**: pill tamam `bg-muted-foreground`, açık adım `bg-foreground`,
-  bekliyor `bg-hairline`; yeşil yalnız tik rozetinde (`bg-success`), tamamlanan
-  başlık muted + üstü çizili. Açık adım tamamlanınca 900ms sonra sıradaki eksik
-  adım açılır; hepsi bitince kart "Kurulum tamam — …" satırına çöker (konfeti
-  yok). Klavye: ↑/↓/Home/End başlıklar arası, Enter/Space aç-kapa. Sidebar'da
-  karşılığı nav'ın en üstündeki "Başlarken" satırı + mono `text-[10px]`
-  `SidebarMenuBadge` ("2/4", "Deneme", "Bitti"); kurulum bitti ve abonelik
-  aktifse satır çöker (opaklık 150ms + yükseklik 200ms `EASE_OUT`). Footer'da
-  onboarding kartı yok.
-- **Abonelik kartı:**
-  [src/components/billing/SubscriptionPanel.tsx](src/components/billing/SubscriptionPanel.tsx)
-  (Başlarken'de tam, Ayarlar `#plan`'da `compact`). Başlık şeridinde durum
-  `Badge` (deneme `info`, aktif `success`, bitiyor `warning`, bitti
-  `critical`); plan adı + özellik listesi (ink tik) ve sağda KPI dilinde fiyat
-  (`font-mono text-2xl tabular-nums`) + "/ yıl + KDV" InfoTip (oranlama). Kalan
-  deneme günü **statik metin** — geri sayım animasyonu yok. Tek plan, dönem
-  seçici yok. Deneme bitince Başlarken/Ayarlar dışında kilit ekranı
-  ([SubscriptionGate.tsx](src/components/layout/SubscriptionGate.tsx)):
-  soluk kilit ikonu + başlık + açıklama + ink CTA — sessiz 403 yok.
+  `onboarding` bileşeni, **upstream API'siyle** (Root/Step/StepIndicator/
+  Navigation, ChoiceGroup, FeatureCarousel, TipsList); yalnız sınıflar bu dile
+  çevrildi. Kullanım demonun kalıbıdır:
+  [OnboardingDialog.tsx](src/components/onboarding/OnboardingDialog.tsx) —
+  şeffaf `DialogContent` (`sm:max-w-3xl`, kapat X yok; Esc/dış tık kapatır)
+  içinde `bg-muted` dış hale `rounded-2xl p-2` + hairline kart `rounded-lg`
+  (konsantrik 16 = 8 + 8). Başlık ortalı: mono eyebrow "Başlarken · n/3" +
+  h2 (`text-xl md:text-2xl font-semibold tracking-tight`) + açıklama + pill
+  göstergesi (aktif `bg-foreground`, geçilen `bg-muted-foreground`, bekleyen
+  `bg-hairline`). Adımlar: 1) özellik turu (`FeatureCarousel`; seçili öğe
+  kart içinde `bg-muted` + hairline, sağda görsel yerine veri-mürekkep
+  önizleme kartı — mono eyebrow + hairline satırlar + durum noktaları),
+  2) kurulum adımları (`TipsList`; numara rozeti `size-6 rounded-md bg-muted`,
+  tamamlanınca `bg-success` tik; satır sağında outline derin link — popup'ı
+  kapatıp gider), 3) plan kartı. Alt gezinme upstream `Navigation` (Geri
+  outline / İleri–"Uygulamaya geç" ink, eşit genişlik). Tetikleyiciler:
+  sidebar nav'ın en üstündeki "Başlarken" satırı (sayfa değil, popup;
+  mono `text-[10px]` `SidebarMenuBadge` "2/4" / "Deneme" / "Bitti"; kurulum
+  bitti ve abonelik aktifse satır çöker), ilk açılış (bir kez), kilit ekranı
+  ve Ayarlar `#plan` "Planı gör" (plan adımına). Ayrı Başlarken sayfası yok.
+- **Plan kartı:**
+  [src/components/billing/PlanCard.tsx](src/components/billing/PlanCard.tsx) —
+  uygulamadaki **tek ink zeminli yüzey** (bilinçli istisna: fiyat kartının
+  öne çıkması için; kullanıcı referansı koyu fiyat kartıydı). `bg-primary
+  text-primary-foreground rounded-lg p-6`, gölge yok. Üst köşede kenara
+  taşan mono uppercase rozet (durum çiftinden: deneme/aktif `success`,
+  bitiyor `warning`, bitti `critical`). Taç ikonlu plan adı
+  (`primary-foreground/70`), fiyat KPI dilinde `font-mono text-4xl
+  tabular-nums` + "/yıllık" + soluk "+ KDV", açıklama, iki kolon özellik
+  listesi (tik `primary-foreground/50` — renkli tik yok), tam genişlik
+  **ters buton** (`bg-card text-foreground`; ikinci accent/teal yok), altında
+  statik durum satırı (kalan deneme günü — geri sayım animasyonu yok). Kartın
+  altında ortalı `text-xs` oranlama dipnotu. Ayarlar'da yalnız rozet + durum
+  satırı + "Planı gör" ([SubscriptionPanel.tsx](src/components/billing/SubscriptionPanel.tsx)).
+  Deneme bitince Ayarlar dışında kilit ekranı
+  ([SubscriptionGate.tsx](src/components/layout/SubscriptionGate.tsx)) —
+  sessiz 403 yok, CTA popup'ı plan adımında açar.
 ---
 
 ## 6. Hareket
@@ -487,8 +496,8 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   odağıyla (yalnız `:focus-visible`) anlık açılır. Doğrulama uyarısı
   (`AlertTip`) gecikmesiz açılır. `motion` yalnızca animate-ui bileşenlerinde,
   `src/components/ui/icons/` altındaki animasyonlu ikonlarda ve sidebar
-  Başlarken rehberinin akordeon/rozet geçişlerinde
-  ([src/components/ui/onboarding.tsx](src/components/ui/onboarding.tsx)),
+  Başlarken popup'ının önizleme/rozet geçişlerinde
+  ([src/components/onboarding/OnboardingDialog.tsx](src/components/onboarding/OnboardingDialog.tsx)),
   `motion/swipeable-list` sürükleme jestinde (repodaki tek `drag` kullanımı) ve
   `PopoverForm`'un büyüme/çökme geçişinde
   ([src/components/ui/popover-form.tsx](src/components/ui/popover-form.tsx) —
@@ -500,15 +509,13 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   karakterde ama ~%30 kısa spring'le (700/50) tersten oynar; `prefers-reduced-motion`'da filtresiz ve anlık);
   ikisi bilinçli olarak birlikte yaşar — yeni animasyon için önce mevcut
   utility'ye bak.
-- **Akordeon motifi** — Başlarken rehberi emsaldir: panel yüksekliği
-  `auto`'ya kanonik `SPRING` (350/35) ile açılır/çöker, içerik opaklığı
-  150ms (çıkış 100ms); ok `rotate-180` CSS 200ms `ease-out`. Numara ↔ tik
-  rozeti `AnimatePresence mode="popLayout"` + opacity/scale 0.8↔1 + `SPRING`
-  (`AnimatedCheckbox` aynı dili paylaşır). `AnimatePresence initial={false}` →
-  ilk boyamada animasyon yok. `prefers-reduced-motion` → yükseklik anlık,
-  yalnız opaklık. Otomatik sıradaki adıma geçiş 900ms beklemeden sonra olur
-  (zamanlama; reduced-motion'da da korunur) ve kullanıcı başka adım açarsa
-  iptal edilir. İkon dışı animasyonlarda `useReducedMotion()` doğrudan
+- **Başlarken popup'ı hareketi** — Dialog'un kendi 200/150ms geçişi; adım
+  değişimi upstream gibi anlık (aktif olmayan adım unmount). Özellik
+  önizlemesi `AnimatePresence mode="wait"`: giriş opacity + 6px `SPRING`,
+  çıkış 100ms opaklık. Kurulum numara ↔ tik rozeti `popLayout` +
+  opacity/scale 0.8↔1 + `SPRING` (`AnimatedCheckbox` aynı dil); "n / 4
+  tamamlandı" sayacı `AnimatedNumber`. `prefers-reduced-motion` → kayma yok,
+  yalnız opaklık. İkon dışı animasyonlarda `useReducedMotion()` doğrudan
   `motion/react`'ten alınır — `useIconHover` yalnızca ikon animasyonları içindir.
 - **İkon animasyonu daima parent'tan sürülür:**
   [useIconHover()](src/components/ui/icons/use-icon-hover.ts) ile `ref` +

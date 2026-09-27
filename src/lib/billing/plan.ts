@@ -8,14 +8,17 @@
  * env'inde (`IKAS_PLAN_KEY`, bkz. subscription-service.ts).
  */
 export const PLAN = {
-  name: 'Flowventory',
+  name: 'Flowventory Pro',
+  description: 'Stoklarını izleyen, ne zaman ne sipariş vereceğini söyleyen tam paket.',
   yearlyPrice: 980,
   currency: 'TRY',
   trialDays: 14,
   features: [
-    'Stok takibi ve uyarılar',
-    'Satın alma raporu',
-    'Otomatik kurallar',
-    'E-posta özetleri',
+    'Sınırsız ürün ve stok takibi',
+    'Kritik ve az kalan stok uyarıları',
+    'Tedarikçi bazlı satın alma raporu (PDF)',
+    'Otomatik stok kuralları',
+    'Görüntülenme → satış analizi',
+    'Günlük / haftalık e-posta özeti',
   ],
 } as const;

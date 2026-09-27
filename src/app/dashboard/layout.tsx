@@ -10,6 +10,7 @@ import { AppSidebar } from '@/components/layout/AppSidebar';
 import { NotificationDrawer } from '@/components/layout/NotificationDrawer';
 import { NotificationsProvider } from '@/components/layout/notifications-context';
 import { SubscriptionGate } from '@/components/layout/SubscriptionGate';
+import { OnboardingDialogProvider } from '@/components/onboarding/onboarding-dialog-context';
 import { SidebarCollapseGuardProvider, useGuardedSidebarOpen } from '@/components/layout/sidebar-collapse-guard';
 import { BrandLogo } from '@/components/shared/BrandLogo';
 import { Toaster } from '@/components/ui/sonner';
@@ -58,25 +59,27 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       <NotificationsProvider>
         <SidebarCollapseGuardProvider value={sidebar.contextValue}>
           <SidebarProvider open={sidebar.open} onOpenChange={sidebar.onOpenChange}>
-            <AppSidebar storeName={storeName} />
-            {/*
-              min-w-0: inset bir flex öğesi ve varsayılan min-width:auto ile geniş tablolar
-              onu içeriği kadar şişiriyordu — tablonun kendi overflow-x-auto'su devreye
-              girmeden tüm sayfa yatay kayıyordu.
-            */}
-            {/* overscroll-contain: kaydırma sona dayanınca ikas iframe'inin
-                dışındaki panele zincirlenmez. */}
-            <SidebarInset className="h-svh min-w-0 overflow-x-hidden overflow-y-auto overscroll-contain">
-              {/* Dar iframe genişliği: sidebar Sheet'e düşer, tetikleyici bu barda yaşar. */}
-              <header className="flex h-12 shrink-0 items-center gap-2 border-b border-hairline bg-card px-4 print:hidden md:hidden">
-                <SidebarTrigger />
-                <BrandLogo variant="mark" className="h-7 w-7" />
-              </header>
-              <SubscriptionGate>{children}</SubscriptionGate>
-            </SidebarInset>
-            {/* Drawer, sidebar'ın dışında yaşar: mobilde sidebar Sheet'i kapanınca
-                unmount olmaz (bkz. NotificationsProvider). */}
-            <NotificationDrawer />
+            <OnboardingDialogProvider>
+              <AppSidebar storeName={storeName} />
+              {/*
+                min-w-0: inset bir flex öğesi ve varsayılan min-width:auto ile geniş tablolar
+                onu içeriği kadar şişiriyordu — tablonun kendi overflow-x-auto'su devreye
+                girmeden tüm sayfa yatay kayıyordu.
+              */}
+              {/* overscroll-contain: kaydırma sona dayanınca ikas iframe'inin
+                  dışındaki panele zincirlenmez. */}
+              <SidebarInset className="h-svh min-w-0 overflow-x-hidden overflow-y-auto overscroll-contain">
+                {/* Dar iframe genişliği: sidebar Sheet'e düşer, tetikleyici bu barda yaşar. */}
+                <header className="flex h-12 shrink-0 items-center gap-2 border-b border-hairline bg-card px-4 print:hidden md:hidden">
+                  <SidebarTrigger />
+                  <BrandLogo variant="mark" className="h-7 w-7" />
+                </header>
+                <SubscriptionGate>{children}</SubscriptionGate>
+              </SidebarInset>
+              {/* Drawer, sidebar'ın dışında yaşar: mobilde sidebar Sheet'i kapanınca
+                  unmount olmaz (bkz. NotificationsProvider). */}
+              <NotificationDrawer />
+            </OnboardingDialogProvider>
             <Toaster />
           </SidebarProvider>
         </SidebarCollapseGuardProvider>

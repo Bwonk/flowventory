@@ -1,5 +1,10 @@
 # Başlarken sekmesi + abonelik başlatma
 
+> **Revizyon (27 Eyl 2026, kullanıcı geri bildirimi):** "istediğim tarz bu değildi — cult-ui onboarding popover olarak gelmeli, verdiğim modül üstüne".
+> Ayrı `/dashboard/baslarken` sayfası ve checklist'e çevrilmiş bileşen **kaldırıldı**. Yerine: upstream cult-ui `onboarding.tsx` API'si aynen
+> (yalnız sınıflar DESIGN.md'ye çevrildi) + demonun Dialog kalıbı (`src/components/onboarding/OnboardingDialog.tsx`): 1) özellik turu,
+> 2) kurulum adımları (TipsList), 3) koyu plan kartı (`PlanCard`, kullanıcının referans görseli ink zemine çevrildi). Sidebar satırı popup açar;
+> kilit ekranı ve Ayarlar "Planı gör" plan adımına açar; ilk açılışta popup bir kez kendiliğinden açılır. Aşağıdaki §4–§5 sayfa tasarımı tarihsel.
 > Durum: **uygulandı** (27 Eyl 2026, Faz 0–5; push/deploy edilmedi). Canlı QA ve ödeme akışı teyidi: DEVIR-NOTLARI §J.
 > Plandan sapmalar: Faz 1+2 tek commit (kart silinmeden hook değişemiyordu); `ChoiceGroup` alınmadı (TR'de dönem seçimi yok — YAGNI);
 > `useControllableState` yerine yerel eşdeğer (`radix-ui/internal` moduleResolution'da çözülmüyor); kart girişinde `animate-enter`

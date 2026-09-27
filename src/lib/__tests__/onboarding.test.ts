@@ -2,7 +2,6 @@
 import { describe, expect, it } from 'vitest';
 import { deriveOnboardingSteps, type OnboardingSignals } from '@/lib/onboarding';
 import { getOnboardingNavState, type OnboardingNavInput } from '@/lib/onboarding-nav';
-import { nextOpenKey } from '@/components/ui/onboarding-steps';
 
 const signals = (overrides: Partial<OnboardingSignals> = {}): OnboardingSignals => ({
   server: { sync: false, tracker: false, threshold: false },
@@ -44,26 +43,6 @@ describe('deriveOnboardingSteps', () => {
 
   it('mezun kullanıcıda tüm adımlar tamam', () => {
     expect(Object.values(doneMap(signals({ server: null, complete: true })))).toEqual([true, true, true, true]);
-  });
-});
-
-describe('nextOpenKey', () => {
-  const steps = (...done: boolean[]) => done.map((d, i) => ({ key: `s${i}`, done: d }));
-
-  it('sonraki eksik adımı açar', () => {
-    expect(nextOpenKey(steps(true, false, false), 's0')).toBe('s1');
-  });
-
-  it('tamamlanmış adımların üzerinden atlar', () => {
-    expect(nextOpenKey(steps(false, true, true, false), 's0')).toBe('s3');
-  });
-
-  it('sonrasında eksik yoksa baştaki eksik adıma döner', () => {
-    expect(nextOpenKey(steps(false, true, true), 's2')).toBe('s0');
-  });
-
-  it('hepsi bittiyse null', () => {
-    expect(nextOpenKey(steps(true, true, true), 's1')).toBeNull();
   });
 });
 

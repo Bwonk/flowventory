@@ -1,36 +1,28 @@
 'use client';
 
-import { useEffect, type ReactNode } from 'react';
-import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { type ReactNode } from 'react';
+import { usePathname } from 'next/navigation';
 import { Lock } from 'lucide-react';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { Button } from '@/components/ui/button';
 import { hasAccess } from '@/lib/billing/entitlement';
 import { useSubscription } from '@/lib/billing/use-subscription';
-import { consumeFirstLanding } from '@/lib/onboarding';
+import { useOnboardingDialog } from '@/components/onboarding/onboarding-dialog-context';
+import { ONBOARDING_PLAN_STEP } from '@/components/onboarding/OnboardingDialog';
 
-const BASLARKEN = '/dashboard/baslarken';
-/** Deneme bitse de açık kalan sayfalar: plan yolu ve ayarlar. */
-const ALWAYS_OPEN = [BASLARKEN, '/dashboard/ayarlar'];
+/** Deneme bitse de açık kalan sayfa: ayarlar (plan bölümü orada). */
+const ALWAYS_OPEN = ['/dashboard/ayarlar'];
 
 /**
- * Dashboard içeriğinin kapısı:
- * - İlk açılışta (rehber bitmemişse) Genel Bakış yerine Başlarken açılır.
- * - Deneme bitti ve abonelik yoksa Başlarken/Ayarlar dışındaki sayfalar
- *   yerine kilit ekranı — sessiz 403 değil, ilerleme yolu. Durum
- *   alınamazsa ya da faturalandırma kapalıysa kilit yok (fail-open).
+ * Dashboard içeriğinin kapısı: deneme bitti ve abonelik yoksa Ayarlar
+ * dışındaki sayfalar yerine kilit ekranı — sessiz 403 değil, ilerleme yolu
+ * (CTA Başlarken popup'ını plan adımında açar). Durum alınamazsa ya da
+ * faturalandırma kapalıysa kilit yok (fail-open).
  */
 export function SubscriptionGate({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter();
   const { summary } = useSubscription();
-
-  useEffect(() => {
-    if (pathname === '/dashboard' && consumeFirstLanding()) router.replace(BASLARKEN);
-    // Yalnız ilk mount: sonraki gezinmeler yönlendirilmez.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const { openOnboarding } = useOnboardingDialog();
 
   const locked =
     summary !== null && !hasAccess(summary.state) && !ALWAYS_OPEN.some(p => pathname.startsWith(p));
@@ -46,8 +38,8 @@ export function SubscriptionGate({ children }: { children: ReactNode }) {
             Stok verilerin ve kuralların saklanıyor. Aboneliği başlatınca kaldığın yerden devam edersin.
           </p>
         </div>
-        <Button asChild className="mt-2">
-          <Link href={`${BASLARKEN}#abonelik`}>Aboneliği başlat</Link>
+        <Button type="button" className="mt-2" onClick={() => openOnboarding(ONBOARDING_PLAN_STEP)}>
+          Planı gör
         </Button>
       </div>
     </PageContainer>
