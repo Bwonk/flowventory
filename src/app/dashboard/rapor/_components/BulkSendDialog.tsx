@@ -105,14 +105,8 @@ export function BulkSendDialog({ token, groups, onVendorSent }: BulkSendDialogPr
           size="sm"
           // done: tıklanamaz ama soluk değil — onay durumu tam mürekkeple okunur.
           className={cn('h-8 w-full gap-1.5 text-xs', done && 'disabled:opacity-100')}
-          disabled={done || ready.length === 0}
-          title={
-            !done && ready.length === 0
-              ? groups.length === 0
-                ? 'Sepet boş'
-                : 'Tedarikçi e-postaları eksik'
-              : undefined
-          }
+          // E-postası eksik gruplar pencerede listelenir; tetik yalnız sepet boşken kapalı.
+          disabled={done || groups.length === 0}
           aria-label={
             done ? 'Sipariş verildi' : `Tüm tedarikçilere sipariş e-postalarını gönder (${ready.length} tedarikçi)`
           }
@@ -164,7 +158,7 @@ export function BulkSendDialog({ token, groups, onVendorSent }: BulkSendDialogPr
                 <div className="min-w-0">
                   <p className="truncate font-medium text-foreground">{vendor.vendorName}</p>
                   <p className="truncate text-xs text-muted-foreground">
-                    {email ?? 'E-posta yok — atlanacak'}
+                    {email ?? 'E-posta eksik · atlanacak'}
                   </p>
                 </div>
                 <div className="shrink-0 text-right tabular-nums">
@@ -177,6 +171,12 @@ export function BulkSendDialog({ token, groups, onVendorSent }: BulkSendDialogPr
             );
           })}
         </ul>
+        {skipped.length > 0 && (
+          <p className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
+            {skipped.length === 1 ? `${skipped[0].vendor.vendorName} için` : `${skipped.length} tedarikçi için`} kayıtlı
+            e-posta yok. Adresi sepetteki grubun Gönder penceresinden ekleyebilirsiniz.
+          </p>
+        )}
         <div className="flex justify-between gap-4 text-sm">
           <span className="text-muted-foreground">Gönderilecek toplam · {ready.length} e-posta</span>
           <span className="font-semibold tabular-nums text-foreground">{formatPrice(readyTotal)}</span>

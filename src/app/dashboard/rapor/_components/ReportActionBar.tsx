@@ -28,6 +28,7 @@ interface ReportActionBarProps {
   onLineQtyChange: (variantId: string, qty: number | null) => void;
   onResetBasket: () => void;
   onVendorSent: (vendorId: string) => void;
+  onVendorContactSaved: (vendorId: string, next: { email: string | null; phone: string | null }) => void;
   onPrint: () => void;
 }
 
@@ -49,6 +50,7 @@ export function ReportActionBar({
   onLineQtyChange,
   onResetBasket,
   onVendorSent,
+  onVendorContactSaved,
   onPrint,
 }: ReportActionBarProps) {
   const params = useIconHover();
@@ -115,6 +117,7 @@ export function ReportActionBar({
           onLineQtyChange={onLineQtyChange}
           onResetBasket={onResetBasket}
           onVendorSent={onVendorSent}
+          onVendorContactSaved={onVendorContactSaved}
           trigger={button}
         />
       ),

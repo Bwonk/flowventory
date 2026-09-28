@@ -25,10 +25,15 @@ export function defaultQtyFor(line: PurchaseReportLine): number {
   return line.needsOrder ? line.suggestedQty : ORDER_ROUNDING_MULTIPLE;
 }
 
-/** Açılış sepeti: tüm öneri satırları önerilen adetle seçili (e-posta davranışıyla birebir). */
+/**
+ * Açılış sepeti: tedarikçisi olan öneri satırları önerilen adetle seçili.
+ * Tedarikçisiz satırlar tohumlanmaz — sipariş edilemedikleri için sepet
+ * rozetinde sayılıp toplu gönderimde sessizce düşüyorlardı.
+ */
 export function seedBasket(report: PurchaseReportApiResponse): BasketState {
   const basket: BasketState = {};
   for (const vendor of report.vendors) {
+    if (vendor.vendorId === null) continue;
     for (const line of vendor.lines) {
       if (line.needsOrder) basket[line.variantId] = line.suggestedQty;
     }

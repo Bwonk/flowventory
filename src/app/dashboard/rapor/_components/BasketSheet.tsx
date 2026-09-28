@@ -52,6 +52,8 @@ interface BasketSheetProps {
   onResetBasket: () => void;
   /** Gönderim başarısında o tedarikçinin satırları sepetten düşer. */
   onVendorSent: (vendorId: string) => void;
+  /** Gönder penceresinde girilen e-posta kaydedilince tedarikçi listesini günceller. */
+  onVendorContactSaved: (vendorId: string, next: { email: string | null; phone: string | null }) => void;
   /** Dış tetikleyici (ör. ExpandableActionBar öğesi); verilmezse varsayılan segment buton. */
   trigger?: ReactNode;
 }
@@ -86,6 +88,7 @@ export function BasketSheet({
   onLineQtyChange,
   onResetBasket,
   onVendorSent,
+  onVendorContactSaved,
   trigger,
 }: BasketSheetProps) {
   const { ref: cartRef, hoverProps: cartHoverProps } = useIconHover();
@@ -168,9 +171,15 @@ export function BasketSheet({
                           >
                             {vendor.vendorId === null ? 'Tedarikçi atanmamış' : vendor.vendorName}
                           </p>
-                          <p className="text-xs tabular-nums text-muted-foreground">
-                            <AnimatedNumber value={vendorTotals.count} /> kalem
-                          </p>
+                          <div className="flex items-center gap-1.5 text-xs tabular-nums text-muted-foreground">
+                            <span>
+                              <AnimatedNumber value={vendorTotals.count} /> kalem
+                            </span>
+                            {/* Eksik e-posta göndermeyi engellemez; Gönder penceresi adresi sorar. */}
+                            {vendor.vendorId !== null && !contact?.email && (
+                              <Badge variant="warning">E-posta eksik</Badge>
+                            )}
+                          </div>
                         </div>
                         {/* Grup toplamı sağda vurgulu (Kart × Sevkiyat karması) */}
                         <p
@@ -245,6 +254,8 @@ export function BasketSheet({
                             vendorId={vendor.vendorId}
                             vendorName={vendor.vendorName}
                             email={contact?.email ?? null}
+                            phone={contact?.phone ?? null}
+                            onContactSaved={next => onVendorContactSaved(vendor.vendorId!, next)}
                             lines={lines}
                             onSent={() => onVendorSent(vendor.vendorId!)}
                             variant="group"

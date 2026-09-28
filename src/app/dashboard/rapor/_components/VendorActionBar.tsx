@@ -26,7 +26,8 @@ interface VendorActionBarProps {
 /**
  * Aktif tedarikçinin işlem yolu — Ürün ekle · Yazdır · İletişim │ Gönder (ink).
  * Kompakt ikonlar hover/focus'ta etiketlenir; tek ink birincil sayfanın asıl
- * hedefi olan Gönder'dir. Yazdır/Gönder sepet boşken kapalıdır.
+ * hedefi olan Gönder'dir. Yazdır/Gönder yalnız sepet boşken kapalıdır —
+ * e-posta eksikliği Gönder'i kapatmaz, pencere adresi sorar.
  */
 export function VendorActionBar({
   token,
@@ -103,9 +104,9 @@ export function VendorActionBar({
             'aria-label': `${vendor.vendorName} siparişini e-posta ile gönder`,
             variant: 'ink',
             separatorBefore: true,
-            disabled: !contact.email || sendLines.length === 0,
-            title:
-              sendLines.length === 0 ? 'Sepet boş' : contact.email ? undefined : "Önce İletişim'den e-posta ekleyin",
+            // E-posta eksikse de açık: pencere adresi sorar ve kaydeder.
+            disabled: sendLines.length === 0,
+            title: sendLines.length === 0 ? 'Sepet boş' : undefined,
             hoverProps: send.hoverProps,
             wrap: button => (
               <SendReportDialog
@@ -113,6 +114,8 @@ export function VendorActionBar({
                 vendorId={vendorId}
                 vendorName={vendor.vendorName}
                 email={contact.email}
+                phone={contact.phone}
+                onContactSaved={next => onContactSaved(vendorId, next)}
                 lines={sendLines}
                 onSent={() => onSent(vendorId)}
                 variant="track"

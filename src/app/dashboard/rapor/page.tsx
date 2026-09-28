@@ -2,6 +2,7 @@
 
 import { logger } from '@/lib/logger';
 import { useCallback, useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { TokenHelpers } from '@/helpers/token-helpers';
 import { ApiRequests } from '@/lib/api-requests';
 import type { PurchaseReportApiResponse } from '@/app/api/reports/purchase/route';
@@ -111,10 +112,16 @@ export default function RaporPage() {
     try {
       const [res, vendorsRes] = await Promise.all([
         ApiRequests.reports.purchase(currentToken),
-        ApiRequests.vendors.list(currentToken).catch(() => null),
+        ApiRequests.vendors.list(currentToken).catch(error => {
+          logger.error('Vendor list fetch failed', { error });
+          return null;
+        }),
       ]);
       if (vendorsRes?.status === 200 && vendorsRes.data?.data) {
         setVendorList(vendorsRes.data.data.vendors);
+      } else {
+        // Liste gelmezse kayıtlı e-postalar da görünmez; sessiz kalmasın.
+        toast.error('Tedarikçi iletişim bilgileri yüklenemedi. Yenile ile tekrar deneyin.');
       }
       if (res.status === 200 && res.data?.data) {
         setReport(res.data.data);
@@ -174,9 +181,19 @@ export default function RaporPage() {
 
   const handleVendorContactSaved = useCallback(
     (vendorId: string, next: { email: string | null; phone: string | null }) => {
-      setVendorList(prev => prev.map(v => (v.vendorId === vendorId ? { ...v, ...next } : v)));
+      setVendorList(prev => {
+        if (prev.some(v => v.vendorId === vendorId)) {
+          return prev.map(v => (v.vendorId === vendorId ? { ...v, ...next } : v));
+        }
+        // Liste yüklenememişse ya da tedarikçi henüz listede yoksa kaydı kaybetme.
+        const vendorName = report?.vendors.find(v => v.vendorId === vendorId)?.vendorName;
+        if (!vendorName) return prev;
+        return [...prev, { vendorId, vendorName, ...next }].sort((a, b) =>
+          a.vendorName.localeCompare(b.vendorName, 'tr'),
+        );
+      });
     },
-    [],
+    [report],
   );
 
   const handleVendorDeleted = useCallback((vendorId: string) => {
@@ -270,6 +287,7 @@ export default function RaporPage() {
               onLineQtyChange={handleLineQtyChange}
               onResetBasket={handleResetBasket}
               onVendorSent={handleVendorSent}
+              onVendorContactSaved={handleVendorContactSaved}
               onPrint={() => window.print()}
             />
           }

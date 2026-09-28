@@ -15,17 +15,23 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { formatPrice } from '@/lib/currency';
 import type { BasketLine } from './basket';
 import { extractErrorMessage } from '@/lib/api-error';
+import { useEmailField } from './use-email-field';
 
 interface SendReportDialogProps {
   token: string;
   vendorId: string;
   vendorName: string;
-  /** Kayıtlı tedarikçi e-postası; yoksa buton disabled. */
+  /** Kayıtlı tedarikçi e-postası; yoksa pencerede sorulur ve kaydedilir. */
   email: string | null;
+  /** Kayıtlı telefon — e-posta kaydedilirken korunur. */
+  phone: string | null;
+  /** Pencerede girilen e-posta kaydedilince sayfadaki tedarikçi listesini günceller. */
+  onContactSaved?: (next: { email: string | null; phone: string | null }) => void;
   /** Sepetteki satırlar — e-postaya bu adetler gider. */
   lines: BasketLine[];
   /** Gönderim başarısında (sepetten düşürme vb.) — toast sonrası çağrılır. */
@@ -39,7 +45,7 @@ interface SendReportDialogProps {
    * 'shelf' kompakt ghost (eski raf dili, sepet çekmecesi dışında kullanılmaz).
    */
   variant?: 'shelf' | 'group' | 'track';
-  /** Dış tetikleyici (ör. ExpandableActionBar öğesi); disabled/title dışarıda hesaplanır. */
+  /** Dış tetikleyici (ör. ExpandableActionBar öğesi); disabled dışarıda hesaplanır. */
   trigger?: ReactNode;
 }
 
@@ -47,12 +53,16 @@ interface SendReportDialogProps {
  * Tedarikçiye sipariş e-postası — dışa dönük aksiyon olduğu için tek tık
  * yerine bilinçli bir onay adımı var: alıcı + sepet satırları + toplam
  * gösterilir. Adetler sepetten gider; fiyat/isim sunucu raporundan okunur.
+ * E-posta kayıtlı değilse tetik pasifleşmez: alıcı satırı alana dönüşür,
+ * "Kaydet ve gönder" önce adresi tedarikçiye kaydeder, sonra gönderir.
  */
 export function SendReportDialog({
   token,
   vendorId,
   vendorName,
   email,
+  phone,
+  onContactSaved,
   lines,
   onSent,
   triggerClassName,
@@ -62,6 +72,12 @@ export function SendReportDialog({
   const { ref: sendRef, hoverProps } = useIconHover();
   const [open, setOpen] = useState(false);
   const [sending, setSending] = useState(false);
+  const [draftEmail, setDraftEmail] = useState('');
+  const emailField = useEmailField(draftEmail);
+  const needsEmail = !email;
+  const canSend = !needsEmail || (emailField.trimmed !== '' && emailField.valid);
+  const emailInputId = `send-email-${vendorId}`;
+  const emailErrorId = `send-email-error-${vendorId}`;
 
   const totalCost = lines.reduce((sum, { line, qty }) => sum + qty * line.unitCost, 0);
   const hasEstimate = lines.some(({ line }) => line.isEstimate);
@@ -69,6 +85,17 @@ export function SendReportDialog({
   const send = async () => {
     setSending(true);
     try {
+      if (needsEmail) {
+        const saved = await ApiRequests.vendors.updateContact(token, {
+          vendorId,
+          vendorName,
+          email: emailField.trimmed,
+          phone,
+        });
+        const contact = saved.data?.data;
+        if (!contact) throw new Error('Empty vendor contact response');
+        onContactSaved?.({ email: contact.email, phone: contact.phone });
+      }
       const res = await ApiRequests.vendors.sendReport(token, {
         vendorId,
         lines: lines.map(({ line, qty }) => ({ variantId: line.variantId, qty })),
@@ -87,7 +114,17 @@ export function SendReportDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={next => !sending && setOpen(next)}>
+    <Dialog
+      open={open}
+      onOpenChange={next => {
+        if (sending) return;
+        setOpen(next);
+        if (next) {
+          setDraftEmail('');
+          emailField.reset();
+        }
+      }}
+    >
       <DialogTrigger asChild>
         {trigger ?? (
         <Button
@@ -99,8 +136,7 @@ export function SendReportDialog({
             'print:hidden',
             triggerClassName,
           )}
-          disabled={!email || lines.length === 0}
-          title={lines.length === 0 ? 'Sepet boş' : email ? undefined : "Önce İletişim'den e-posta ekleyin"}
+          disabled={lines.length === 0}
           aria-label={`${vendorName} siparişini e-posta ile gönder`}
           {...hoverProps}
         >
@@ -113,10 +149,42 @@ export function SendReportDialog({
         <DialogHeader>
           <DialogTitle>Sipariş ver — {vendorName}</DialogTitle>
         </DialogHeader>
-        <div className="flex justify-between gap-4 text-sm">
-          <span className="text-muted-foreground">Alıcı</span>
-          <span className="truncate font-medium text-foreground">{email}</span>
-        </div>
+        {needsEmail ? (
+          <div>
+            <label htmlFor={emailInputId} className="mb-1 block text-xs text-muted-foreground">
+              Tedarikçi e-postası
+            </label>
+            <Input
+              id={emailInputId}
+              type="email"
+              inputMode="email"
+              autoComplete="off"
+              autoFocus
+              value={draftEmail}
+              onChange={e => setDraftEmail(e.target.value)}
+              onBlur={emailField.onBlur}
+              placeholder="siparis@tedarikci.com"
+              className="h-8 md:text-base pointer-fine:text-sm"
+              disabled={sending}
+              aria-invalid={emailField.showError || undefined}
+              aria-describedby={emailField.showError ? emailErrorId : undefined}
+            />
+            {emailField.showError ? (
+              <p id={emailErrorId} className="mt-1 text-xs text-destructive">
+                Geçerli bir e-posta adresi girin.
+              </p>
+            ) : (
+              <p className="mt-1 text-xs text-muted-foreground">
+                {vendorName} için kayıtlı e-posta yok. Adres kaydedilir, sonraki siparişlerde sorulmaz.
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="flex justify-between gap-4 text-sm">
+            <span className="text-muted-foreground">Alıcı</span>
+            <span className="truncate font-medium text-foreground">{email}</span>
+          </div>
+        )}
         {/* Sepet önizlemesi — e-postaya birebir bu satırlar gider */}
         <ul className="max-h-64 divide-y divide-border overflow-y-auto rounded-md border border-border text-sm">
           {lines.map(({ line, qty }) => (
@@ -152,8 +220,8 @@ export function SendReportDialog({
           <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={sending}>
             Vazgeç
           </Button>
-          <Button type="button" onClick={send} disabled={sending}>
-            {sending ? 'Gönderiliyor…' : 'Gönder'}
+          <Button type="button" onClick={send} disabled={sending || !canSend}>
+            {sending ? 'Gönderiliyor…' : needsEmail ? 'Kaydet ve gönder' : 'Gönder'}
           </Button>
         </DialogFooter>
       </DialogContent>

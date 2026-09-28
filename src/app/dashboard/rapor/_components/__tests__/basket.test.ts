@@ -67,6 +67,14 @@ describe('seedBasket', () => {
     } as PurchaseReportApiResponse;
     expect(seedBasket(report)).toEqual({ a: 15 });
   });
+
+  it('tedarikçisiz satırları tohumlamaz', () => {
+    const unassigned = makeLine({ variantId: 'c', suggestedQty: 20 });
+    const report = {
+      vendors: [makeVendor([needs]), makeVendor([unassigned], { vendorId: null, vendorName: 'Yok' })],
+    } as PurchaseReportApiResponse;
+    expect(seedBasket(report)).toEqual({ a: 15 });
+  });
 });
 
 describe('vendorBasketLines / vendorBasketTotals', () => {
