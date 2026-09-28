@@ -145,7 +145,6 @@ export async function GET(request: NextRequest) {
       merchantId,
       storeName: merchantResponse.data.getMerchant.storeName,
     });
-    await kanca.flush(); // make sure the install is sent before the redirect
 
     const publicApiUrl = resolvePublicApiUrl(request);
 
