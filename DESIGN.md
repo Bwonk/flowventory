@@ -342,8 +342,17 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   `div` yap) ve boyut `size` prop'uyla açıkça verilir (`[&>svg]` direkt-çocuk kuralları
   bu ikonlara işlemez).
 - **Butonlar:** [src/components/ui/button.tsx](src/components/ui/button.tsx);
-  birincil = ink, ikincil = `variant="outline"` hairline; tehlikeli =
-  `variant="destructive"`. Mavi buton yok.
+  birincil (`default`) ve ikincil (`variant="outline"`) butonlar cult-ui
+  **TextureButton** ile çizilir
+  ([src/components/ui/texture-button.tsx](src/components/ui/texture-button.tsx);
+  kullanıcı kararı, 28 Eyl 2026): siyah → texture `primary` (ink gradyan kenar +
+  ink gradyan yüzey), beyaz → texture `secondary` (`foreground/15` kenar +
+  card→muted yüzey). İki katmanlıdır: yükseklik/genişlik/yerleşim dış
+  katmanda, dolgu/boşluk/yazı iç yüzeyde — `Button` çağıranın className'ini
+  bu ikiye kendisi böler, çağrı yerleri değişmez. Koyu (ink) zeminde buton
+  `outline` (beyaz) kullanılır. Tehlikeli = `variant="destructive"`, ghost /
+  link / segment düz kalır. Sidebar geri bildirim butonu `ShimmerButton`dır,
+  texture'a çevrilmez. Mavi buton yok.
 - **Bilgi balonu (InfoTip):** yardımcı hesap açıklamaları ("~33 gün neye
   göre?", "hangi pencere?") metnin içine değil
   [src/components/shared/InfoTip.tsx](src/components/shared/InfoTip.tsx)'e

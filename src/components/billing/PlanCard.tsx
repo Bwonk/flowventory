@@ -27,8 +27,8 @@ const MANAGE_HINT = 'ikas panelinde uygulamanın sağ üstündeki "Planı Yönet
 /**
  * Plan kartı — ink zeminli tek plan kartı (onboarding popup'ının son adımı).
  * Referans: kullanıcının paylaştığı koyu fiyat kartı; DESIGN.md'ye çevrildi:
- * zemin `bg-primary` (ink, ikinci accent yok — teal/yeşil buton yerine ters
- * `bg-card` buton), köşe `rounded-lg`, gölge yok, fiyat KPI dilinde
+ * zemin `bg-primary` (ink, ikinci accent yok — teal/yeşil buton yerine beyaz
+ * texture secondary buton), köşe `rounded-lg`, gölge yok, fiyat KPI dilinde
  * `font-mono tabular-nums`, köşe rozeti durum çiftinden. Kalan deneme günü
  * statik metin — geri sayım animasyonu yok.
  */
@@ -112,7 +112,7 @@ export function PlanCard() {
           ) : error ? (
             <div className="flex items-center justify-between gap-3 text-sm text-primary-foreground/70">
               Abonelik durumu alınamadı.
-              <Button type="button" size="sm" className="bg-card text-foreground hover:bg-card/90" onClick={() => void refresh()}>
+              <Button type="button" size="sm" variant="outline" onClick={() => void refresh()}>
                 Tekrar dene
               </Button>
             </div>
@@ -124,7 +124,8 @@ export function PlanCard() {
             <div className="flex flex-col gap-2 sm:flex-row">
               <Button
                 type="button"
-                className="w-full flex-1 bg-card text-foreground hover:bg-card/90 disabled:bg-primary-foreground/10 disabled:text-primary-foreground/60 disabled:opacity-100"
+                variant="outline"
+                className="w-full flex-1"
                 onClick={() => void handleCheckout()}
                 disabled={starting || pending}
               >
