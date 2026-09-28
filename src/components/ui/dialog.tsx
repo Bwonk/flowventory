@@ -41,7 +41,7 @@ function DialogOverlay({
       className={cn(
         // İçerikle aynı ritim; reduced-motion'da da kısa fade kalır.
         // Şeffaflık azaltılmışsa blur yok, perde koyulaşır.
-        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=open]:duration-200 data-[state=closed]:duration-150 ease-out fixed inset-0 z-50 bg-black/40 backdrop-blur-sm reduced-transparency:backdrop-blur-none reduced-transparency:bg-black/60",
+        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=open]:duration-300 data-[state=closed]:duration-200 ease-out fixed inset-0 z-50 bg-black/40 backdrop-blur-sm reduced-transparency:backdrop-blur-none reduced-transparency:bg-black/60",
         className
       )}
       {...props}
@@ -64,13 +64,13 @@ function DialogContent({
       <DialogOverlay />
       <DialogPrimitive.Content
         data-slot="dialog-content"
-        // Origin-aware: açan butonun merkezinden fade + 0.9 → 1 büyür, 200ms
-        // güçlü ease-out; kapanışta aynı noktaya 150ms'de küçülür (kök
+        // Origin-aware: açan butonun merkezinden fade + 0.9 → 1 büyür, 300ms
+        // güçlü ease-out; kapanışta aynı noktaya 200ms'de küçülür (kök
         // useTriggerOrigin'den; tetikleyici yoksa kendi ortası).
         // reduced-motion'da yalnız fade kalır (zoom motion-safe'te).
         onAnimationStart={handleAnimationStart}
         className={cn(
-          "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 motion-safe:data-[state=closed]:zoom-out-90 motion-safe:data-[state=open]:zoom-in-90 data-[state=open]:duration-200 data-[state=closed]:duration-150 ease-out fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg sm:max-w-lg",
+          "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 motion-safe:data-[state=closed]:zoom-out-90 motion-safe:data-[state=open]:zoom-in-90 data-[state=open]:duration-300 data-[state=closed]:duration-200 ease-out fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg sm:max-w-lg",
           className
         )}
         {...props}

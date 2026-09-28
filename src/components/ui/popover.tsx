@@ -36,9 +36,9 @@ function PopoverContent({
         className={cn(
           // Origin-aware: tetikleyicinin merkezinden 0.9 → 1 büyür, kapanışta
           // oraya küçülür (kök useTriggerOrigin'den; bulunamazsa Radix'in
-          // tarafa bakan kökü). 150ms güçlü ease-out giriş, 100ms çıkış;
+          // tarafa bakan kökü). 250ms güçlü ease-out giriş, 150ms çıkış;
           // reduced-motion'da yalnız fade (zoom motion-safe'te).
-          "z-50 w-72 origin-(--radix-popover-content-transform-origin) rounded-md border bg-popover p-4 text-popover-foreground shadow-md outline-hidden ease-out data-[state=closed]:animate-out data-[state=closed]:duration-100 data-[state=closed]:fade-out-0 motion-safe:data-[state=closed]:zoom-out-90 data-[state=open]:animate-in data-[state=open]:duration-150 data-[state=open]:fade-in-0 motion-safe:data-[state=open]:zoom-in-90",
+          "z-50 w-72 origin-(--radix-popover-content-transform-origin) rounded-md border bg-popover p-4 text-popover-foreground shadow-md outline-hidden ease-out data-[state=closed]:animate-out data-[state=closed]:duration-150 data-[state=closed]:fade-out-0 motion-safe:data-[state=closed]:zoom-out-90 data-[state=open]:animate-in data-[state=open]:duration-250 data-[state=open]:fade-in-0 motion-safe:data-[state=open]:zoom-in-90",
           className
         )}
         onAnimationStart={handleAnimationStart}

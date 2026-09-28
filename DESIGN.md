@@ -517,8 +517,9 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   Aralık `width`'le çalışır (ikon şeridi gerçek 48px yerleşim ister; bilinçli).
   Menü hover'ı kayan hap değil, 150ms zemin rengi —
   [src/components/animate-ui/components/radix/sidebar.tsx](src/components/animate-ui/components/radix/sidebar.tsx).
-- Katmanlar: `Dialog` 200ms açılır / 150ms kapanır (`ease-out`, zoom 90);
-  `Popover` 150 / 100ms (zoom 90). İkisi de **origin-aware**: açan butonun
+- Katmanlar: `Dialog` 300ms açılır / 200ms kapanır (`ease-out`, zoom 90);
+  `Popover` 250 / 150ms (zoom 90) — büyüme hissedilsin diye diğer arayüz
+  hareketlerinden uzun. İkisi de **origin-aware**: açan butonun
   merkezinden büyür, kapanışta oraya küçülür — kök
   [src/lib/hooks/use-trigger-origin.ts](src/lib/hooks/use-trigger-origin.ts)
   (Radix `aria-controls` tetikleyicisi, yoksa son 1sn'deki basış; bulunamazsa
@@ -562,7 +563,7 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   yerine salt cross-fade, yükseklik ve hap anlık. İkon dışı animasyonlarda
   `useReducedMotion()` doğrudan `motion/react`'ten alınır — `useIconHover`
   yalnızca ikon animasyonları içindir.
-- **Başlarken popup'ı hareketi** — Dialog'un kendi 200/150ms geçişi; adım
+- **Başlarken popup'ı hareketi** — Dialog'un kendi 300/200ms geçişi; adım
   değişimi upstream gibi anlık (aktif olmayan adım unmount). Özellik
   önizlemesi `AnimatePresence mode="wait"`: giriş opacity + 6px `SPRING`,
   çıkış 100ms opaklık. Kurulum numara ↔ tik rozeti `popLayout` +
