@@ -24,6 +24,8 @@ const CORNER_BADGE: Record<SubscriptionState, { label: string; className: string
   expired: { label: 'Deneme bitti', className: 'bg-critical text-critical-foreground' },
 };
 
+const PERIOD_LABEL = { YEARLY: '/yıllık', MONTHLY: '/aylık', ONE_TIME: 'tek sefer' } as const;
+
 const MANAGE_HINT = 'ikas panelinde uygulamanın sağ üstündeki "Planı Yönet" butonunu da kullanabilirsin.';
 
 /**
@@ -50,6 +52,8 @@ export function PlanCard() {
     }
   };
 
+  // Bölge planının fiyatı (Partner panel); yoksa TR planının sabit bilgisi.
+  const price = summary?.offer ?? { price: PLAN.yearlyPrice, currency: PLAN.currency, period: 'YEARLY' as const };
   const state = summary?.state ?? 'trial';
   const badge = CORNER_BADGE[state];
 
@@ -138,9 +142,9 @@ export function PlanCard() {
         </p>
         <p className="mt-3 flex flex-wrap items-baseline gap-x-1.5">
           <span className="font-mono text-4xl font-medium tracking-tight tabular-nums">
-            {formatMoneyRounded(PLAN.yearlyPrice, PLAN.currency)}
+            {formatMoneyRounded(price.price, price.currency)}
           </span>
-          <span className="text-sm text-primary-foreground/60">/yıllık</span>
+          <span className="text-sm text-primary-foreground/60">{PERIOD_LABEL[price.period]}</span>
           <span className="text-xs text-primary-foreground/40">+ KDV</span>
         </p>
         <p className="mt-3 text-sm text-primary-foreground/70">{PLAN.description}</p>

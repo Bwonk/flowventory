@@ -6,6 +6,17 @@ export enum MerchantAppPaymentStatusEnum {
   WAITING_FOR_PAYMENT = "WAITING_FOR_PAYMENT"
 }
 
+export enum MerchantRegionEnum {
+  AF = "AF",
+  AN = "AN",
+  AS = "AS",
+  EU = "EU",
+  OC = "OC",
+  PL = "PL",
+  TR = "TR",
+  US = "US"
+}
+
 export enum MerchantSubscriptionStatusEnum {
   ACTIVE = "ACTIVE",
   REMOVED = "REMOVED",
@@ -91,6 +102,12 @@ export enum SubscriptionPeriodEnum {
   MONTHLY = "MONTHLY",
   ONE_TIME = "ONE_TIME",
   YEARLY = "YEARLY"
+}
+
+export enum SubscriptionPriceCurrencyEnum {
+  EUR = "EUR",
+  TRY = "TRY",
+  USD = "USD"
 }
 
 export type BundleProductOrderLineInput = {
@@ -712,6 +729,7 @@ export interface ListOrderForAnalyticsQuery {
 export type GetMerchantLicenceQueryVariables = {}
 
 export type GetMerchantLicenceQueryData = {
+  region: MerchantRegionEnum;
   appSubscriptions?: Array<{
   id: string;
   storeAppId: string;
@@ -726,6 +744,21 @@ export type GetMerchantLicenceQueryData = {
 
 export interface GetMerchantLicenceQuery {
   getMerchantLicence: GetMerchantLicenceQueryData;
+}
+
+export type GetAvailableSubscriptionsQueryVariables = {}
+
+export type GetAvailableSubscriptionsQueryData = Array<{
+  key: string;
+  currencyCode: SubscriptionPriceCurrencyEnum;
+  prices: Array<{
+  period: SubscriptionPeriodEnum;
+  price: number;
+}>;
+}>
+
+export interface GetAvailableSubscriptionsQuery {
+  getAvailableSubscriptions: GetAvailableSubscriptionsQueryData;
 }
 
 export type CreateMerchantAppPaymentMutationVariables = {
@@ -917,6 +950,7 @@ export class GeneratedQueries {
     const query = `
   query getMerchantLicence {
     getMerchantLicence {
+      region
       appSubscriptions {
         id
         storeAppId
@@ -931,6 +965,22 @@ export class GeneratedQueries {
   }
 `;
     return this.client.query<Partial<GetMerchantLicenceQuery>>({ query });
+  }
+
+  async getAvailableSubscriptions(): Promise<APIResult<Partial<GetAvailableSubscriptionsQuery>>> {
+    const query = `
+  query getAvailableSubscriptions {
+    getAvailableSubscriptions {
+      key
+      currencyCode
+      prices {
+        period
+        price
+      }
+    }
+  }
+`;
+    return this.client.query<Partial<GetAvailableSubscriptionsQuery>>({ query });
   }
 }
 

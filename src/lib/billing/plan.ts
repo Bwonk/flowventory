@@ -4,8 +4,9 @@
  * Plan ikas Partner panelinde tanımlanır; buradaki fiyat yalnız gösterimdir
  * (KDV hariç). ikas mağazaya kalan lisans gününe göre oranlanmış fiyat +
  * KDV'yi kendi ödeme ekranında gösterir. TR bölgesinde yalnız yıllık plan
- * açılabildiğinden dönem seçimi yok. Partner panel plan anahtarı sunucu
- * env'inde (`IKAS_PLAN_KEY`, bkz. subscription-service.ts).
+ * açılabildiğinden dönem seçimi yok. Diğer bölgelerin planları ve fiyatları
+ * Partner panelden gelir (`IKAS_PLAN_KEY`, bkz. subscription-service.ts);
+ * buradaki fiyat onlar alınamazsa gösterilen TR varsayılanıdır.
  */
 export const PLAN = {
   name: 'Flowventory Pro',

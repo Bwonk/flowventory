@@ -1,7 +1,9 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 import {
+  currencyForRegion,
   hasAccess,
+  pickSubscription,
   resolveSubscriptionState,
   trialDaysLeft,
   type LicenceSubscription,
@@ -22,7 +24,7 @@ const sub = (overrides: Partial<LicenceSubscription> = {}): LicenceSubscription 
 describe('resolveSubscriptionState', () => {
   it('planımızda ACTIVE abonelik → active (deneme bitmiş olsa da)', () => {
     expect(
-      resolveSubscriptionState({ subscriptions: [sub()], planKey: KEY, trialEndsAt: TRIAL_OVER, now: NOW }),
+      resolveSubscriptionState({ subscriptions: [sub()], planKeys: [KEY], trialEndsAt: TRIAL_OVER, now: NOW }),
     ).toBe('active');
   });
 
@@ -30,7 +32,7 @@ describe('resolveSubscriptionState', () => {
     expect(
       resolveSubscriptionState({
         subscriptions: [sub({ status: 'WILL_BE_REMOVED' })],
-        planKey: KEY,
+        planKeys: [KEY],
         trialEndsAt: TRIAL_OVER,
         now: NOW,
       }),
@@ -39,7 +41,7 @@ describe('resolveSubscriptionState', () => {
 
   it('silinmiş ya da başka plana ait abonelik sayılmaz', () => {
     const subscriptions = [sub({ deleted: true }), sub({ storeAppListingSubscriptionKey: 'baska-plan' })];
-    expect(resolveSubscriptionState({ subscriptions, planKey: KEY, trialEndsAt: TRIAL_OVER, now: NOW })).toBe(
+    expect(resolveSubscriptionState({ subscriptions, planKeys: [KEY], trialEndsAt: TRIAL_OVER, now: NOW })).toBe(
       'expired',
     );
   });
@@ -48,7 +50,7 @@ describe('resolveSubscriptionState', () => {
     expect(
       resolveSubscriptionState({
         subscriptions: [sub({ status: 'REMOVED' })],
-        planKey: KEY,
+        planKeys: [KEY],
         trialEndsAt: IN_TRIAL,
         now: NOW,
       }),
@@ -56,20 +58,31 @@ describe('resolveSubscriptionState', () => {
   });
 
   it('abonelik yok, deneme bitti → expired', () => {
-    expect(resolveSubscriptionState({ subscriptions: [], planKey: KEY, trialEndsAt: TRIAL_OVER, now: NOW })).toBe(
+    expect(resolveSubscriptionState({ subscriptions: [], planKeys: [KEY], trialEndsAt: TRIAL_OVER, now: NOW })).toBe(
       'expired',
     );
   });
 
   it('faturalandırma kapalıyken (plan anahtarı yok) deneme bitse de expired dönmez', () => {
-    expect(resolveSubscriptionState({ subscriptions: [], planKey: null, trialEndsAt: TRIAL_OVER, now: NOW })).toBe(
+    expect(resolveSubscriptionState({ subscriptions: [], planKeys: [], trialEndsAt: TRIAL_OVER, now: NOW })).toBe(
       'trial',
     );
   });
 
+  it('bölge planlarından herhangi biri aktifse active', () => {
+    expect(
+      resolveSubscriptionState({
+        subscriptions: [sub({ storeAppListingSubscriptionKey: 'eur-plan' })],
+        planKeys: [KEY, 'eur-plan'],
+        trialEndsAt: TRIAL_OVER,
+        now: NOW,
+      }),
+    ).toBe('active');
+  });
+
   it('faturalandırma kapalıyken lisanstaki abonelik yoksayılır', () => {
     expect(
-      resolveSubscriptionState({ subscriptions: [sub()], planKey: null, trialEndsAt: IN_TRIAL, now: NOW }),
+      resolveSubscriptionState({ subscriptions: [sub()], planKeys: [], trialEndsAt: IN_TRIAL, now: NOW }),
     ).toBe('trial');
   });
 });
@@ -91,5 +104,39 @@ describe('hasAccess', () => {
     expect(hasAccess('active')).toBe(true);
     expect(hasAccess('will_be_removed')).toBe(true);
     expect(hasAccess('expired')).toBe(false);
+  });
+});
+
+describe('currencyForRegion', () => {
+  it('Partner panel bölge gruplarını izler', () => {
+    expect(currencyForRegion('TR')).toBe('TRY');
+    expect(currencyForRegion('EU')).toBe('EUR');
+    expect(currencyForRegion('PL')).toBe('EUR');
+    expect(currencyForRegion('US')).toBe('USD');
+    expect(currencyForRegion('AS')).toBe('USD');
+    expect(currencyForRegion(null)).toBeNull();
+  });
+});
+
+describe('pickSubscription', () => {
+  const available = [
+    { key: 'try-plan', currencyCode: 'TRY' as const },
+    { key: 'eur-plan', currencyCode: 'EUR' as const },
+    { key: 'usd-plan', currencyCode: 'USD' as const },
+  ];
+  const keys = ['try-plan', 'eur-plan', 'usd-plan'];
+
+  it('mağazanın bölge para birimindeki planı seçer', () => {
+    expect(pickSubscription(available, keys, 'TR')?.key).toBe('try-plan');
+    expect(pickSubscription(available, keys, 'EU')?.key).toBe('eur-plan');
+    expect(pickSubscription(available, keys, 'OC')?.key).toBe('usd-plan');
+  });
+
+  it('bölge eşleşmesi yoksa sunulan ilk planımıza düşer', () => {
+    expect(pickSubscription([available[1]], keys, 'TR')?.key).toBe('eur-plan');
+  });
+
+  it('bizim olmayan planları yoksayar; hiçbiri yoksa null', () => {
+    expect(pickSubscription([{ key: 'baska', currencyCode: 'TRY' as const }], keys, 'TR')).toBeNull();
   });
 });

@@ -234,6 +234,7 @@ export const LIST_ORDER_FOR_ANALYTICS = gql`
 export const GET_MERCHANT_LICENCE = gql`
   query getMerchantLicence {
     getMerchantLicence {
+      region
       appSubscriptions {
         id
         storeAppId
@@ -243,6 +244,21 @@ export const GET_MERCHANT_LICENCE = gql`
         lastPaymentDate
         lastPaymentPeriod
         lastPaymentPeriodInDays
+      }
+    }
+  }
+`;
+
+// Mağazanın satın alabileceği planlar (Partner panel › Planlar, bölgeye göre).
+// Birden fazla bölge planı varsa ödeme bu listeden mağazaya uyan anahtarla açılır.
+export const GET_AVAILABLE_SUBSCRIPTIONS = gql`
+  query getAvailableSubscriptions {
+    getAvailableSubscriptions {
+      key
+      currencyCode
+      prices {
+        period
+        price
       }
     }
   }
