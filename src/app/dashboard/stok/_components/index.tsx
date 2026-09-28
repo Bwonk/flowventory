@@ -1,8 +1,9 @@
 "use client"
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ArrowDownTrayIcon } from '@/components/ui/icons/arrow-down-tray';
+import { useIconHover } from '@/components/ui/icons/use-icon-hover';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { PageHeader } from '@/components/layout/PageHeader';
 import type { HomePageProps, Product } from '@/lib/products/types';
@@ -23,6 +24,7 @@ const HomePage: React.FC<HomePageProps> = ({ token, products = [], analytics, vi
   );
   const salesByVariant = analytics?.salesByVariant ?? [];
   const filters = useProductFilters(products, viewStats, salesByVariant, initialStatusFilter);
+  const download = useIconHover();
 
   useEffect(() => {
     if (initialSelectedProductId && products.some(p => p.id === initialSelectedProductId)) {
@@ -57,8 +59,8 @@ const HomePage: React.FC<HomePageProps> = ({ token, products = [], analytics, vi
           eyebrow="STOK YÖNETİMİ"
           title="Stok Takibi"
           actions={
-            <Button onClick={() => downloadCSV(filters.displayedRows)} className="gap-2">
-              <Download className="size-4" />
+            <Button onClick={() => downloadCSV(filters.displayedRows)} className="gap-2" {...download.hoverProps}>
+              <ArrowDownTrayIcon ref={download.ref} size={16} className="flex shrink-0 [&>svg]:size-4!" aria-hidden />
               CSV İndir
             </Button>
           }
