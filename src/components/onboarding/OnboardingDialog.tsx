@@ -2,8 +2,10 @@
 
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { ArrowRight, Check, ClipboardList, LineChart, Package, SlidersHorizontal, type LucideIcon } from 'lucide-react';
+import { Check, ClipboardList, LineChart, Package, SlidersHorizontal, type LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ArrowRightIcon } from '@/components/ui/icons/arrow-right';
+import { useIconHover } from '@/components/ui/icons/use-icon-hover';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { FeatureCarousel, Onboarding, TipsList, useOnboarding } from '@/components/ui/onboarding';
 import { PlanCard } from '@/components/billing/PlanCard';
@@ -209,6 +211,24 @@ function FeatureStep() {
 
 // ─── 2. Kurulum ───────────────────────────────────────────────────────────
 
+/** Adımın derin link butonu — hareketli ok, hover butondan sürülür (useIconHover). */
+function StepLinkButton({ label, done, onClick }: { label: string; done: boolean; onClick: () => void }) {
+  const { ref, hoverProps } = useIconHover();
+  return (
+    <Button
+      type="button"
+      size="sm"
+      variant={done ? 'ghost' : 'outline'}
+      className="shrink-0"
+      onClick={onClick}
+      {...hoverProps}
+    >
+      {label}
+      <ArrowRightIcon ref={ref} size={14} className="flex" aria-hidden />
+    </Button>
+  );
+}
+
 function SetupStep({ onNavigate }: { onNavigate: (href: string) => void }) {
   const { steps, doneCount, total, loading } = useOnboardingSteps();
   const reduceMotion = useReducedMotion();
@@ -261,16 +281,11 @@ function SetupStep({ onNavigate }: { onNavigate: (href: string) => void }) {
                 </Button>
               )}
             </div>
-            <Button
-              type="button"
-              size="sm"
-              variant={step.done ? 'ghost' : 'outline'}
-              className="shrink-0"
+            <StepLinkButton
+              label={step.done ? 'Aç' : step.cta}
+              done={step.done}
               onClick={() => onNavigate(step.href)}
-            >
-              {step.done ? 'Aç' : step.cta}
-              <ArrowRight className="size-3.5" aria-hidden />
-            </Button>
+            />
           </TipsList.Item>
         ))}
       </TipsList>

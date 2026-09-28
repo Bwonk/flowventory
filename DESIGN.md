@@ -334,7 +334,8 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   artısı, kaldır/sil çöpü, düzenle kalemi, tetikleyici şimşeği, stok uyarı
   üçgeni, boş kural belgesi, geçmiş saati, geçmiş sonucu tik/çarpı, aksiyon
   türü ikonları: zil / zarf / arşiv kutusu — `ActionIcon`; tablo menüsünde
-  `TableMenuItem.animatedIcon`) — animasyonlu
+  `TableMenuItem.animatedIcon`), Başlarken kartının kapat ✕'i ve Başlarken
+  popup'ındaki adım butonlarının sağa oku (`ArrowRightIcon`) — animasyonlu
   heroicons kullanır: [src/components/ui/icons/](src/components/ui/icons).
   Karma kütüphane **bilinçli**: heroicons stroke-1.5, lucide stroke-2; ikisi
   aynı satırda yan yana getirilmez. Animasyonlu ikonlar bir `<div>` sarmaladığı
