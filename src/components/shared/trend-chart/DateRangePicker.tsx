@@ -228,7 +228,7 @@ export function DateRangePicker<T extends string>({
               />
             </div>
             <div className="-mx-4 mt-3 flex items-center justify-end gap-2 border-t border-hairline px-4 pt-3">
-              <Button variant="ghost" size="sm" onClick={() => handleOpenChange(false)} className="h-8 rounded-md text-xs">
+              <Button variant="outline" size="sm" onClick={() => handleOpenChange(false)} className="h-8 rounded-md text-xs">
                 İptal
               </Button>
               <Button size="sm" onClick={applyCustomRange} disabled={!canApplyCustom} className="h-8 rounded-md text-xs">

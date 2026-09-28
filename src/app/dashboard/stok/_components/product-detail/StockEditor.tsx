@@ -223,7 +223,7 @@ const LocationRow: React.FC<{
               </p>
               <div className="mt-3 flex justify-end gap-1.5">
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
                   className="h-6 px-2 text-xs"
                   onClick={() => setConfirmOpen(false)}

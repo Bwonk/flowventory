@@ -362,7 +362,10 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   katmanda, dolgu/boşluk/yazı iç yüzeyde — `Button` çağıranın className'ini
   bu ikiye kendisi böler, çağrı yerleri değişmez. Koyu (ink) zeminde buton
   `outline` (beyaz) kullanılır. Tehlikeli = `variant="destructive"`, ghost /
-  link / segment düz kalır. Sidebar geri bildirim butonu `ShimmerButton`dır,
+  link / segment düz kalır. Birincil butonun yanındaki Vazgeç / İptal her
+  zaman `outline`'dır (popover içindeki küçük onay çiftleri dahil); ghost'a
+  ya da elle yazılmış `<button>`'a düşürülmez — çift, ağırlığı farklı iki
+  texture butonu olarak okunmalı. Sidebar geri bildirim butonu `ShimmerButton`dır,
   texture'a çevrilmez. Mavi buton yok.
 - **Bilgi balonu (InfoTip):** yardımcı hesap açıklamaları ("~33 gün neye
   göre?", "hangi pencere?") metnin içine değil

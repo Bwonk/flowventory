@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { useStockThreshold, DEFAULT_STOCK_THRESHOLD } from '@/lib/stock-threshold';
 import { Dropdown } from '@/components/shared/filters/Dropdown';
 import { NumberStepper } from '@/components/shared/NumberStepper';
+import { Button } from '@/components/ui/button';
 
 /**
  * Stok eşiği kontrolü: tetikleyici dropdown + geçici (temp) kritik/az kalan girişleri.
@@ -66,18 +67,19 @@ export const ThresholdControl: React.FC = () => {
           </div>
 
           <div className="mt-4 flex gap-2">
-            <button
+            <Button
               type="button"
+              variant="outline"
               onClick={() => {
                 setTempCritical(threshold.min);
                 setTempWarning(threshold.max);
                 close();
               }}
-              className="flex-1 rounded-lg border border-border py-2 text-sm text-muted-foreground transition-colors hover:bg-muted"
+              className="flex-1"
             >
               İptal
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               onClick={() => {
                 // İyimser uygulanır, panel hemen kapanır; sunucu yazamazsa eşik geri döner.
@@ -87,10 +89,10 @@ export const ThresholdControl: React.FC = () => {
                 close();
               }}
               disabled={hasError}
-              className="flex-1 rounded-lg bg-primary py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-foreground disabled:opacity-50"
+              className="flex-1"
             >
               Kaydet
-            </button>
+            </Button>
           </div>
         </div>
       )}
