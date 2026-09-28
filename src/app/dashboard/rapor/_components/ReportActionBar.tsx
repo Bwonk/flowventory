@@ -144,7 +144,7 @@ export function ReportActionBar({
       id: 'print',
       icon: <PrinterIcon ref={print.ref} size={12} className="flex" aria-hidden />,
       label: 'Yazdır / PDF',
-      // Yolun sağ ucunda öne çıkan bg-card hap; ink birincil tedarikçi yolundaki Gönder'dir.
+      // Yolun sağ ucunda texture secondary; primary (ink) tedarikçi yolundaki Gönder'dir.
       variant: 'card',
       separatorBefore: true,
       disabled: basketEmpty,

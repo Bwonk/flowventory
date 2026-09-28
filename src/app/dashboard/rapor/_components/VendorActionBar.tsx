@@ -32,9 +32,9 @@ interface VendorActionBarProps {
 }
 
 /**
- * Aktif tedarikçinin işlem yolu — Ürün ekle · Tedarikçi ayarları · Yazdır │ Gönder (ink).
- * Kompakt ikonlar hover/focus'ta etiketlenir; tek ink birincil sayfanın asıl
- * hedefi olan Gönder'dir. Yazdır/Gönder yalnız sepet boşken kapalıdır —
+ * Aktif tedarikçinin işlem yolu — Ürün ekle · Yazdır (secondary) · Tedarikçi ayarları │ Gönder (primary).
+ * Kompakt ikonlar hover/focus'ta etiketlenir; tek primary (ink) sayfanın asıl
+ * hedefi olan Gönder'dir, Yazdır texture secondary. Yazdır/Gönder yalnız sepet boşken kapalıdır —
  * e-posta eksikliği Gönder'i kapatmaz, pencere adresi sorar.
  */
 export function VendorActionBar({
@@ -82,6 +82,7 @@ export function VendorActionBar({
       icon: <PrinterIcon ref={print.ref} size={12} className="flex" aria-hidden />,
       label: 'Yazdır',
       'aria-label': `${vendor.vendorName} siparişini yazdır`,
+      variant: 'card',
       disabled: basketCount === 0,
       title: basketCount === 0 ? 'Sepet boş' : undefined,
       hoverProps: print.hoverProps,

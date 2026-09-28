@@ -5,6 +5,7 @@
 // hairline vurgu hapı (gölge/blur/yuvarlak hap yok), spring 350/35, ink ve
 // card segment varyantları, ayraç, ikon hover'ı parent'tan (useIconHover),
 // Radix trigger'larına `wrap` ile sarılma, basma geri bildirimi 0.99.
+// ink/card segmentleri Button'ın texture primary/secondary yüzeyini taşır.
 
 import { LayoutGroup, motion, useReducedMotion } from 'motion/react';
 import {
@@ -43,7 +44,10 @@ export type ExpandableActionBarItem = {
   badge?: ReactNode;
   /** Rozet rengi: ink (varsayılan, sayaç) · critical (acil sinyali). */
   badgeVariant?: 'ink' | 'critical';
-  /** ghost (varsayılan) · card (bg-card + hairline) · ink (birincil). Yol başına en fazla bir ink. */
+  /**
+   * ghost (varsayılan) · card (texture secondary, ikincil) · ink (texture
+   * primary, birincil). Yol başına en fazla bir ink.
+   */
   variant?: ExpandableActionBarVariant;
   /** Öğeden önce ince dikey ayraç. */
   separatorBefore?: boolean;
@@ -103,9 +107,17 @@ export interface ExpandableActionBarProps {
 }
 
 const VARIANT_CLASS: Record<ExpandableActionBarVariant, string> = {
-  ghost: 'text-muted-foreground hover:text-foreground focus-visible:text-foreground',
-  card: 'border border-hairline bg-card text-foreground',
-  ink: 'bg-primary text-primary-foreground hover:bg-primary/90',
+  ghost: 'px-[9px] text-muted-foreground hover:text-foreground focus-visible:text-foreground',
+  // Texture butonlarla aynı iki katman (texture-button.tsx primary/secondary):
+  // dış katman gradyan kenar + 1px boşluk, yüzey TEXTURE_SURFACE_CLASS'ta.
+  card: 'border border-foreground/15 bg-card/50 p-px text-foreground',
+  ink: 'border border-primary/10 bg-gradient-to-b from-primary/70 to-primary p-px text-primary-foreground',
+};
+
+// İç yüzey — dolgu 7px: 1px kenar + 1px boşlukla ghost'un 9px'ine denk, ikon kaymaz.
+const TEXTURE_SURFACE_CLASS: Record<Exclude<ExpandableActionBarVariant, 'ghost'>, string> = {
+  card: 'bg-gradient-to-b from-card to-muted/70 group-hover/action:from-muted/40 group-hover/action:to-muted',
+  ink: 'bg-gradient-to-b from-primary/85 to-primary group-hover/action:from-primary/75 group-hover/action:to-primary/90',
 };
 
 /** Dokunmatik/kaba işaretçi (telefon, tablet) — hover yok. */
@@ -395,72 +407,9 @@ export function ExpandableActionBar({
             const isHighlighted = variant === 'ghost' && highlightId === item.id;
             const label = typeof item.label === 'string' ? item.label : undefined;
 
-            const button = (
-              <motion.button
-                type="button"
-                data-value={item.id}
-                role={role === 'tablist' ? 'tab' : undefined}
-                aria-selected={role === 'tablist' ? isActive : undefined}
-                disabled={item.disabled}
-                title={item.title ?? label}
-                aria-label={item['aria-label'] ?? label}
-                onPointerEnter={(event: PointerEvent<HTMLButtonElement>) => {
-                  if (!hover.enter(event)) return;
-                  clearCollapseTimer();
-                  setHoveredId(item.id);
-                }}
-                onPointerDown={(event: PointerEvent<HTMLButtonElement>) => {
-                  tap.start(event, isExpanded);
-                }}
-                // Platformun aldığı dokunuş click göndermez; tuş basımı ise
-                // arkasında pointer olmayan bir aktivasyon başlatır — ikisi de
-                // kaydı düşürmezse parmak bir sonraki click'e kalır.
-                onPointerCancel={tap.drop}
-                onKeyDown={tap.drop}
-                onClick={(event: MouseEvent<HTMLButtonElement>) => {
-                  event.currentTarget.blur();
-                  const gesture = tap.take();
-                  // Parmağa etiketleri gösteren bir şey yok: ilk dokunuş yolu
-                  // açar, ikincisi aksiyonu çalıştırır. Durum jestin başından
-                  // okunur — dokunuşta odaklayan tarayıcı yolu dokunuşun
-                  // ortasında açar, aksi halde ilk dokunuş göstermesi gereken
-                  // aksiyonu çalıştırırdı.
-                  const firstTap =
-                    gesture !== null && gesture.pointerType !== 'mouse' && !gesture.state && !tapExpanded;
-                  if (firstTap && hoverExpands) {
-                    // Radix tetikleyicisi (wrap) bu click'i görmesin.
-                    event.preventDefault();
-                    setTapExpanded(true);
-                    open();
-                    setHoveredId(item.id);
-                    return;
-                  }
-                  item.onClick?.();
-                  onAction?.(item);
-                }}
-                whileTap={reduce || item.disabled ? undefined : { scale: 0.99 }}
-                transition={transition}
-                {...item.hoverProps}
-                className={cn(
-                  'relative isolate inline-flex h-[30px] min-w-[30px] shrink-0 items-center justify-center overflow-hidden rounded-md px-[9px] text-sm font-medium whitespace-nowrap outline-none transition-[color,background-color] duration-150',
-                  // Halka ink; birincil (ink zeminli) segmentte görünsün diye zeminden 2px ayrılır.
-                  'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-muted disabled:pointer-events-none disabled:opacity-50',
-                  VARIANT_CLASS[variant],
-                  isHighlighted && 'text-foreground',
-                  classNames?.item,
-                  isActive && classNames?.activeItem,
-                )}
-              >
-                {/* Vurgu hapı — SegmentedTrack'in aktif hapıyla aynı dil; öğeler
-                    arasında tek eleman olarak kayar. */}
-                {isHighlighted ? (
-                  <motion.span
-                    layoutId="action-bar-highlight"
-                    className="absolute inset-0 -z-10 rounded-md border border-hairline bg-card"
-                    transition={transition}
-                  />
-                ) : null}
-
+            // İkon · etiket · rozet; texture segmentlerde iç yüzeyin içine girer.
+            const content = (
+              <>
                 <span
                   className={cn(
                     // Monogram gibi metin ikonlar 12px'ten geniş olabilir — yükseklik sabit, genişlik içerik.
@@ -515,6 +464,87 @@ export function ExpandableActionBar({
                     {item.badge}
                   </span>
                 ) : null}
+              </>
+            );
+
+            const button = (
+              <motion.button
+                type="button"
+                data-value={item.id}
+                role={role === 'tablist' ? 'tab' : undefined}
+                aria-selected={role === 'tablist' ? isActive : undefined}
+                disabled={item.disabled}
+                title={item.title ?? label}
+                aria-label={item['aria-label'] ?? label}
+                onPointerEnter={(event: PointerEvent<HTMLButtonElement>) => {
+                  if (!hover.enter(event)) return;
+                  clearCollapseTimer();
+                  setHoveredId(item.id);
+                }}
+                onPointerDown={(event: PointerEvent<HTMLButtonElement>) => {
+                  tap.start(event, isExpanded);
+                }}
+                // Platformun aldığı dokunuş click göndermez; tuş basımı ise
+                // arkasında pointer olmayan bir aktivasyon başlatır — ikisi de
+                // kaydı düşürmezse parmak bir sonraki click'e kalır.
+                onPointerCancel={tap.drop}
+                onKeyDown={tap.drop}
+                onClick={(event: MouseEvent<HTMLButtonElement>) => {
+                  event.currentTarget.blur();
+                  const gesture = tap.take();
+                  // Parmağa etiketleri gösteren bir şey yok: ilk dokunuş yolu
+                  // açar, ikincisi aksiyonu çalıştırır. Durum jestin başından
+                  // okunur — dokunuşta odaklayan tarayıcı yolu dokunuşun
+                  // ortasında açar, aksi halde ilk dokunuş göstermesi gereken
+                  // aksiyonu çalıştırırdı.
+                  const firstTap =
+                    gesture !== null && gesture.pointerType !== 'mouse' && !gesture.state && !tapExpanded;
+                  if (firstTap && hoverExpands) {
+                    // Radix tetikleyicisi (wrap) bu click'i görmesin.
+                    event.preventDefault();
+                    setTapExpanded(true);
+                    open();
+                    setHoveredId(item.id);
+                    return;
+                  }
+                  item.onClick?.();
+                  onAction?.(item);
+                }}
+                whileTap={reduce || item.disabled ? undefined : { scale: 0.99 }}
+                transition={transition}
+                {...item.hoverProps}
+                className={cn(
+                  'group/action relative isolate inline-flex h-[30px] min-w-[30px] shrink-0 items-center justify-center overflow-hidden rounded-md text-sm font-medium whitespace-nowrap outline-none transition-[color,background-color] duration-150',
+                  // Halka ink; birincil (ink zeminli) segmentte görünsün diye zeminden 2px ayrılır.
+                  'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-muted disabled:pointer-events-none disabled:opacity-50',
+                  VARIANT_CLASS[variant],
+                  isHighlighted && 'text-foreground',
+                  classNames?.item,
+                  isActive && classNames?.activeItem,
+                )}
+              >
+                {/* Vurgu hapı — SegmentedTrack'in aktif hapıyla aynı dil; öğeler
+                    arasında tek eleman olarak kayar. */}
+                {isHighlighted ? (
+                  <motion.span
+                    layoutId="action-bar-highlight"
+                    className="absolute inset-0 -z-10 rounded-md border border-hairline bg-card"
+                    transition={transition}
+                  />
+                ) : null}
+
+                {variant === 'ghost' ? (
+                  content
+                ) : (
+                  <span
+                    className={cn(
+                      'relative inline-flex h-full w-full items-center justify-center rounded-[5px] px-[7px] transition-[background-color] duration-150 ease-out',
+                      TEXTURE_SURFACE_CLASS[variant],
+                    )}
+                  >
+                    {content}
+                  </span>
+                )}
               </motion.button>
             );
 

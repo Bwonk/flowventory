@@ -233,8 +233,10 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   odak girince etiketler paylaşımlı-layout ile açılır (spring 350/35, etiket
   blur 3px→0), dokunmatikte ilk dokunuş açar ikincisi çalıştırır; hover
   vurgusu `bg-card` + hairline hap olarak öğeler arasında kayar. Öğe
-  varyantları: ghost, `card` (bg-card + hairline — öne çıkan ikincil), `ink`
-  (birincil; yol başına en fazla bir), `separatorBefore` ayraç; ikon
+  varyantları: ghost, `card` (texture `secondary` — öne çıkan ikincil, ör.
+  Yazdır), `ink` (texture `primary` — birincil, ör. Gönder; yol başına en
+  fazla bir) — `Button` default/outline ile aynı iki katmanlı yüzey (28 Eyl
+  2026), `separatorBefore` ayraç; ikon
   animasyonu `hoverProps` ile parent'tan sürülür; Dialog/Popover/Sheet
   tetikleyicileri `wrap` ile butona `asChild` biner (bileşenlerin `trigger`
   prop'u). Akışta yaşayan bir satırda (başlık, sekme satırı) yol **`overlay`**
