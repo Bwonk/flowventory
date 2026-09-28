@@ -298,8 +298,9 @@ export function ExpandableActionBar({
         for (const label of Array.from(child.querySelectorAll<HTMLElement>('[data-label]'))) {
           width -= label.offsetWidth + (parseFloat(getComputedStyle(label).marginLeft) || 0);
         }
-        // Rozet açıkken akışa girer (ml-1.5); kapalıyken köşede mutlak, yer kaplamaz.
-        for (const badge of Array.from(child.querySelectorAll<HTMLElement>('[data-badge]'))) {
+        // Ghost rozeti açıkken akışa girer (ml-1.5); kapalıyken köşede mutlak, yer kaplamaz.
+        // Dolgulu segmentin rozeti hep akıştadır, kapalı genişliğe dahildir.
+        for (const badge of Array.from(child.querySelectorAll<HTMLElement>('[data-badge="corner"]'))) {
           const badgeStyle = getComputedStyle(badge);
           if (badgeStyle.position !== 'absolute') width -= badge.offsetWidth + (parseFloat(badgeStyle.marginLeft) || 0);
         }
@@ -451,7 +452,7 @@ export function ExpandableActionBar({
 
                 {item.badge ? (
                   <span
-                    data-badge
+                    data-badge={variant === 'ghost' ? 'corner' : 'inline'}
                     className={cn(
                       'inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-medium tabular-nums',
                       item.badgeVariant === 'critical'
@@ -460,7 +461,8 @@ export function ExpandableActionBar({
                           item.variant === 'ink'
                           ? 'bg-primary-foreground text-primary'
                           : 'bg-primary text-primary-foreground',
-                      isExpanded ? 'ml-1.5' : 'absolute top-0 right-0 h-3.5 min-w-3.5 text-[9px]',
+                      // Dolgulu (ink/card) yüzeyde köşe rozeti ikonu ezer: kapalıyken de ikonun yanında durur.
+                      isExpanded || variant !== 'ghost' ? 'ml-1.5' : 'absolute top-0 right-0 h-3.5 min-w-3.5 text-[9px]',
                       classNames?.badge,
                     )}
                   >
