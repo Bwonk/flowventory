@@ -12,7 +12,7 @@ import { NotificationsProvider } from '@/components/layout/notifications-context
 import { SubscriptionGate } from '@/components/layout/SubscriptionGate';
 import { OnboardingDialogProvider } from '@/components/onboarding/onboarding-dialog-context';
 import { SidebarCollapseGuardProvider, useGuardedSidebarOpen } from '@/components/layout/sidebar-collapse-guard';
-import { BrandLogo } from '@/components/shared/BrandLogo';
+import { BrandMark } from '@/components/shared/BrandLogo';
 import { Toaster } from '@/components/ui/sonner';
 import {
   SidebarInset,
@@ -72,7 +72,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 {/* Dar iframe genişliği: sidebar Sheet'e düşer, tetikleyici bu barda yaşar. */}
                 <header className="flex h-12 shrink-0 items-center gap-2 border-b border-hairline bg-card px-4 print:hidden md:hidden">
                   <SidebarTrigger />
-                  <BrandLogo variant="mark" className="h-7 w-7" />
+                  <BrandMark size={28} />
                 </header>
                 <SubscriptionGate>{children}</SubscriptionGate>
               </SidebarInset>

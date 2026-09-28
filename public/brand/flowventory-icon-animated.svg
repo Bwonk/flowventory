@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" fill="none" role="img" aria-label="Flowventory">
+<style>
+.fv-unit{animation:none}
+svg:hover .fv-unit{animation:fv-unit 900ms linear both}
+svg:hover .fv-arm{animation:fv-arm 900ms linear both}
+@keyframes fv-unit{
+  0%{transform:translateX(0);opacity:1;animation-timing-function:cubic-bezier(.77,0,.175,1)}
+  20%{transform:translateX(12px);opacity:0;animation-timing-function:step-end}
+  42%{transform:translateX(-14px);opacity:1;animation-timing-function:cubic-bezier(.3,1.3,.5,1)}
+  78%,100%{transform:translateX(0);opacity:1}
+}
+@keyframes fv-arm{
+  0%,11%{transform:translateX(0);animation-timing-function:cubic-bezier(.77,0,.175,1)}
+  42%{transform:translateX(-10px)}
+  56%{transform:translateX(-10px);animation-timing-function:cubic-bezier(.3,1.3,.5,1)}
+  92%,100%{transform:translateX(0)}
+}
+@media (prefers-reduced-motion:reduce){svg:hover .fv-unit,svg:hover .fv-arm{animation:none}}
+</style>
+<clipPath id="fv-arm-clip"><rect x="18" y="0" width="46" height="64"/></clipPath>
+<rect width="64" height="64" rx="16" fill="#131318"/>
+<rect class="fv-unit" x="32" y="28" width="10" height="10" rx="3" fill="#CBF200"/>
+<g clip-path="url(#fv-arm-clip)"><rect class="fv-arm" x="18" y="14" width="28" height="10" rx="3" fill="#FAFAFA"/></g>
+<rect x="18" y="14" width="10" height="36" rx="3" fill="#FAFAFA"/>
+</svg>

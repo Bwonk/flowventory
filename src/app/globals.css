@@ -61,6 +61,9 @@
   --color-ink: var(--ink);
   --color-hairline: var(--hairline);
   --color-accent-blue: var(--accent-blue);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-lime: var(--brand-lime);
+  --color-brand-paper: var(--brand-paper);
   /* Stok durumu göstergeleri (bar/dot/badge) — tek kaynak */
   --color-status-healthy: var(--status-healthy);
   --color-status-warning: var(--status-warning);
@@ -147,6 +150,10 @@
   --ink: #18181b;
   --hairline: #e4e4e7;
   --accent-blue: #1863dc;
+  /* marka — yalnız Flowventory logosu (BrandLogo); arayüzde kullanılmaz */
+  --brand-ink: #131318;
+  --brand-lime: #cbf200;
+  --brand-paper: #fafafa;
   /* durum üçlüsü — tek kaynak */
   --status-healthy: #059669;
   --status-warning: #d97706;

@@ -58,6 +58,7 @@ gelir. **Arbitrary hex yasak**; tek istisna print-only siyah/beyaz düzeltmeleri
 | Durum: sağlıklı / uyarı / kritik | `bg-status-healthy` #059669 / `bg-status-warning` #d97706 / `bg-status-critical` #dc2626 |
 | Rozet kritik zemin/metin | `--critical` #fef2f2 / `--critical-foreground` #b91c1c (success/warning/info çiftlerinin dördüncüsü; `bg-destructive/10` türetmesi kaldırıldı) |
 | Yıkıcı aksiyon | `bg-destructive` — yalnız yıkıcı butonlar ve solid sayaç pili (bildirim sayacı) |
+| Marka (yalnız logo) | `--brand-ink` #131318 / `--brand-lime` #cbf200 / `--brand-paper` #fafafa — ikas logosunun renkleri; yalnız `BrandLogo` kullanır, arayüzde ikinci accent olarak kullanılmaz |
 
 **Accent bütçesi: sayfa başına tek mavi ailesi.** Mavi yalnızca: aktif nav
 öğesi, link, birincil grafik serisi. Butonlar mavi DEĞİL — birincil buton ink
@@ -486,6 +487,24 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   adımına). Sidebar'da nav satırı/tab butonu **yok** (kullanıcı kararı, 27 Eyl
   2026) — sidebar'da footer'daki kayan kartın slaytları popup'ı kurulum
   adımında açar (yukarıda). Ayrı Başlarken sayfası yok.
+- **Marka logosu ("Raf"):**
+  [src/components/shared/BrandLogo.tsx](src/components/shared/BrandLogo.tsx) —
+  `BrandMark` (kare ikon) + `BrandWordmark` ("Flowventory", Geist SemiBold
+  −0.035em, eğriye çevrili). İşaret 64'lük ızgarada: `--brand-ink` karo
+  (rx 16), F harfi raf (gövde + üst kol `--brand-paper`), orta kolun yerinde
+  lime kare = raftan çıkan ürün. Lime yalnız dolu şekil ve yalnız mürekkep
+  üstünde (açık zeminde kontrast 1,3:1 — lime yazı / ince lime çizgi yok).
+  Kilit: 32px işaret + 18px yüksek yazı (cap ≈ işaretin %40'ı), arada
+  `gap-2`; daraltılmış sidebar'da yalnız işaret. Hover hikâyesi sidebar
+  başlık satırından `useIconHover<BrandMarkHandle>()` ile sürülür: kare sağa
+  çıkar (satış), üst kol kısalır (stok düşer), gövdenin arkasından yeni kare
+  kayar (tedarik), kol geri uzar — `EASE_IN_OUT` + `ICON_SPRING`, ~0.8sn;
+  ikon hover sınırının (≤400ms) bilinçli istisnası, çünkü hikâyedir ve bir
+  kez oynar. İmleç ayrılınca kesilmez, oynarken yeniden tetiklenmez.
+  Dosya sürümleri (SVG/PNG, açık/koyu zemin, hareketli SVG) `public/brand/`;
+  sekme ikonu Next dosya kuralıyla `src/app/favicon.ico` / `icon.svg` /
+  `apple-icon.png` (bu varlık dosyaları hex taşır — kaynak koddaki hex yasağı
+  onlara işlemez).
 - **Plan kartı:**
   [src/components/billing/PlanCard.tsx](src/components/billing/PlanCard.tsx) —
   uygulamadaki **tek ink zeminli yüzey** (bilinçli istisna: fiyat kartının

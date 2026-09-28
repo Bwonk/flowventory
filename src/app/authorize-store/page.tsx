@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { BrandLogo } from "@/components/shared/BrandLogo";
+import { BrandMark } from "@/components/shared/BrandLogo";
 
 /**
  * AuthorizeStorePage
@@ -43,7 +43,7 @@ const AuthorizeStorePage: React.FC = () => {
     <main className="min-h-svh flex flex-col items-center justify-center p-6">
       <div className="flex w-full max-w-md flex-col items-center gap-8">
         <div className="flex flex-col items-center gap-3">
-          <BrandLogo variant="mark" priority className="h-20 w-20 rounded-2xl" />
+          <BrandMark size={80} aria-hidden />
           <p className="text-[15px] font-semibold text-primary">Flowventory</p>
         </div>
         <Card className="w-full">

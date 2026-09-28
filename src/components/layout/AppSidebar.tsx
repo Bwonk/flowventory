@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Store } from 'lucide-react';
-import { BrandLogo } from '@/components/shared/BrandLogo';
+import { BrandMark, BrandWordmark, type BrandMarkHandle } from '@/components/shared/BrandLogo';
 import { NotificationBell } from './NotificationBell';
 import { OnboardingCard } from './OnboardingCard';
 import { SidebarFeedback } from './SidebarFeedback';
@@ -75,6 +75,26 @@ function NavMenuItem({ item, active }: { item: NavItem; active: boolean }) {
 }
 
 /**
+ * Başlıktaki logo. İşaretin "Raf" hikâyesi satırın üzerine gelince oynar;
+ * daraltılmış ikon modunda yalnız işaret kalır.
+ */
+function SidebarBrand() {
+  const { ref, hoverProps } = useIconHover<BrandMarkHandle>();
+
+  return (
+    <Link
+      href="/dashboard"
+      aria-label="Flowventory"
+      className="flex min-w-0 items-center gap-2 overflow-hidden px-1 group-data-[collapsible=icon]:px-0"
+      {...hoverProps}
+    >
+      <BrandMark ref={ref} size={32} aria-hidden />
+      <BrandWordmark height={18} className="group-data-[collapsible=icon]:hidden" />
+    </Link>
+  );
+}
+
+/**
  * Flowventory ana navigasyon kenar çubuğu (animate-ui radix sidebar).
  * Masaüstünde ikon moduna daralabilir; dar iframe genişliklerinde Sheet olarak açılır.
  */
@@ -84,14 +104,7 @@ export function AppSidebar({ storeName }: AppSidebarProps) {
   return (
     <Sidebar collapsible="icon" variant="floating">
       <SidebarHeader className="h-16 justify-center border-b border-sidebar-border">
-        <Link href="/dashboard" aria-label="Flowventory" className="flex min-w-0 items-center overflow-hidden px-1">
-          <BrandLogo variant="mark" priority className="hidden h-9 w-9 shrink-0 group-data-[collapsible=icon]:block" />
-          <BrandLogo
-            variant="full"
-            priority
-            className="h-12 w-full object-cover group-data-[collapsible=icon]:hidden"
-          />
-        </Link>
+        <SidebarBrand />
       </SidebarHeader>
 
       <SidebarContent>
