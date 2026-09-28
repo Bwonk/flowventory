@@ -1,17 +1,22 @@
 'use client';
 
 import { logger } from '@/lib/logger';
-import { useState, type ReactElement } from 'react';
+import { useEffect, useState, type ReactElement } from 'react';
 import { toast } from 'sonner';
 import { ApiRequests } from '@/lib/api-requests';
 import { Button } from '@/components/ui/button';
 import { EnvelopeIcon } from '@/components/ui/icons/envelope';
 import { useIconHover } from '@/components/ui/icons/use-icon-hover';
 import { Input } from '@/components/ui/input';
+import { TrashIcon } from '@/components/ui/icons/trash';
+import { extractErrorMessage } from '@/lib/api-error';
+import { cn } from '@/lib/utils';
 import { NumberStepper } from '@/components/shared/NumberStepper';
 import { GooPopover, GooPopoverContent, GooPopoverTrigger } from '@/components/motion/goo-popover';
 import { PopoverHeader, PopoverTitle } from '@/components/ui/popover';
 import { useEmailField } from './use-email-field';
+
+const DELETE_CONFIRM_MS = 5000;
 
 export type VendorSettings = {
   email: string | null;
@@ -30,6 +35,10 @@ interface VendorContactPopoverProps {
   defaultLeadTimeDays: number;
   /** Sayfadaki vendorList entry'sini patch'ler; tedarik ayarı değiştiyse rapor tazelenir. */
   onSaved: (contact: VendorSettings) => void;
+  /** Tedarikçideki ürün sayısı — ürünlü tedarikçi silinemez (ikas ürünü tedarikçisiz bırakmaz). */
+  productCount: number;
+  /** Silme sonrası sayfa listesinden düşürür. */
+  onDeleted: (vendorId: string) => void;
   /** Dış tetikleyici (ör. ExpandableActionBar öğesi); verilmezse varsayılan ikon segment. */
   trigger?: ReactElement;
 }
@@ -46,9 +55,12 @@ export function VendorContactPopover({
   contact,
   defaultLeadTimeDays,
   onSaved,
+  productCount,
+  onDeleted,
   trigger,
 }: VendorContactPopoverProps) {
   const { ref: envelopeRef, hoverProps } = useIconHover();
+  const trash = useIconHover();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState(contact.email ?? '');
   const [phone, setPhone] = useState(contact.phone ?? '');
@@ -56,6 +68,36 @@ export function VendorContactPopover({
   const [moq, setMoq] = useState(contact.moq ?? 0);
   const [casePack, setCasePack] = useState(contact.casePack ?? 0);
   const [saving, setSaving] = useState(false);
+  // Kalıcı silme iki adımlı: ilk tık sorar, 5 sn içinde ikinci tık siler.
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  useEffect(() => {
+    if (!confirmDelete) return;
+    const t = setTimeout(() => setConfirmDelete(false), DELETE_CONFIRM_MS);
+    return () => clearTimeout(t);
+  }, [confirmDelete]);
+
+  const remove = async () => {
+    if (productCount > 0) return;
+    if (!confirmDelete) {
+      setConfirmDelete(true);
+      return;
+    }
+    setDeleting(true);
+    try {
+      const res = await ApiRequests.vendors.delete(token, { vendorId });
+      if (!res.data?.data) throw new Error('Empty vendor delete response');
+      setOpen(false);
+      toast.success(`Tedarikçi silindi: ${vendorName}`);
+      onDeleted(vendorId);
+    } catch (error) {
+      logger.error('Vendor delete failed', { vendorId, error });
+      toast.error(extractErrorMessage(error, 'Tedarikçi silinemedi.'));
+    } finally {
+      setDeleting(false);
+      setConfirmDelete(false);
+    }
+  };
 
   const emailField = useEmailField(email);
   const trimmedEmail = emailField.trimmed;
@@ -100,8 +142,9 @@ export function VendorContactPopover({
       sideOffset={6}
       open={open}
       onOpenChange={next => {
-        if (saving) return;
+        if (saving || deleting) return;
         setOpen(next);
+        setConfirmDelete(false);
         if (next) {
           // Popover her açılışta kayıtlı değerlerden başlar.
           setEmail(contact.email ?? '');
@@ -188,6 +231,27 @@ export function VendorContactPopover({
           <Button type="button" size="sm" onClick={save} disabled={saving || !emailField.valid} className="w-full">
             {saving ? 'Kaydediliyor…' : 'Kaydet'}
           </Button>
+          <div className="border-t border-hairline pt-2.5">
+            {productCount > 0 ? (
+              <p className="text-xs text-muted-foreground">
+                Silmek için önce {productCount} ürünü başka tedarikçiye taşıyın; ikas ürünü tedarikçisiz bırakmaya izin
+                vermiyor.
+              </p>
+            ) : (
+              <Button
+                type="button"
+                size="sm"
+                variant={confirmDelete ? 'destructive' : 'ghost'}
+                onClick={() => void remove()}
+                disabled={saving || deleting}
+                className={cn('w-full gap-1.5', !confirmDelete && 'text-destructive hover:text-destructive')}
+                {...trash.hoverProps}
+              >
+                <TrashIcon ref={trash.ref} size={12} className="flex shrink-0 [&>svg]:size-3!" aria-hidden />
+                {deleting ? 'Siliniyor…' : confirmDelete ? `${vendorName} silinsin mi? Onayla` : 'Tedarikçiyi sil'}
+              </Button>
+            )}
+          </div>
         </div>
       </GooPopoverContent>
     </GooPopover>

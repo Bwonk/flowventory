@@ -145,6 +145,7 @@ export function VendorTabsPanel({
           onProductsAssigned={onProductsAssigned}
           onContactSaved={onVendorContactSaved}
           onSent={onVendorSent}
+          onVendorDeleted={onVendorDeleted}
         />
       </div>
 

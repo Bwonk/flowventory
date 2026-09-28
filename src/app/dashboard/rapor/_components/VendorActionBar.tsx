@@ -27,6 +27,8 @@ interface VendorActionBarProps {
   onProductsAssigned: (vendorName: string) => Promise<void>;
   onContactSaved: (vendorId: string, next: Partial<VendorSettings>) => void;
   onSent: (vendorId: string) => void;
+  /** Tedarikçi ayarlarından silinince sayfa listesinden düşürür. */
+  onVendorDeleted: (vendorId: string) => void;
 }
 
 /**
@@ -44,6 +46,7 @@ export function VendorActionBar({
   onProductsAssigned,
   onContactSaved,
   onSent,
+  onVendorDeleted,
 }: VendorActionBarProps) {
   const add = useIconHover();
   const print = useIconHover();
@@ -100,6 +103,8 @@ export function VendorActionBar({
                 contact={contact}
                 defaultLeadTimeDays={vendor.leadTimeDays}
                 onSaved={next => onContactSaved(vendorId, next)}
+                productCount={new Set(vendor.lines.map(l => l.productId)).size}
+                onDeleted={onVendorDeleted}
                 trigger={button}
               />
             ),

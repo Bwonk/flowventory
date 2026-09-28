@@ -223,9 +223,12 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    await prisma.vendorContact.deleteMany({
-      where: { merchantId: user.merchantId, vendorId },
-    });
+    // Açık taslak da gider (satırları başka tedarikçiye taşınmış olabilir);
+    // gönderilmiş siparişler geçmiş kaydı olarak kalır.
+    await prisma.$transaction([
+      prisma.vendorContact.deleteMany({ where: { merchantId: user.merchantId, vendorId } }),
+      prisma.purchaseOrder.deleteMany({ where: { merchantId: user.merchantId, vendorId, status: 'draft' } }),
+    ]);
 
     const data: DeleteVendorApiResponse = { vendorId };
     return NextResponse.json({ data });
