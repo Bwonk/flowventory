@@ -317,7 +317,7 @@ export const ProductDetailContent: React.FC<{
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1, transition: { duration: reduceMotion ? 0 : 0.15, ease: EASE_OUT } }}
                 exit={{ opacity: 0, transition: { duration: reduceMotion ? 0 : 0.1, ease: EASE_OUT } }}
-                className={chartTab === 'runway' ? 'shrink-0' : undefined}
+                className="shrink-0"
               >
                 {chartTab === 'runway' ? (
                   <StockRunwayChart
