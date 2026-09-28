@@ -115,7 +115,7 @@ dev branch'ine bağlanmak yeterli. Şema değişikliğinde: `pnpm prisma migrate
 - [ ] (Resend key girildiyse) e-posta geliyor mu — Ayarlar'dan adres + toggle
 
 ### J) Başlarken popup'ı + abonelik (27 Eyl 2026 — docs/plans/onboarding-sekmesi-abonelik.md)
-- [ ] Sidebar footer'ında Başlarken launcher'ı (adım yok): "Başlarken · n/4", "Sıradaki: …", segment çubuğu; tıklayınca popup kurulum adımında açılıyor; ✕ ile kapanınca geri gelmiyor; hepsi bitince "Kurulum tamam" sonra kayboluyor; ikon modunda gizli
+- [ ] Sidebar footer'ında kayan Başlarken kartı: ok/noktalarla adımlar geziliyor; slayta tıklayınca popup kurulum adımında açılıyor; adım tamamlanınca ✓ + ~1 sn sonra sıradaki eksik adıma kayıyor; ✕ hareketli, kapanınca geri gelmiyor; ikon modunda gizli
 - [ ] İlk açılışta popup bir kez kendiliğinden açılıyor, sonraki girişlerde açılmıyor
 - [ ] Adım 1: özellik listesi tıklanınca/İleri ile sağdaki önizleme değişiyor; ←/→ tuşları çalışıyor
 - [ ] Adım 2: 4 adımın durumu başka tarayıcıda da doğru; "Git" butonu popup'ı kapatıp ilgili sayfaya gidiyor; "Varsayılanı kullan (5/10)" eşik adımını tamamlıyor

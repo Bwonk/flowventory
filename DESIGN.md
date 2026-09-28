@@ -425,23 +425,23 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   genişlik verme. Negatif kenar boşluğu kabukta değil `h1`'de: kabukta
   `max-w-full` ile birlikte kendini 8px daraltıp her başlığı kırpıyordu.
   Ayrı "ad" alanı açma.
-- **Sidebar Başlarken launcher'ı:**
+- **Sidebar onboarding kartı:**
   [src/components/layout/OnboardingCard.tsx](src/components/layout/OnboardingCard.tsx) —
-  sektördeki "launcher/beacon + checklist" kalıbı (Appcues beacon, Userpilot
-  kapalı checklist, Stripe kurulum listesi): sidebar **adımları göstermez**,
-  yalnız popup'a yönlendirir (kullanıcı kararı, 27 Eyl 2026; nav satırı/tab
-  butonu ve kayan adım slaytı ikisi de reddedildi). Footer'da, beyaz sidebar
-  yüzeyinde ikinci seviye `bg-muted` kart (çerçevesiz, gölgesiz); bütünü tek
-  buton (`aria-haspopup="dialog"`) → popup kurulum adımında açılır; hover
-  `bg-card/60`. İçerik: mono eyebrow "Başlarken" (sayaç metni yok — çubuk
-  yeter), başlık "Kurulumu tamamla" + kayan ok, "Sıradaki: …" (truncate),
-  4 segmentli 4px çubuk: tamamlanan adım **sayısı** kadar segment soldan
-  dolar (`bg-foreground` scaleX `SPRING`; boş `bg-hairline` — durum rengi
-  değil mürekkep). Segment adıma bağlı değil: adımlar sırasız yapılabildiği
-  için adım eşlemesi ortada boşluk bırakıp bozuk görünüyordu.
-  Sağ üstte ayrı ✕ (kalıcı gizler; çıkış opaklık + yükseklik 200ms). Hepsi
-  bitince yeşil tikli "Kurulum tamam" satırı ~1.2 sn kalır, sonra kart çöker
-  ve bir daha gelmez. Daraltılmış ikon modunda gizli.
+  adımlar ok/noktalarla **gezilir**, slayta tıklamak sayfaya değil Başlarken
+  popup'ına (kurulum adımı) götürür (kullanıcı kararı, 28 Eyl 2026: yalnız
+  "Kurulumu tamamla" launcher'ı "2. adımda" gibi okunuyordu; nav satırı/tab
+  butonu da reddedildi). Kapat ✕ hareketli `XMarkIcon` (hover butondan,
+  `useIconHover`);
+  beyaz sidebar yüzeyi üzerinde ikinci seviye `bg-muted` zemin — çerçevesiz,
+  gölgesiz (kart-içinde-kart kuralı). Sonuç: muted zeminde `hover:bg-muted`
+  görünmez, içteki tüm hover yüzeyleri `hover:bg-card`. Daraltılmış ikon
+  modunda kart tamamen gizlenir. Hit alanı istisnası: 240px sidebar'daki
+  kompakt kontrol kümesinde (3 nokta + 2 ok) 40px hedef uygulanamaz — nokta
+  16×32, ok 28px; bilinçli ve sınırlı sapma, sayfa gövdesindeki kontrollere
+  genellenmez. İlerleme ayrı bir sayaçta değil noktalarda yaşar ve **durum
+  rengiyle değil mürekkep tonuyla** kodlanır: aktif = `bg-foreground` hap,
+  tamamlandı = `bg-muted-foreground` nokta, bekliyor = `bg-hairline` nokta.
+  Yeşil yalnızca slayt içindeki rozette (check) kullanılır; başlık üstü çizili.
 - **Başlarken popup'ı (onboarding):**
   [src/components/ui/onboarding.tsx](src/components/ui/onboarding.tsx) — cult-ui
   `onboarding` bileşeni, **upstream API'siyle** (Root/Step/StepIndicator/
@@ -465,8 +465,8 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   outline / İleri–"Uygulamaya geç" ink, eşit genişlik). Tetikleyiciler: ilk
   açılış (bir kez), kilit ekranı ve Ayarlar `#plan` "Planı gör" (plan
   adımına). Sidebar'da nav satırı/tab butonu **yok** (kullanıcı kararı, 27 Eyl
-  2026) — sidebar'da footer'daki launcher kartı popup'ı kurulum adımında
-  açar (yukarıda). Ayrı Başlarken sayfası yok.
+  2026) — sidebar'da footer'daki kayan kartın slaytları popup'ı kurulum
+  adımında açar (yukarıda). Ayrı Başlarken sayfası yok.
 - **Plan kartı:**
   [src/components/billing/PlanCard.tsx](src/components/billing/PlanCard.tsx) —
   uygulamadaki **tek ink zeminli yüzey** (bilinçli istisna: fiyat kartının
@@ -520,7 +520,7 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   odağıyla (yalnız `:focus-visible`) anlık açılır. Doğrulama uyarısı
   (`AlertTip`) gecikmesiz açılır. `motion` yalnızca animate-ui bileşenlerinde,
   `src/components/ui/icons/` altındaki animasyonlu ikonlarda ve sidebar
-  sidebar Başlarken launcher'ının segment/sayaç geçişlerinde
+  sidebar Başlarken kartının slayt geçişinde
   ([src/components/layout/OnboardingCard.tsx](src/components/layout/OnboardingCard.tsx)),
   Başlarken popup'ının önizleme/rozet geçişlerinde
   ([src/components/onboarding/OnboardingDialog.tsx](src/components/onboarding/OnboardingDialog.tsx)),
@@ -535,6 +535,18 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   karakterde ama ~%30 kısa spring'le (700/50) tersten oynar; `prefers-reduced-motion`'da filtresiz ve anlık);
   ikisi bilinçli olarak birlikte yaşar — yeni animasyon için önce mevcut
   utility'ye bak.
+- **Slayt (carousel) motifi** — onboarding kartı emsaldir: yön farkındalıklı
+  **tam genişlik** kaydırma; giren ve çıkan slayt aynı `spring 350/35`'i
+  paylaşır (tek ray hissi), kenarda hafif fade (opacity 0.4↔1, 0.15s) sert
+  kesilmeyi yumuşatır — "çıkış girişten sessiz" ilkesi burada bu fade ile
+  sağlanır; blur yok. Viewport yüksekliği aktif slaytın içeriğine aynı spring
+  ile uyar (ResizeObserver ölçümlü) — metin asla kırpılmaz. Aktif nokta hap
+  morph'u `layoutId` + aynı spring ile noktadan noktaya taşınır.
+  `AnimatePresence initial={false}` → ilk boyamada animasyon yok; rozet/ikon
+  takasları `mode="popLayout"` + spring; `prefers-reduced-motion` → kayma
+  yerine salt cross-fade, yükseklik ve hap anlık. İkon dışı animasyonlarda
+  `useReducedMotion()` doğrudan `motion/react`'ten alınır — `useIconHover`
+  yalnızca ikon animasyonları içindir.
 - **Başlarken popup'ı hareketi** — Dialog'un kendi 200/150ms geçişi; adım
   değişimi upstream gibi anlık (aktif olmayan adım unmount). Özellik
   önizlemesi `AnimatePresence mode="wait"`: giriş opacity + 6px `SPRING`,
