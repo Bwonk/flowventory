@@ -289,7 +289,16 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   genişliğindeki bir dilimden başlar; `rounded-lg` tetikleyicide
   `triggerRadius={8}`. Tablo satır/kolon "…" menüleri de goo'dur (`TableMenu`);
   panel portallı olsa da React olayı satıra kabardığı için tetikleyici ve panel
-  satır tıklamasını yutar (`GooPopoverContent onClick`). Dinlenme hali standart açılır yüzeydir (`rounded-lg` +
+  satır tıklamasını yutar (`GooPopoverContent onClick`). Onay/form
+  açılırları da goo'dur (tarih seçici, hızlı stok ve stok düzenleme onayı,
+  tedarikçi ata/iletişim, rapor parametreleri) — uygulamada Radix `Popover`
+  kullanan açılır yoktur (`ui/popover`'dan yalnız `PopoverHeader/Title`).
+  Radix Dialog/Sheet içinde `GooPopoverContent container={dialog içeriği}`:
+  body'deki panel dialog'un odak tuzağına ve dış-tık kapanışına takılır; kap
+  dönüşümlü olduğundan konum kabın köşesine göre düzeltilir, kabuk
+  `overflow-visible` olmalı (kırpma iç katmanda — ürün detay modalı emsal),
+  Esc yalnız açılırı kapatsın diye dialog `onEscapeKeyDown`'da portal varsa
+  engellenir. Dinlenme hali standart açılır yüzeydir (`rounded-lg` +
   `border-hairline` + `bg-popover` + `shadow-md`) — goo yalnız geçiştir:
   oturunca filtre ve clip kapanır. Akarken kontur, gövdenin 1px dışında kalan
   `bg-hairline` goo katmanıdır. Yarıçap 8 (panel) / 6 (tetikleyici), boyun 8px,
@@ -518,7 +527,8 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   Aralık `width`'le çalışır (ikon şeridi gerçek 48px yerleşim ister; bilinçli).
   Menü hover'ı kayan hap değil, 150ms zemin rengi —
   [src/components/animate-ui/components/radix/sidebar.tsx](src/components/animate-ui/components/radix/sidebar.tsx).
-- Katmanlar: `Dialog` 400ms açılır / 250ms kapanır, `Popover` 300 / 180ms;
+- Katmanlar: `Dialog` 400ms açılır / 250ms kapanır, `Popover` (şu an
+  kullanıcısı yok; açılırlar goo) 300 / 180ms;
   ikisi de `ease-reveal` (yumuşak ease-out) + zoom 90 — büyüme gözle
   hissedilsin diye kullanıcı isteğiyle diğer arayüz hareketlerinden uzun
   (300ms sınırının bilinçli istisnası). İkisi de **origin-aware**: açan butonun

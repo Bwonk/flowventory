@@ -5,7 +5,7 @@ import { Calendar as CalendarIcon, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { type DateRange } from 'react-day-picker';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { GooPopover, GooPopoverContent, GooPopoverTrigger } from '@/components/motion/goo-popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -126,8 +126,8 @@ export function DateRangePicker<T extends string>({
   const draftToLabel = draftRange?.to ? format(draftRange.to, 'd MMM yyyy', { locale: tr }) : null;
 
   return (
-    <Popover open={open} onOpenChange={handleOpenChange}>
-      <PopoverTrigger asChild>
+    <GooPopover open={open} onOpenChange={handleOpenChange} align="end" sideOffset={6} className="shrink-0">
+      <GooPopoverTrigger>
         <Button
           variant="outline"
           aria-label="Tarih aralığı seç"
@@ -141,15 +141,8 @@ export function DateRangePicker<T extends string>({
           <span>{triggerLabel}</span>
           <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
         </Button>
-      </PopoverTrigger>
-      <PopoverContent
-        container={portalContainer ?? undefined}
-        align="end"
-        sideOffset={6}
-        className="z-[100] w-auto max-w-[calc(100vw-1rem)] rounded-lg p-4"
-        onOpenAutoFocus={e => e.preventDefault()}
-        onCloseAutoFocus={e => e.preventDefault()}
-      >
+      </GooPopoverTrigger>
+      <GooPopoverContent container={portalContainer} aria-label="Tarih aralığı" className="p-4">
         {/* Hızlı aralıklar */}
         <div className="relative">
           <div
@@ -179,6 +172,7 @@ export function DateRangePicker<T extends string>({
                   type="button"
                   role="option"
                   aria-selected={active}
+                  data-selected={active}
                   onClick={() => selectQuickRange(r.value)}
                   className={cn(
                     'flex h-8 shrink-0 items-center justify-center rounded-md px-4 text-xs font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
@@ -239,7 +233,7 @@ export function DateRangePicker<T extends string>({
             </div>
           </>
         )}
-      </PopoverContent>
-    </Popover>
+      </GooPopoverContent>
+    </GooPopover>
   );
 }

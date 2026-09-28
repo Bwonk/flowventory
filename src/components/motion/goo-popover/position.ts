@@ -1,6 +1,8 @@
 'use client';
-// beui.dev/components/motion/popover (popover-position) — birebir; tek fark
-// tetikleyicinin basma ölçeğinin ölçümden çıkarılması (`unscaledRect`).
+// beui.dev/components/motion/popover (popover-position) — birebir; farklar:
+// tetikleyicinin basma ölçeğinin ölçümden çıkarılması (`unscaledRect`) ve
+// portal kabı (`container`) dönüşümlü bir ata ise (Radix Dialog içeriği) onun
+// köşesine göre `offset`.
 
 import { type MutableRefObject, useCallback, useLayoutEffect, useState } from 'react';
 
@@ -15,6 +17,14 @@ export type PortalLayout = {
     width: number;
     height: number;
   };
+  /**
+   * Portal kabının viewport'taki iç köşesi. Kap dönüşümlü olduğunda (`translate`)
+   * `position: fixed` onun kutusuna göre konumlanır; body'de 0.
+   */
+  offset: {
+    x: number;
+    y: number;
+  };
 };
 
 function sameLayout(a: PortalLayout | null, b: PortalLayout) {
@@ -24,7 +34,9 @@ function sameLayout(a: PortalLayout | null, b: PortalLayout) {
     a.trigger.width === b.trigger.width &&
     a.trigger.height === b.trigger.height &&
     a.content.width === b.content.width &&
-    a.content.height === b.content.height
+    a.content.height === b.content.height &&
+    a.offset.x === b.offset.x &&
+    a.offset.y === b.offset.y
   );
 }
 
@@ -50,11 +62,18 @@ function unscaledRect(element: HTMLElement) {
   };
 }
 
+function containerOffset(container: HTMLElement | null | undefined) {
+  if (!container) return { x: 0, y: 0 };
+  const rect = container.getBoundingClientRect();
+  return { x: rect.left + container.clientLeft, y: rect.top + container.clientTop };
+}
+
 /** Tetikleyiciyi ve portallanmış paneli viewport koordinatlarında ölçer. */
 export function usePopoverPortalPosition<TriggerElement extends HTMLElement, ContentElement extends HTMLElement>(
   triggerRef: MutableRefObject<TriggerElement | null>,
   contentRef: MutableRefObject<ContentElement | null>,
   active: boolean,
+  container?: HTMLElement | null,
 ) {
   const [layout, setLayout] = useState<PortalLayout | null>(null);
 
@@ -75,9 +94,10 @@ export function usePopoverPortalPosition<TriggerElement extends HTMLElement, Con
         width: content.offsetWidth,
         height: content.offsetHeight,
       },
+      offset: containerOffset(container),
     };
     setLayout(current => (sameLayout(current, next) ? current : next));
-  }, [contentRef, triggerRef]);
+  }, [contentRef, triggerRef, container]);
 
   useLayoutEffect(() => {
     update();

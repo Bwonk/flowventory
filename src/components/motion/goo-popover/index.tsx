@@ -391,9 +391,21 @@ export interface GooPopoverContentProps {
    * tıklanabilir bir atanın (tablo satırı) içindeyse burada durdurulur.
    */
   onClick?: MouseEventHandler<HTMLDivElement>;
+  /**
+   * Portal kabı; verilmezse body. Radix Dialog/Sheet içinde dialog içeriğini
+   * ver: body'deki panel dialog'un odak tuzağına, dış-tık kapanışına ve kaydırma
+   * kilidine takılır.
+   */
+  container?: HTMLElement | null;
 }
 
-export function GooPopoverContent({ children, className, 'aria-label': ariaLabel, onClick }: GooPopoverContentProps) {
+export function GooPopoverContent({
+  children,
+  className,
+  'aria-label': ariaLabel,
+  onClick,
+  container,
+}: GooPopoverContentProps) {
   const ctx = useGooPopoverContext('GooPopoverContent');
   const {
     side,
@@ -428,7 +440,7 @@ export function GooPopoverContent({ children, className, 'aria-label': ariaLabel
   const [portalReady, setPortalReady] = useState(false);
   useEffect(() => setPortalReady(true), []);
   const present = mounted && portalReady;
-  const layout = usePopoverPortalPosition(triggerRef, contentRef, present);
+  const layout = usePopoverPortalPosition(triggerRef, contentRef, present, container);
 
   const geo = useMemo(() => {
     const triggerW = layout?.trigger.width ?? 0;
@@ -558,7 +570,9 @@ export function GooPopoverContent({ children, className, 'aria-label': ariaLabel
       className="group/goo pointer-events-none fixed left-0 top-0 isolate z-50 size-0"
       style={{
         visibility: layout ? 'visible' : 'hidden',
-        transform: `translate3d(${layout?.trigger.left ?? 0}px, ${layout?.trigger.top ?? 0}px, 0)`,
+        transform: layout
+          ? `translate3d(${layout.trigger.left - layout.offset.x}px, ${layout.trigger.top - layout.offset.y}px, 0)`
+          : undefined,
       }}
     >
       {/* Goo filtresi: bulanıklaştır, alfayı keskinleştirip katı şekle çevir, keskin
@@ -622,6 +636,6 @@ export function GooPopoverContent({ children, className, 'aria-label': ariaLabel
         </div>
       </div>
     </div>,
-    document.body,
+    container ?? document.body,
   );
 }

@@ -16,7 +16,7 @@ import { InfoTip } from '@/components/shared/InfoTip';
 import { NumberStepper } from '@/components/shared/NumberStepper';
 import { CloseButton } from '@/components/ui/close-button';
 import { Button } from '@/components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { GooPopover, GooPopoverContent, GooPopoverTrigger } from '@/components/motion/goo-popover';
 
 /**
  * Seçili varyant için satır içi stok düzenleme.
@@ -175,8 +175,8 @@ const LocationRow: React.FC<{
               if (!confirmOpen) stopEditing();
             }}
           />
-          <Popover open={confirmOpen} onOpenChange={next => !saving && setConfirmOpen(next)}>
-            <PopoverTrigger asChild>
+          <GooPopover open={confirmOpen} onOpenChange={next => !saving && setConfirmOpen(next)} align="start">
+            <GooPopoverTrigger>
               <button
                 type="button"
                 onClick={requestConfirm}
@@ -201,8 +201,8 @@ const LocationRow: React.FC<{
                   </motion.span>
                 </AnimatePresence>
               </button>
-            </PopoverTrigger>
-            <PopoverContent container={portalContainer} align="start" className="w-64 p-3">
+            </GooPopoverTrigger>
+            <GooPopoverContent container={portalContainer} aria-label="Stok değişikliğini onayla" className="w-64 p-3">
               <p className="font-mono text-sm tabular-nums text-foreground">
                 {currentStock} → {draft}{' '}
                 <span className="text-muted-foreground">({formatDelta(delta)})</span>
@@ -234,8 +234,8 @@ const LocationRow: React.FC<{
                   Onayla
                 </Button>
               </div>
-            </PopoverContent>
-          </Popover>
+            </GooPopoverContent>
+          </GooPopover>
           <CloseButton
             onClick={stopEditing}
             disabled={saving}

@@ -1,20 +1,15 @@
 'use client';
 
 import { logger } from '@/lib/logger';
-import { useState, type ReactNode } from 'react';
+import { useState, type ReactElement } from 'react';
 import { toast } from 'sonner';
 import { ApiRequests } from '@/lib/api-requests';
 import { Button } from '@/components/ui/button';
 import { EnvelopeIcon } from '@/components/ui/icons/envelope';
 import { useIconHover } from '@/components/ui/icons/use-icon-hover';
 import { Input } from '@/components/ui/input';
-import {
-  Popover,
-  PopoverContent,
-  PopoverHeader,
-  PopoverTitle,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { GooPopover, GooPopoverContent, GooPopoverTrigger } from '@/components/motion/goo-popover';
+import { PopoverHeader, PopoverTitle } from '@/components/ui/popover';
 import { useEmailField } from './use-email-field';
 
 interface VendorContactPopoverProps {
@@ -25,7 +20,7 @@ interface VendorContactPopoverProps {
   /** Sayfadaki vendorList entry'sini patch'ler — rapor refetch'i gerekmez. */
   onSaved: (contact: { email: string | null; phone: string | null }) => void;
   /** Dış tetikleyici (ör. ExpandableActionBar öğesi); verilmezse varsayılan ikon segment. */
-  trigger?: ReactNode;
+  trigger?: ReactElement;
 }
 
 /**
@@ -67,7 +62,9 @@ export function VendorContactPopover({ token, vendorId, vendorName, contact, onS
   };
 
   return (
-    <Popover
+    <GooPopover
+      align="end"
+      sideOffset={6}
       open={open}
       onOpenChange={next => {
         if (saving) return;
@@ -80,7 +77,7 @@ export function VendorContactPopover({ token, vendorId, vendorName, contact, onS
         }
       }}
     >
-      <PopoverTrigger asChild>
+      <GooPopoverTrigger>
         {trigger ?? (
           <Button
             variant="segment"
@@ -93,8 +90,8 @@ export function VendorContactPopover({ token, vendorId, vendorName, contact, onS
             <EnvelopeIcon ref={envelopeRef} size={12} className="flex shrink-0 [&>svg]:size-3!" aria-hidden />
           </Button>
         )}
-      </PopoverTrigger>
-      <PopoverContent align="end" sideOffset={6} className="z-[100] w-64 rounded-lg p-3">
+      </GooPopoverTrigger>
+      <GooPopoverContent aria-label="İletişim bilgileri" className="w-64 p-3">
         <PopoverHeader>
           <PopoverTitle>{vendorName}</PopoverTitle>
         </PopoverHeader>
@@ -145,7 +142,7 @@ export function VendorContactPopover({ token, vendorId, vendorName, contact, onS
             {saving ? 'Kaydediliyor…' : 'Kaydet'}
           </Button>
         </div>
-      </PopoverContent>
-    </Popover>
+      </GooPopoverContent>
+    </GooPopover>
   );
 }

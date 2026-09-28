@@ -8,7 +8,7 @@ import { ApiRequests } from '@/lib/api-requests';
 import type { VendorListItem } from '@/app/api/vendors/route';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { GooPopover, GooPopoverContent, GooPopoverTrigger } from '@/components/motion/goo-popover';
 import { OptionButton } from '@/components/shared/filters/Dropdown';
 import { extractErrorMessage } from '@/lib/api-error';
 
@@ -57,21 +57,23 @@ export function VendorAssignPopover({ token, productId, vendors, onAssigned }: V
   };
 
   return (
-    <Popover
+    <GooPopover
       open={open}
       onOpenChange={next => {
         if (saving) return;
         setOpen(next);
         if (!next) setQuery('');
       }}
+      align="end"
+      sideOffset={6}
     >
-      <PopoverTrigger asChild>
+      <GooPopoverTrigger>
         <Button variant="outline" size="sm" className="h-6 gap-1 px-2 text-xs" aria-label="Tedarikçi ata">
           <Store className="size-3" aria-hidden />
           Tedarikçi
         </Button>
-      </PopoverTrigger>
-      <PopoverContent align="end" sideOffset={6} className="z-[100] w-64 rounded-lg p-2">
+      </GooPopoverTrigger>
+      <GooPopoverContent aria-label="Tedarikçi ata" className="w-64 p-2">
         <Input
           value={query}
           onChange={e => setQuery(e.target.value)}
@@ -113,7 +115,7 @@ export function VendorAssignPopover({ token, productId, vendors, onAssigned }: V
         <p className="mt-1.5 border-t border-hairline px-1 pt-2 text-xs text-muted-foreground">
           Ürünün tüm varyantlarına uygulanır.
         </p>
-      </PopoverContent>
-    </Popover>
+      </GooPopoverContent>
+    </GooPopover>
   );
 }

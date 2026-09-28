@@ -1,20 +1,15 @@
 'use client';
 
 import { logger } from '@/lib/logger';
-import { useState, type ReactNode } from 'react';
+import { useState, type ReactElement } from 'react';
 import { toast } from 'sonner';
 import { extractErrorMessage } from '@/lib/api-error';
 import { AdjustmentsHorizontalIcon } from '@/components/ui/icons/adjustments-horizontal';
 import { useIconHover } from '@/components/ui/icons/use-icon-hover';
 import { Button } from '@/components/ui/button';
 import { NumberStepper } from '@/components/shared/NumberStepper';
-import {
-  Popover,
-  PopoverContent,
-  PopoverHeader,
-  PopoverTitle,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { GooPopover, GooPopoverContent, GooPopoverTrigger } from '@/components/motion/goo-popover';
+import { PopoverHeader, PopoverTitle } from '@/components/ui/popover';
 
 interface ReportParamsPopoverProps {
   leadTimeDays: number;
@@ -22,7 +17,7 @@ interface ReportParamsPopoverProps {
   /** Kaydeder ve raporu yeniden hesaplatır; hata fırlatırsa popover açık kalır. */
   onApply: (leadTimeDays: number, targetStockDays: number) => Promise<void>;
   /** Dış tetikleyici (ör. ExpandableActionBar öğesi); verilmezse varsayılan segment buton. */
-  trigger?: ReactNode;
+  trigger?: ReactElement;
 }
 
 /**
@@ -55,7 +50,9 @@ export function ReportParamsPopover({ leadTimeDays, targetStockDays, onApply, tr
   };
 
   return (
-    <Popover
+    <GooPopover
+      align="end"
+      sideOffset={6}
       open={open}
       onOpenChange={next => {
         if (saving) return;
@@ -67,7 +64,7 @@ export function ReportParamsPopover({ leadTimeDays, targetStockDays, onApply, tr
         }
       }}
     >
-      <PopoverTrigger asChild>
+      <GooPopoverTrigger>
         {trigger ?? (
           <Button variant="segment" size="segment" aria-label="Hesap parametreleri" {...paramsHoverProps}>
             <AdjustmentsHorizontalIcon
@@ -81,8 +78,8 @@ export function ReportParamsPopover({ leadTimeDays, targetStockDays, onApply, tr
             </span>
           </Button>
         )}
-      </PopoverTrigger>
-      <PopoverContent align="end" sideOffset={6} className="w-64 rounded-lg p-3">
+      </GooPopoverTrigger>
+      <GooPopoverContent aria-label="Hesap parametreleri" className="w-64 p-3">
         <PopoverHeader>
           <PopoverTitle>Hesap parametreleri</PopoverTitle>
         </PopoverHeader>
@@ -121,7 +118,7 @@ export function ReportParamsPopover({ leadTimeDays, targetStockDays, onApply, tr
             {saving ? 'Hesaplanıyor…' : 'Uygula'}
           </Button>
         </div>
-      </PopoverContent>
-    </Popover>
+      </GooPopoverContent>
+    </GooPopover>
   );
 }

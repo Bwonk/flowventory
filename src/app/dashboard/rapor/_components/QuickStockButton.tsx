@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { extractErrorMessage } from '@/lib/api-error';
 import { ApiRequests } from '@/lib/api-requests';
 import { Button } from '@/components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { GooPopover, GooPopoverContent, GooPopoverTrigger } from '@/components/motion/goo-popover';
 import { springOrInstant } from '@/lib/motion';
 
 type QuickStockState = 'idle' | 'saving' | 'done';
@@ -97,8 +97,8 @@ export function QuickStockButton({ token, productId, variantId, addQty, onStockC
   };
 
   return (
-    <Popover open={confirmOpen} onOpenChange={next => state === 'idle' && setConfirmOpen(next)}>
-      <PopoverTrigger asChild>
+    <GooPopover open={confirmOpen} onOpenChange={next => state === 'idle' && setConfirmOpen(next)} align="end">
+      <GooPopoverTrigger>
         <Button
           variant="ghost"
           size="sm"
@@ -127,8 +127,8 @@ export function QuickStockButton({ token, productId, variantId, addQty, onStockC
           </AnimatePresence>
           Stok
         </Button>
-      </PopoverTrigger>
-      <PopoverContent align="end" className="w-64 p-3">
+      </GooPopoverTrigger>
+      <GooPopoverContent aria-label="Stok girişini onayla" className="w-64 p-3">
         <p className="text-sm text-foreground">
           İkas admin&apos;deki stok da güncellenir:{' '}
           <span className="font-semibold tabular-nums">+{addQty} adet</span>
@@ -149,7 +149,7 @@ export function QuickStockButton({ token, productId, variantId, addQty, onStockC
             Onayla
           </Button>
         </div>
-      </PopoverContent>
-    </Popover>
+      </GooPopoverContent>
+    </GooPopover>
   );
 }
