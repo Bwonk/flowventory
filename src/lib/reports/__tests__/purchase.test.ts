@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computePurchaseLine, roundUpToMultiple, stdDev } from '@/lib/reports/purchase';
+import { buildInStockMask, computePurchaseLine, computeReplenishment, roundUpToMultiple, stdDev } from '@/lib/reports/purchase';
 
 describe('roundUpToMultiple', () => {
   it("5'in katına yukarı yuvarlar", () => {
@@ -95,5 +95,81 @@ describe('computePurchaseLine', () => {
       targetStockDays: 30,
     });
     expect(calc.urgent).toBe(true);
+  });
+});
+
+describe('computeReplenishment', () => {
+  const steady = (qty: number, days = 30) => Array.from({ length: days }, () => qty);
+  const base = { leadTimeDays: 10, targetStockDays: 30, incoming: 0, moq: null, casePack: 10 };
+
+  it('sipariş noktasına inince öneri başlar, koliye yuvarlanır', () => {
+    // günlük 1.2 (30 günde 36): ROP = 12, hedef = 48; stok 12 → ihtiyaç 36 → koli 10 → 40
+    const calc = computeReplenishment({ ...base, dailyQuantities: [...steady(1, 24), ...steady(2, 6)], currentStock: 12 });
+    expect(calc.dailyAvg).toBeCloseTo(1.2);
+    expect(calc.needsOrder).toBe(true);
+    expect(calc.suggestedQty % 10).toBe(0);
+    expect(calc.suggestedQty).toBeGreaterThanOrEqual(calc.rawQty);
+  });
+
+  it('sipariş noktasının üstünde öneri yok ama ham ihtiyaç görünür', () => {
+    const calc = computeReplenishment({ ...base, dailyQuantities: steady(1), currentStock: 25 });
+    expect(calc.needsOrder).toBe(false);
+    expect(calc.suggestedQty).toBe(0);
+    expect(calc.rawQty).toBe(15);
+  });
+
+  it('yoldaki adet öneriden düşülür', () => {
+    const without = computeReplenishment({ ...base, dailyQuantities: steady(2), currentStock: 10 });
+    const withIncoming = computeReplenishment({ ...base, dailyQuantities: steady(2), currentStock: 10, incoming: 10 });
+    expect(withIncoming.rawQty).toBe(without.rawQty - 10);
+  });
+
+  it('yoldaki adet sipariş noktasını geçiriyorsa öneri kalkar', () => {
+    const calc = computeReplenishment({ ...base, dailyQuantities: steady(2), currentStock: 10, incoming: 60 });
+    expect(calc.needsOrder).toBe(false);
+  });
+
+  it('MOQ ham ihtiyacın üstündeyse MOQ uygulanır', () => {
+    const calc = computeReplenishment({ ...base, moq: 100, dailyQuantities: steady(1), currentStock: 5 });
+    expect(calc.suggestedQty).toBe(100);
+  });
+
+  it('stoksuz günler ortalamaya girmez', () => {
+    const qty = [...steady(0, 10), ...steady(3, 20)];
+    const mask = [...Array(10).fill(false), ...Array(20).fill(true)];
+    const calc = computeReplenishment({ ...base, dailyQuantities: qty, inStockMask: mask, currentStock: 0 });
+    expect(calc.dailyAvg).toBe(3);
+    expect(calc.inStockDays).toBe(20);
+  });
+
+  it('acil: stok + yolda tedarik süresini karşılamıyor', () => {
+    const urgent = computeReplenishment({ ...base, dailyQuantities: steady(2), currentStock: 5 });
+    expect(urgent.urgent).toBe(true);
+    expect(urgent.orderInDays).toBeLessThanOrEqual(0);
+  });
+
+  it('satış yoksa kapsama ve en geç sipariş boş', () => {
+    const calc = computeReplenishment({ ...base, dailyQuantities: steady(0), currentStock: 5 });
+    expect(calc.daysOfCover).toBeNull();
+    expect(calc.orderInDays).toBeNull();
+    expect(calc.needsOrder).toBe(false);
+  });
+});
+
+describe('buildInStockMask', () => {
+  const days = ['2026-09-01', '2026-09-02', '2026-09-03', '2026-09-04'];
+
+  it('gün başında stok 0 ve satış yoksa günü dışarıda bırakır', () => {
+    const history = [
+      { dateKey: '2026-08-30', totalStock: 3 },
+      { dateKey: '2026-09-01', totalStock: 0 },
+      { dateKey: '2026-09-03', totalStock: 20 },
+    ];
+    // 01: başta 3 → stoklu; 02: başta 0, satış 0 → stoksuz; 03: başta 0 ama gün içinde geldi, satış 2 → stoklu; 04: 20
+    expect(buildInStockMask(days, history, [1, 0, 2, 1])).toEqual([true, false, true, true]);
+  });
+
+  it('kayıt yoksa tüm günler dahil', () => {
+    expect(buildInStockMask(days, [], [0, 0, 0, 0])).toEqual([true, true, true, true]);
   });
 });

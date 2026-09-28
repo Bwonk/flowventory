@@ -22,6 +22,7 @@ import { springOrInstant } from '@/lib/motion';
 import { formatPrice } from '@/lib/currency';
 import type { PurchaseReportVendor } from '@/app/api/reports/purchase/route';
 import type { BasketLine } from './basket';
+import { useDraftSyncContext } from './use-draft-sync';
 
 export interface BulkSendGroup {
   vendor: PurchaseReportVendor;
@@ -38,14 +39,22 @@ interface BulkSendDialogProps {
 }
 
 /**
- * Sepetin tamamını sipariş etme: her tedarikçiye KENDİ sepet satırlarıyla
- * ayrı bir e-posta gider (tek toplu e-posta yok — alıcılar farklı).
- * Gönderimler sırayla yapılır; e-postası olmayan tedarikçi atlanır ve
- * önizlemede öyle işaretlenir.
+ * Tüm taslakları gönderme: her tedarikçiye KENDİ satırlarıyla ayrı sipariş
+ * e-postası gider (beklenen teslim = tedarik süresi). Gönderimler sırayla;
+ * e-postası olmayan tedarikçi atlanır ve önizlemede öyle işaretlenir —
+ * WhatsApp/PDF için grubun kendi Gönder penceresi kullanılır.
  */
+
+function isoDateInDays(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
 export function BulkSendDialog({ token, groups, onVendorSent }: BulkSendDialogProps) {
   const { ref: sendRef, hoverProps } = useIconHover();
   const reduceMotion = useReducedMotion();
+  const draftSync = useDraftSyncContext();
   const [open, setOpen] = useState(false);
   const [sending, setSending] = useState(false);
   const [progress, setProgress] = useState<string | null>(null);
@@ -68,15 +77,18 @@ export function BulkSendDialog({ token, groups, onVendorSent }: BulkSendDialogPr
 
   const sendAll = async () => {
     setSending(true);
+    await draftSync.flush();
     const sent: string[] = [];
     const failed: string[] = [];
     for (const group of ready) {
       const vendorId = group.vendor.vendorId!;
       setProgress(group.vendor.vendorName);
       try {
-        await ApiRequests.vendors.sendReport(token, {
+        await ApiRequests.purchaseOrders.send(token, {
           vendorId,
           lines: group.lines.map(({ line, qty }) => ({ variantId: line.variantId, qty })),
+          channels: ['email'],
+          expectedAt: isoDateInDays(group.vendor.leadTimeDays),
         });
         sent.push(group.vendor.vendorName);
         onVendorSent(vendorId);
@@ -136,7 +148,7 @@ export function BulkSendDialog({ token, groups, onVendorSent }: BulkSendDialogPr
                 className="flex items-center gap-1.5"
               >
                 <PaperAirplaneIcon ref={sendRef} size={12} className="flex shrink-0 [&>svg]:size-3!" aria-hidden />
-                Hepsini Sipariş Ver
+                Tümünü gönder
               </motion.span>
             )}
           </AnimatePresence>
@@ -144,10 +156,10 @@ export function BulkSendDialog({ token, groups, onVendorSent }: BulkSendDialogPr
       </DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Hepsini sipariş ver</DialogTitle>
+          <DialogTitle>Tümünü gönder</DialogTitle>
         </DialogHeader>
         <p className="text-xs text-muted-foreground">
-          Her tedarikçiye kendi sipariş e-postası ayrı gönderilir.
+          Her tedarikçiye kendi sipariş e-postası ayrı gider; adetler Yolda&apos;ya geçer.
         </p>
         <ul className="max-h-64 divide-y divide-border overflow-y-auto rounded-md border border-border text-sm">
           {groups.map(({ vendor, lines, email }) => {
@@ -174,7 +186,7 @@ export function BulkSendDialog({ token, groups, onVendorSent }: BulkSendDialogPr
         {skipped.length > 0 && (
           <p className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
             {skipped.length === 1 ? `${skipped[0].vendor.vendorName} için` : `${skipped.length} tedarikçi için`} kayıtlı
-            e-posta yok. Adresi sepetteki grubun Gönder penceresinden ekleyebilirsiniz.
+            e-posta yok. Grubun kendi Gönder penceresinden e-posta ekleyebilir ya da WhatsApp/PDF ile gönderebilirsiniz.
           </p>
         )}
         <div className="flex justify-between gap-4 text-sm">

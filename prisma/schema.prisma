@@ -216,10 +216,81 @@ model VendorContact {
   vendorName String // görüntüleme cache'i
   email      String?
   phone      String?
+  /** Tedarikçiye özel tedarik süresi (gün); boşsa MerchantSettings.leadTimeDays. */
+  leadTimeDays Int?
+  /** En az sipariş adedi (satır başına). */
+  moq        Int?
+  /** Koli adedi — öneri bu katına yuvarlanır; boşsa 5. */
+  casePack   Int?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
   @@unique([merchantId, vendorId])
+}
+
+// Satın alma siparişi. Tedarikçi başına tek açık taslak (status "draft"):
+// Satın Alma tablosundaki tikler buraya yazılır. Gönderilince numara alır ve
+// "sent" olur; gönderilmiş/kısmi siparişlerin kalan adetleri öneriden
+// "yolda" olarak düşülür. Teslim alma ikas stoğuna yazar (PurchaseOrderReceipt).
+model PurchaseOrder {
+  id           String    @id @default(cuid())
+  merchantId   String
+  /** Gönderimde verilir (PO-0001); taslakta boş — numara boşluğu oluşmasın. */
+  number       Int?
+  vendorId     String
+  vendorName   String
+  status       String    // "draft" | "sent" | "partial" | "closed" | "cancelled"
+  /** Gönderim kanalları: "email" | "whatsapp" | "pdf". */
+  channels     String[]  @default([])
+  sentTo       String?
+  sentAt       DateTime?
+  expectedAt   DateTime?
+  closedAt     DateTime?
+  currencyCode String    @default("TRY")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  lines        PurchaseOrderLine[]
+  receipts     PurchaseOrderReceipt[]
+
+  @@unique([merchantId, number])
+  @@index([merchantId, status])
+  @@index([merchantId, vendorId, status])
+}
+
+model PurchaseOrderLine {
+  id           String        @id @default(cuid())
+  orderId      String
+  order        PurchaseOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  merchantId   String
+  productId    String
+  variantId    String
+  sku          String?
+  productName  String
+  variantName  String?
+  qty          Int
+  receivedQty  Int           @default(0)
+  cancelledQty Int           @default(0)
+  /** Alış fiyatı; bilinmiyorsa boş — tedarikçiye fiyatsız gider. */
+  unitCost     Float?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@unique([orderId, variantId])
+  @@index([merchantId, variantId])
+}
+
+// Bir teslim alma işlemi — ikas'a yazılan stok farkları (geri al için).
+// linesJson: [{ productId, variantId, qty, stockLocationId, previousCount, newCount }]
+model PurchaseOrderReceipt {
+  id         String        @id @default(cuid())
+  orderId    String
+  order      PurchaseOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  merchantId String
+  linesJson  String
+  undoneAt   DateTime?
+  createdAt  DateTime      @default(now())
+
+  @@index([merchantId, orderId])
 }
 
 // Gönderilen özet raporları — idempotency: saatlik cron'un tekrarları ya da

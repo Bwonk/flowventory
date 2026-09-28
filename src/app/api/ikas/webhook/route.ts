@@ -162,6 +162,8 @@ export async function POST(request: NextRequest) {
           prisma.trackingScriptInstall.deleteMany({ where: { merchantId } }),
           prisma.merchantSettings.deleteMany({ where: { merchantId } }),
           prisma.vendorContact.deleteMany({ where: { merchantId } }),
+          // Satır ve teslim kayıtları cascade ile gider.
+          prisma.purchaseOrder.deleteMany({ where: { merchantId } }),
           prisma.notification.deleteMany({ where: { merchantId } }),
           prisma.trackingRuleEvent.deleteMany({ where: { merchantId } }),
           prisma.trackingRuleState.deleteMany({ where: { merchantId } }),

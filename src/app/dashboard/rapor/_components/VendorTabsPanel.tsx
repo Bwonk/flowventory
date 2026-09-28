@@ -13,6 +13,7 @@ import { AddProductsDialog } from './AddProductsDialog';
 import { vendorBasketTotals, type BasketState } from './basket';
 import { DeleteVendorDialog } from './DeleteVendorDialog';
 import { VendorActionBar } from './VendorActionBar';
+import type { VendorSettings } from './VendorContactPopover';
 import { VendorOrderTable } from './VendorOrderTable';
 
 /** Tab/print anahtarı — printVendorId ile aynı konvansiyon. */
@@ -24,8 +25,6 @@ interface VendorTabsPanelProps {
   vendors: PurchaseReportVendor[];
   token: string | null;
   vendorList: VendorListItem[];
-  stockOverrides: Record<string, number>;
-  onStockChange: (variantId: string, newTotalStock: number) => void;
   /** Sepet: tikli satırlar ve adetleri; gönderim/yazdırma sepeti izler. */
   basket: BasketState;
   onLineQtyChange: (variantId: string, qty: number | null) => void;
@@ -35,7 +34,7 @@ interface VendorTabsPanelProps {
   /** Ürün Ekle sonrası refetch + aktif tab'ı tedarikçi adıyla yeniden hedefleme
       (local- id ilk atamada gerçek ikas id'sine dönüşür, tab zıplamasın). */
   onProductsAssigned: (vendorName: string) => Promise<void>;
-  onVendorContactSaved: (vendorId: string, next: { email: string | null; phone: string | null }) => void;
+  onVendorContactSaved: (vendorId: string, next: Partial<VendorSettings>) => void;
   /** Ürünsüz tedarikçi silindiğinde sayfa listesinden düşürülür. */
   onVendorDeleted: (vendorId: string) => void;
   activeKey: string | null;
@@ -54,8 +53,6 @@ export function VendorTabsPanel({
   vendors,
   token,
   vendorList,
-  stockOverrides,
-  onStockChange,
   basket,
   onLineQtyChange,
   onVendorSent,
@@ -142,7 +139,7 @@ export function VendorTabsPanel({
         <VendorActionBar
           token={token}
           vendor={activeVendor}
-          contact={activeContact ?? { email: null, phone: null }}
+          contact={activeContact ?? { email: null, phone: null, leadTimeDays: null, moq: null, casePack: null }}
           basket={basket}
           onPrint={() => onPrintVendor(effectiveActiveKey)}
           onProductsAssigned={onProductsAssigned}
@@ -214,8 +211,6 @@ export function VendorTabsPanel({
                     vendor={vendor}
                     token={token}
                     vendors={vendorList}
-                    stockOverrides={stockOverrides}
-                    onStockChange={onStockChange}
                     onAssigned={onAssigned}
                     basket={basket}
                     onLineQtyChange={onLineQtyChange}

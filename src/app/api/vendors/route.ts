@@ -9,6 +9,10 @@ export type VendorListItem = {
   vendorName: string;
   email: string | null;
   phone: string | null;
+  /** Tedarikçiye özel tedarik süresi (gün); boşsa mağaza varsayılanı. */
+  leadTimeDays: number | null;
+  moq: number | null;
+  casePack: number | null;
 };
 
 export type VendorsApiResponse = {
@@ -30,6 +34,26 @@ export type VendorsApiResponse = {
  * GET sırasında o id'ye taşınır (lazy reconcile).
  */
 const LOCAL_VENDOR_PREFIX = 'local-';
+
+function toItem(c: {
+  vendorId: string;
+  vendorName: string;
+  email: string | null;
+  phone: string | null;
+  leadTimeDays: number | null;
+  moq: number | null;
+  casePack: number | null;
+}): VendorListItem {
+  return {
+    vendorId: c.vendorId,
+    vendorName: c.vendorName,
+    email: c.email,
+    phone: c.phone,
+    leadTimeDays: c.leadTimeDays,
+    moq: c.moq,
+    casePack: c.casePack,
+  };
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -79,12 +103,15 @@ export async function GET(request: NextRequest) {
         vendorName: r.vendorName ?? r.vendorId,
         email: contact?.email ?? null,
         phone: contact?.phone ?? null,
+        leadTimeDays: contact?.leadTimeDays ?? null,
+        moq: contact?.moq ?? null,
+        casePack: contact?.casePack ?? null,
       };
     });
 
     const localOnly: VendorListItem[] = Array.from(contactByVendor.values())
       .filter(c => c.vendorId.startsWith(LOCAL_VENDOR_PREFIX))
-      .map(c => ({ vendorId: c.vendorId, vendorName: c.vendorName, email: c.email, phone: c.phone }));
+      .map(c => toItem(c));
 
     const vendors = [...fromSnapshots, ...localOnly].sort((a, b) =>
       a.vendorName.localeCompare(b.vendorName, 'tr'),
@@ -151,12 +178,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    const data: VendorListItem = {
-      vendorId: created.vendorId,
-      vendorName: created.vendorName,
-      email: created.email,
-      phone: created.phone,
-    };
+    const data: VendorListItem = toItem(created);
     return NextResponse.json({ data });
   } catch (error) {
     logger.error('Vendor create error', { error });
@@ -218,6 +240,10 @@ const contactSchema = z.object({
   vendorName: z.string().trim().min(1).max(150),
   email: z.string().email('Geçerli bir e-posta girin').max(320).nullable().optional(),
   phone: z.string().trim().max(32).nullable().optional(),
+  // Tedarik ayarları: gönderilmezse (undefined) dokunulmaz, null temizler.
+  leadTimeDays: z.number().int().min(1).max(365).nullable().optional(),
+  moq: z.number().int().min(1).max(100_000).nullable().optional(),
+  casePack: z.number().int().min(1).max(10_000).nullable().optional(),
 });
 
 /**
@@ -238,20 +264,20 @@ export async function PUT(request: NextRequest) {
         { status: 400 },
       );
     }
-    const { vendorId, vendorName, email, phone } = parsed.data;
+    const { vendorId, vendorName, email, phone, leadTimeDays, moq, casePack } = parsed.data;
+    const supply = {
+      ...(leadTimeDays !== undefined && { leadTimeDays }),
+      ...(moq !== undefined && { moq }),
+      ...(casePack !== undefined && { casePack }),
+    };
 
     const saved = await prisma.vendorContact.upsert({
       where: { merchantId_vendorId: { merchantId: user.merchantId, vendorId } },
-      create: { merchantId: user.merchantId, vendorId, vendorName, email: email ?? null, phone: phone ?? null },
-      update: { vendorName, email: email ?? null, phone: phone ?? null },
+      create: { merchantId: user.merchantId, vendorId, vendorName, email: email ?? null, phone: phone ?? null, ...supply },
+      update: { vendorName, email: email ?? null, phone: phone ?? null, ...supply },
     });
 
-    const data: VendorListItem = {
-      vendorId: saved.vendorId,
-      vendorName: saved.vendorName,
-      email: saved.email,
-      phone: saved.phone,
-    };
+    const data: VendorListItem = toItem(saved);
     return NextResponse.json({ data });
   } catch (error) {
     logger.error('Vendor contact upsert error', { error });

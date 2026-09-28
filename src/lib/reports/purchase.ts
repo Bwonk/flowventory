@@ -73,3 +73,100 @@ export function computePurchaseLine(input: PurchaseLineInput): PurchaseLineCompu
     urgent: dailyAvg > 0 && currentStock <= reorderPoint,
   };
 }
+
+/**
+ * Stoklu gün maskesi: günün başında stok ≤ 0 olan ve o gün satış yapılmamış
+ * günler talebi değil stoksuzluğu gösterir; ortalamaya girerse talep olduğundan
+ * düşük görünür. Geçmiş kaydı olmayan günler (bilinmiyor) dahil sayılır.
+ *
+ * @param dayKeys pencere gün anahtarları (eskiden yeniye)
+ * @param history stok değişim kayıtları, `dateKey` artan sırada
+ * @param dailyQuantities `dayKeys` ile hizalı günlük satışlar
+ */
+export function buildInStockMask(
+  dayKeys: string[],
+  history: ReadonlyArray<{ dateKey: string; totalStock: number }>,
+  dailyQuantities: number[],
+): boolean[] {
+  let cursor = 0;
+  let carry: number | null = null;
+  // Pencereden önceki son değer günün başlangıç stoğudur.
+  while (cursor < history.length && history[cursor].dateKey < dayKeys[0]) {
+    carry = history[cursor].totalStock;
+    cursor++;
+  }
+  return dayKeys.map((key, i) => {
+    const startStock = carry;
+    while (cursor < history.length && history[cursor].dateKey === key) {
+      carry = history[cursor].totalStock;
+      cursor++;
+    }
+    const outOfStock = startStock !== null && startStock <= 0 && (dailyQuantities[i] ?? 0) === 0;
+    return !outOfStock;
+  });
+}
+
+export interface ReplenishmentInput extends PurchaseLineInput {
+  /** Gönderilmiş siparişlerde henüz gelmemiş adet. */
+  incoming: number;
+  /** En az sipariş adedi; boşsa sınır yok. */
+  moq: number | null;
+  /** Koli adedi; boşsa ORDER_ROUNDING_MULTIPLE. */
+  casePack: number | null;
+  /** `dailyQuantities` ile hizalı stoklu gün maskesi; verilmezse tüm günler. */
+  inStockMask?: boolean[];
+}
+
+export interface Replenishment extends PurchaseLineComputation {
+  incoming: number;
+  /** Yuvarlanmamış ihtiyaç (≥ 0): hedef seviye − stok − yolda. */
+  rawQty: number;
+  /** Sipariş noktasına inildiyse MOQ ve koliye yuvarlanmış adet, değilse 0. */
+  suggestedQty: number;
+  /** Stok + yolda ≤ sipariş noktası (satış varken). */
+  needsOrder: boolean;
+  /** Stok + yolda, tedarik süresi boyunca satışı karşılamıyor. */
+  urgent: boolean;
+  /** Eldeki stok kaç gün yeter (satış yoksa null). */
+  daysOfCover: number | null;
+  /** En geç sipariş: (stok + yolda) kapsaması − tedarik süresi; ≤ 0 = bugün/gecikti. */
+  orderInDays: number | null;
+  /** Ortalamaya giren gün sayısı. */
+  inStockDays: number;
+}
+
+/**
+ * Sektör ikmal formülü (Inventory Planner / Prediko / Katana ortak kalıbı):
+ *   ihtiyaç = günlük × (tedarik + hedef gün) + emniyet − stok − yolda
+ *   adet    = yukarı yuvarla(max(ihtiyaç, MOQ), koli)
+ * Öneri stok + yolda sipariş noktasına inince başlar; günlük ortalama
+ * yalnız stoklu günlerden alınır.
+ */
+export function computeReplenishment(input: ReplenishmentInput): Replenishment {
+  const { dailyQuantities, inStockMask, currentStock, incoming, leadTimeDays, targetStockDays, moq, casePack } = input;
+  const inStock = inStockMask ? dailyQuantities.filter((_, i) => inStockMask[i] !== false) : dailyQuantities;
+  const base = computePurchaseLine({ dailyQuantities: inStock, currentStock, leadTimeDays, targetStockDays });
+
+  const position = currentStock + incoming;
+  const targetLevel = base.dailyAvg * (targetStockDays + leadTimeDays) + base.safetyStock;
+  const rawQty = Math.max(0, Math.ceil(targetLevel - position));
+  const needsOrder = base.dailyAvg > 0 && position <= base.reorderPoint && rawQty > 0;
+  const multiple = casePack && casePack > 0 ? casePack : ORDER_ROUNDING_MULTIPLE;
+  const suggestedQty = needsOrder ? roundUpToMultiple(Math.max(rawQty, moq ?? 0), multiple) : 0;
+  const urgent = needsOrder && position < Math.ceil(base.dailyAvg * leadTimeDays);
+
+  const daysOfCover = base.dailyAvg > 0 ? Math.max(0, currentStock) / base.dailyAvg : null;
+  const orderInDays = base.dailyAvg > 0 ? Math.floor(Math.max(0, position) / base.dailyAvg - leadTimeDays) : null;
+
+  return {
+    ...base,
+    incoming,
+    rawQty,
+    suggestedQty,
+    needsOrder,
+    urgent,
+    daysOfCover,
+    orderInDays,
+    inStockDays: inStock.length,
+  };
+}

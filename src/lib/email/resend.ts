@@ -31,6 +31,8 @@ export interface ResendMessage {
   to: string;
   subject: string;
   html: string;
+  /** Tedarikçi yanıtı mağazaya dönsün (bildirim adresi). */
+  replyTo?: string;
 }
 
 export async function sendViaResend(message: ResendMessage): Promise<void> {

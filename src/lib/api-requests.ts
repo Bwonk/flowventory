@@ -18,16 +18,21 @@ import { PurchaseReportApiResponse } from '../app/api/reports/purchase/route';
 import { ConversionInsightApiResponse } from '../app/api/insights/conversion/route';
 import { InventoryInsightApiResponse } from '../app/api/insights/inventory/route';
 import { NotificationsApiResponse } from '../app/api/notifications/route';
-import { QuickStockApiResponse } from '../app/api/ikas/quick-stock/route';
 import { AssignVendorApiResponse } from '../app/api/ikas/assign-vendor/route';
 import { VendorsApiResponse, VendorListItem, DeleteVendorApiResponse } from '../app/api/vendors/route';
-import { SendVendorReportApiResponse } from '../app/api/vendors/send-report/route';
 import { SyncApiResponse } from '../app/api/sync/route';
 import { DigestTestApiResponse } from '../app/api/digest/test/route';
 import { FeedbackApiResponse } from '../app/api/feedback/route';
 import { OnboardingStatusApiResponse } from '../app/api/onboarding/status/route';
 import { SubscriptionApiResponse } from '../app/api/ikas/subscription/route';
 import { SubscriptionCheckoutApiResponse } from '../app/api/ikas/subscription/checkout/route';
+import type { PurchaseOrdersApiResponse } from '@/app/api/purchase-orders/route';
+import type { DraftUpdateApiResponse } from '@/app/api/purchase-orders/draft/route';
+import type { SendPurchaseOrderApiResponse } from '@/app/api/purchase-orders/send/route';
+import type { ReceivePurchaseOrderApiResponse } from '@/app/api/purchase-orders/[id]/receive/route';
+import type { UndoReceiptApiResponse } from '@/app/api/purchase-orders/[id]/receipts/[receiptId]/undo/route';
+import type { CancelRemainingApiResponse } from '@/app/api/purchase-orders/[id]/cancel-remaining/route';
+import type { PurchaseOrderChannel } from '@/lib/purchase-orders/types';
 
 export async function makePostRequest<T>({ url, data, token }: { url: string; data?: Record<string, unknown>; token?: string }) {
   return axios.post<ApiResponseType<T>>(url, data, {
@@ -81,8 +86,6 @@ export const ApiRequests = {
       token: string,
       input: { productId: string; variantId: string; stockLocationId: string; stockCount: number },
     ) => makePostRequest<{ ok: boolean }>({ url: '/api/ikas/update-stock', token, data: input }),
-    quickStock: (token: string, input: { productId: string; variantId: string; addQty: number }) =>
-      makePostRequest<QuickStockApiResponse>({ url: '/api/ikas/quick-stock', token, data: input }),
     assignVendor: (
       token: string,
       input: { vendorName: string } & ({ productId: string } | { productIds: string[] }),
@@ -157,12 +160,48 @@ export const ApiRequests = {
       makePostRequest<VendorListItem>({ url: '/api/vendors', token, data: input }),
     updateContact: (
       token: string,
-      input: { vendorId: string; vendorName: string; email: string | null; phone: string | null },
+      input: {
+        vendorId: string;
+        vendorName: string;
+        email: string | null;
+        phone: string | null;
+        leadTimeDays?: number | null;
+        moq?: number | null;
+        casePack?: number | null;
+      },
     ) => makePutRequest<VendorListItem>({ url: '/api/vendors', token, data: input }),
-    sendReport: (token: string, input: { vendorId: string; lines?: { variantId: string; qty: number }[] }) =>
-      makePostRequest<SendVendorReportApiResponse>({ url: '/api/vendors/send-report', token, data: input }),
     delete: (token: string, input: { vendorId: string }) =>
       makeDeleteRequest<DeleteVendorApiResponse>({ url: '/api/vendors', token, data: input }),
+  },
+  purchaseOrders: {
+    listOpen: (token: string) => makeGetRequest<PurchaseOrdersApiResponse>({ url: '/api/purchase-orders', token }),
+    updateDraft: (token: string, input: { set: { variantId: string; qty: number }[]; remove: string[] }) =>
+      makePutRequest<DraftUpdateApiResponse>({ url: '/api/purchase-orders/draft', token, data: input }),
+    send: (
+      token: string,
+      input: {
+        vendorId: string;
+        lines: { variantId: string; qty: number }[];
+        channels: PurchaseOrderChannel[];
+        expectedAt: string | null;
+      },
+    ) => makePostRequest<SendPurchaseOrderApiResponse>({ url: '/api/purchase-orders/send', token, data: input }),
+    receive: (token: string, orderId: string, lines: { variantId: string; qty: number }[]) =>
+      makePostRequest<ReceivePurchaseOrderApiResponse>({
+        url: `/api/purchase-orders/${encodeURIComponent(orderId)}/receive`,
+        token,
+        data: { lines },
+      }),
+    undoReceipt: (token: string, orderId: string, receiptId: string) =>
+      makePostRequest<UndoReceiptApiResponse>({
+        url: `/api/purchase-orders/${encodeURIComponent(orderId)}/receipts/${encodeURIComponent(receiptId)}/undo`,
+        token,
+      }),
+    cancelRemaining: (token: string, orderId: string) =>
+      makePostRequest<CancelRemainingApiResponse>({
+        url: `/api/purchase-orders/${encodeURIComponent(orderId)}/cancel-remaining`,
+        token,
+      }),
   },
   rules: {
     list: (token: string) => makeGetRequest<RulesApiResponse>({ url: '/api/rules', token }),

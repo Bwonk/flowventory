@@ -22,7 +22,7 @@ import { GooPopover, GooPopoverContent, GooPopoverTrigger } from '@/components/m
  * Seçili varyant için satır içi stok düzenleme.
  *
  * ikas admin'e yazdığı için doğrudan değil, küçük bir onay popover'ı
- * üzerinden çalışır (rapor sayfasındaki QuickStockButton ile aynı dil):
+ * üzerinden çalışır:
  * kalem → değer → ✓/Enter → "12 → 40 (+28)" onayı → POST /api/ikas/update-stock.
  * Başarı toast'ındaki "Geri Al" önceki mutlak değeri geri yazar. Onaylanan
  * değer `onStockChange` ile üst listeye bildirilir (modal başlığı, varyant

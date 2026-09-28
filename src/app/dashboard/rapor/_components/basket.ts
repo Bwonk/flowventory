@@ -7,12 +7,12 @@ import type {
 
 /**
  * Sepet: variantId → sipariş adedi. Varlık = satır tikli; değer = adet.
- * Geçicidir — Yenile/refetch'te güncel önerilerle yeniden tohumlanır
- * (stockOverrides ile aynı yaşam döngüsü).
+ * Kalıcıdır: tedarikçi taslaklarının istemci kopyası (`basketFromReport`),
+ * değişiklikler `useDraftSync` ile sunucuya yazılır.
  */
 export type BasketState = Record<string, number>;
 
-/** Sunucunun quick-stock sınırıyla aynı üst limit. */
+/** Sunucunun sipariş satırı sınırıyla aynı üst limit (MAX_LINE_QTY). */
 export const MAX_ORDER_QTY = 100_000;
 
 export function clampQty(n: number): number {
@@ -20,9 +20,20 @@ export function clampQty(n: number): number {
   return Math.min(Math.max(Math.round(n), 1), MAX_ORDER_QTY);
 }
 
-/** Tikleme anındaki varsayılan adet: öneri varsa öneri, yoksa 5 (sipariş katı). */
-export function defaultQtyFor(line: PurchaseReportLine): number {
-  return line.needsOrder ? line.suggestedQty : ORDER_ROUNDING_MULTIPLE;
+/** Tikleme anındaki varsayılan adet: öneri varsa öneri, yoksa koli (yoksa 5). */
+export function defaultQtyFor(line: PurchaseReportLine, casePack: number | null = null): number {
+  return line.needsOrder ? line.suggestedQty : (casePack ?? ORDER_ROUNDING_MULTIPLE);
+}
+
+/** Sunucudaki tedarikçi taslakları → sepet (tik = kalıcı taslak). */
+export function basketFromReport(report: PurchaseReportApiResponse): BasketState {
+  const basket: BasketState = {};
+  for (const vendor of report.vendors) {
+    for (const line of vendor.lines) {
+      if (line.draftQty !== null) basket[line.variantId] = line.draftQty;
+    }
+  }
+  return basket;
 }
 
 /**

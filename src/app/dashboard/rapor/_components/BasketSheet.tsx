@@ -134,17 +134,17 @@ export function BasketSheet({
         <SheetHeader className="border-b border-hairline py-3">
           {/* Tek satır başlık (kart başlığı dili) — açıklama yok; toplamlar grup
               kartlarında ve footer'da, gönderim notu footer'da yaşar. */}
-          <SheetTitle className="text-sm font-medium text-foreground">Sepet</SheetTitle>
+          <SheetTitle className="text-sm font-medium text-foreground">Taslaklar</SheetTitle>
           <SheetDescription className="sr-only">
-            Adetleri burada düzenleyin; sipariş tedarikçi başına e-posta ile gider.
+            Tedarikçi başına sipariş taslakları. Adetleri düzenleyin, tedarikçiye gönderin.
           </SheetDescription>
         </SheetHeader>
 
         {groups.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center">
-            <p className="text-sm font-medium text-foreground">Sepet boş</p>
+            <p className="text-sm font-medium text-foreground">Taslak yok</p>
             <p className="text-xs text-muted-foreground">
-              Tablodaki kutucukları tıklayarak sipariş etmek istediğiniz ürünleri ekleyin.
+              Tablodaki kutucukları tıklayarak ürünleri tedarikçinin taslağına ekleyin. Taslak kaydedilir.
             </p>
           </div>
         ) : (
@@ -253,8 +253,8 @@ export function BasketSheet({
                             token={token}
                             vendorId={vendor.vendorId}
                             vendorName={vendor.vendorName}
-                            email={contact?.email ?? null}
-                            phone={contact?.phone ?? null}
+                            contact={{ email: contact?.email ?? null, phone: contact?.phone ?? null }}
+                            leadTimeDays={vendor.leadTimeDays}
                             onContactSaved={next => onVendorContactSaved(vendor.vendorId!, next)}
                             lines={lines}
                             onSent={() => onVendorSent(vendor.vendorId!)}
@@ -278,8 +278,14 @@ export function BasketSheet({
           className={cn('gap-2 border-t border-hairline', groups.length === 0 && 'border-t-0')}
         >
           <div className="flex items-center justify-between gap-3">
-            <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={onResetBasket}>
-              Sıfırla
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-xs"
+              onClick={onResetBasket}
+              title="Taslakları güncel sipariş önerileriyle değiştirir"
+            >
+              Önerilere sıfırla
             </Button>
             <p className="text-sm font-semibold tabular-nums text-foreground">
               <AnimatedNumber value={totals.total} format={formatPrice} />
@@ -306,7 +312,7 @@ export function BasketSheet({
                 onVendorSent={onVendorSent}
               />
               <p className="text-center text-[10px] text-muted-foreground">
-                Her tedarikçiye kendi sipariş e-postası ayrı gönderilir.
+                Her tedarikçiye kendi siparişi ayrı gider; gönderilen adetler Yolda&apos;ya geçer.
               </p>
             </>
           )}

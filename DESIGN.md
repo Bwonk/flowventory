@@ -437,6 +437,25 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   (sepet). Satır içi düzenlemede `autoFocus` + `onEnter(value)` + `onEscape`
   (stok düzenleyici); `onEnter` kaydedilen değeri taşır, çünkü `onChange`
   henüz state'e işlememiştir.
+- **Satın alma siparişi (taslak → gönder → yolda → teslim):** Satın Alma
+  sayfası yeni yüzey açmaz. Tablodaki tik tedarikçinin **kalıcı taslağıdır**
+  (sunucuda; sayfa yenilenince kaybolmaz), adet tikli satırda `NumberStepper
+  sm` ile düzenlenir. Öneri "45 → 50" biçiminde (ham ihtiyaç → MOQ/koli
+  yuvarlaması), hesap `InfoTip`'te. Sayfa yolunda Taslaklar (eski sepet
+  çekmecesi, aynı soft grup dili) ve **Yolda** (`archive-box-arrow-down`,
+  rozet = açık sipariş) çekmeceleri; tedarikçi yolunda "Tedarikçi ayarları"
+  (iletişim + tedarik süresi/MOQ/koli, goo) ve tek ink "Gönder" (rozet =
+  taslak kalemi). **Gönder penceresi kanal kartlarıdır**: E-posta / WhatsApp /
+  PDF, her biri `AnimatedCheckbox` + durum rozeti (Hazır `success`, eksik
+  `warning`); eksik bilgi kartın içinde girilir — pasif buton + gizli `title`
+  kalıbı kullanılmaz, birincil buton nedenini etiketinde söyler ("Kanal
+  seçin", "Gelen adet girin"). Beklenen teslim takvim değil "N gün sonra ·
+  8 Eki" `NumberStepper`. Yolda grubunda satır başına "bu teslimat" stepper'ı
+  (varsayılan kalan adet), ink "N adedi teslim al", outline "Kalanı iptal
+  et" — **iki adımlı satır içi onay**: ilk tık butonu `destructive` + "Kalan N
+  adet iptal edilsin mi?" yapar, 3 sn içinde ikinci tık uygular (tek grup, geri
+  dönüşü küçük iş için Dialog açılmaz). Teslim toast'ında "Geri al". Stok
+  yalnız teslim almada yazılır; satırda hızlı stok butonu yok.
 - **Satır içi başlık (`EditableTitle`):**
   [src/components/shared/EditableTitle.tsx](src/components/shared/EditableTitle.tsx),
   `PageHeader.titleSlot` ile. h1 tipografisi aynen kalır. Tek kabuk iki halde

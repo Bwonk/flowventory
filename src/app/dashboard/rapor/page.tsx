@@ -13,7 +13,8 @@ import { useMerchantCurrency } from '@/lib/currency';
 import { markReportViewed, markStoreSynced } from '@/lib/onboarding';
 import { RaporSkeleton } from './_components/RaporSkeleton';
 import { ContentFadeIn } from '@/components/motion/content-fade-in';
-import { clampQty, seedBasket, type BasketState } from './_components/basket';
+import { basketFromReport, clampQty, seedBasket, type BasketState } from './_components/basket';
+import { DraftSyncContext, useDraftSync } from './_components/use-draft-sync';
 import { ReportActionBar } from './_components/ReportActionBar';
 import { InfoTip } from '@/components/shared/InfoTip';
 import { ReportKpiStrip } from './_components/ReportKpiStrip';
@@ -36,48 +37,38 @@ export default function RaporPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Tek tık stok girişi sonrası Stok hücresi override'ları (variantId → yeni toplam).
-  // Öneri/toplamlar yeniden hesaplanmaz; "Yenile" sunucuda tazeler.
-  const [stockOverrides, setStockOverrides] = useState<Record<string, number>>({});
-
-  const handleStockChange = useCallback((variantId: string, newTotalStock: number) => {
-    setStockOverrides(prev => ({ ...prev, [variantId]: newTotalStock }));
-  }, []);
-
-  // Sepet (variantId → adet): tablo tikleri ekler/çıkarır, çekmece düzenler.
-  // Geçicidir — "Yenile"/refetch güncel önerilerin varsayılanıyla yeniden kurar.
+  // Sepet (variantId → adet) = tedarikçi taslaklarının istemci kopyası: tablo
+  // tikleri ekler/çıkarır, çekmece düzenler; her değişiklik sunucuya yazılır.
   const [basket, setBasket] = useState<BasketState>({});
+  const draftSync = useDraftSync(token);
 
-  const handleLineQtyChange = useCallback((variantId: string, qty: number | null) => {
-    setBasket(prev => {
-      if (qty === null) {
-        if (!(variantId in prev)) return prev;
-        const next = { ...prev };
-        delete next[variantId];
-        return next;
-      }
-      return { ...prev, [variantId]: clampQty(qty) };
-    });
-  }, []);
-
-  const handleResetBasket = useCallback(() => {
-    setBasket(report ? seedBasket(report) : {});
-  }, [report]);
-
-  // Gönderim başarısında o tedarikçinin satırları sepetten düşer — gönderilen
-  // sipariş "tamamlandı" sayılır; Yenile öneriyi güncel stokla tazeler.
-  const handleVendorSent = useCallback(
-    (vendorId: string) => {
-      const vendor = report?.vendors.find(v => v.vendorId === vendorId);
-      if (!vendor) return;
+  const handleLineQtyChange = useCallback(
+    (variantId: string, qty: number | null) => {
+      const next = qty === null ? null : clampQty(qty);
       setBasket(prev => {
-        const next = { ...prev };
-        for (const line of vendor.lines) delete next[line.variantId];
-        return next;
+        if (next === null) {
+          if (!(variantId in prev)) return prev;
+          const copy = { ...prev };
+          delete copy[variantId];
+          return copy;
+        }
+        return { ...prev, [variantId]: next };
       });
+      draftSync.queue(variantId, next);
     },
-    [report],
+    [draftSync],
   );
+
+  // "Önerilere sıfırla": taslaklar güncel önerilerle değiştirilir.
+  const handleResetBasket = useCallback(() => {
+    if (!report) return;
+    const seeded = seedBasket(report);
+    for (const variantId of Object.keys(basket)) {
+      if (!(variantId in seeded)) draftSync.queue(variantId, null);
+    }
+    for (const [variantId, qty] of Object.entries(seeded)) draftSync.queue(variantId, qty);
+    setBasket(seeded);
+  }, [report, basket, draftSync]);
 
   // Atama popover'ındaki mevcut tedarikçi listesi; hatası ölümcül değil
   // (boş liste de serbest metinle eklemeye izin verir).
@@ -110,6 +101,8 @@ export default function RaporPage() {
 
   const fetchReport = useCallback(async (currentToken: string): Promise<boolean> => {
     try {
+      // Bekleyen tik/adet yazımı rapordan önce bitsin; yoksa taslak eski hâliyle döner.
+      await draftSync.flush();
       const [res, vendorsRes] = await Promise.all([
         ApiRequests.reports.purchase(currentToken),
         ApiRequests.vendors.list(currentToken).catch(error => {
@@ -125,8 +118,7 @@ export default function RaporPage() {
       }
       if (res.status === 200 && res.data?.data) {
         setReport(res.data.data);
-        setStockOverrides({});
-        setBasket(seedBasket(res.data.data));
+        setBasket(basketFromReport(res.data.data));
         // Rapor üretildiyse sunucu ensureFreshSync'i çalıştırmıştır —
         // Başlarken'deki "Mağaza verini senkronla" adımı kendiliğinden biter.
         markStoreSynced();
@@ -137,7 +129,31 @@ export default function RaporPage() {
       logger.error('Error fetching purchase report', { error });
       return false;
     }
-  }, []);
+  }, [draftSync]);
+
+  // Gönderilen siparişin satırları taslaktan çıktı; rapor yeniden hesaplanır ki
+  // adetler "Yolda" sütununa geçsin ve öneriden düşsün.
+  const handleVendorSent = useCallback(
+    (vendorId: string) => {
+      const vendor = report?.vendors.find(v => v.vendorId === vendorId);
+      if (vendor) {
+        const ids = vendor.lines.map(l => l.variantId);
+        draftSync.drop(ids);
+        setBasket(prev => {
+          const next = { ...prev };
+          for (const id of ids) delete next[id];
+          return next;
+        });
+      }
+      if (token) void fetchReport(token);
+    },
+    [report, draftSync, token, fetchReport],
+  );
+
+  // Yolda çekmecesindeki teslim alma / iptal / geri al → stok ve yolda değişti.
+  const handleOrdersChanged = useCallback(() => {
+    if (token) void fetchReport(token);
+  }, [token, fetchReport]);
 
   const initialize = useCallback(async () => {
     setLoading(true);
@@ -180,7 +196,7 @@ export default function RaporPage() {
   );
 
   const handleVendorContactSaved = useCallback(
-    (vendorId: string, next: { email: string | null; phone: string | null }) => {
+    (vendorId: string, next: Partial<Omit<VendorListItem, 'vendorId' | 'vendorName'>>) => {
       setVendorList(prev => {
         if (prev.some(v => v.vendorId === vendorId)) {
           return prev.map(v => (v.vendorId === vendorId ? { ...v, ...next } : v));
@@ -188,12 +204,15 @@ export default function RaporPage() {
         // Liste yüklenememişse ya da tedarikçi henüz listede yoksa kaydı kaybetme.
         const vendorName = report?.vendors.find(v => v.vendorId === vendorId)?.vendorName;
         if (!vendorName) return prev;
-        return [...prev, { vendorId, vendorName, ...next }].sort((a, b) =>
+        const empty = { email: null, phone: null, leadTimeDays: null, moq: null, casePack: null };
+        return [...prev, { vendorId, vendorName, ...empty, ...next }].sort((a, b) =>
           a.vendorName.localeCompare(b.vendorName, 'tr'),
         );
       });
+      // Tedarik süresi / MOQ / koli öneriyi değiştirir: rapor yeniden hesaplanır.
+      if (token && ('leadTimeDays' in next || 'moq' in next || 'casePack' in next)) void fetchReport(token);
     },
-    [report],
+    [report, token, fetchReport],
   );
 
   const handleVendorDeleted = useCallback((vendorId: string) => {
@@ -249,10 +268,14 @@ export default function RaporPage() {
         lines: [],
         totalCost: 0,
         hasEstimate: false,
+        leadTimeDays: v.leadTimeDays ?? report.leadTimeDays,
+        moq: v.moq,
+        casePack: v.casePack,
       })),
   ];
 
   return (
+    <DraftSyncContext.Provider value={draftSync}>
     <ContentFadeIn>
       <PageContainer className="print:max-w-none print:p-0">
         <PageHeader
@@ -288,6 +311,8 @@ export default function RaporPage() {
               onResetBasket={handleResetBasket}
               onVendorSent={handleVendorSent}
               onVendorContactSaved={handleVendorContactSaved}
+              openOrderCount={report.openOrderCount}
+              onOrdersChanged={handleOrdersChanged}
               onPrint={() => window.print()}
             />
           }
@@ -312,8 +337,6 @@ export default function RaporPage() {
             vendors={displayVendors}
             token={token}
             vendorList={vendorList}
-            stockOverrides={stockOverrides}
-            onStockChange={handleStockChange}
             basket={basket}
             onLineQtyChange={handleLineQtyChange}
             onVendorSent={handleVendorSent}
@@ -335,5 +358,6 @@ export default function RaporPage() {
         </p>
       </PageContainer>
     </ContentFadeIn>
+    </DraftSyncContext.Provider>
   );
 }

@@ -6,107 +6,159 @@ import { PaperAirplaneIcon } from '@/components/ui/icons/paper-airplane';
 import { useIconHover } from '@/components/ui/icons/use-icon-hover';
 import { toast } from 'sonner';
 import { ApiRequests } from '@/lib/api-requests';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { AnimatedCheckbox } from '@/components/shared/AnimatedCheckbox';
+import { NumberStepper } from '@/components/shared/NumberStepper';
 import { cn } from '@/lib/utils';
-import { formatPrice } from '@/lib/currency';
+import { formatPrice, getActiveCurrency } from '@/lib/currency';
+import { whatsappPhone, type PurchaseOrderChannel } from '@/lib/purchase-orders/types';
 import type { BasketLine } from './basket';
 import { extractErrorMessage } from '@/lib/api-error';
+import { printOrder } from './print-order';
+import { useDraftSyncContext } from './use-draft-sync';
 import { useEmailField } from './use-email-field';
 
 interface SendReportDialogProps {
   token: string;
   vendorId: string;
   vendorName: string;
-  /** Kayıtlı tedarikçi e-postası; yoksa pencerede sorulur ve kaydedilir. */
-  email: string | null;
-  /** Kayıtlı telefon — e-posta kaydedilirken korunur. */
-  phone: string | null;
-  /** Pencerede girilen e-posta kaydedilince sayfadaki tedarikçi listesini günceller. */
-  onContactSaved?: (next: { email: string | null; phone: string | null }) => void;
-  /** Sepetteki satırlar — e-postaya bu adetler gider. */
+  /** Kayıtlı iletişim; eksik kanal bilgisi pencerede girilip kaydedilir. */
+  contact: { email: string | null; phone: string | null };
+  /** Beklenen teslim varsayılanı: bugün + tedarik süresi. */
+  leadTimeDays: number;
+  /** Taslak satırları — siparişe bu adetler gider. */
   lines: BasketLine[];
-  /** Gönderim başarısında (sepetten düşürme vb.) — toast sonrası çağrılır. */
+  onContactSaved?: (next: { email: string | null; phone: string | null }) => void;
+  /** Başarılı gönderimde (taslak "Yolda"ya geçti). */
   onSent?: () => void;
-  /** Tetik butonuna ek sınıf — ör. muted zeminde hover yüzeyini bg-card yapmak. */
-  triggerClassName?: string;
   /**
    * Tetik görünümü: 'track' tedarikçi işlem yolundaki ink hap "Gönder";
-   * 'group' sepet grubunun altındaki tam genişlik ink "Sipariş Ver" (tutar
-   * hemen üstteki grup başlığında yazıyor, butonda tekrarlanmaz);
-   * 'shelf' kompakt ghost (eski raf dili, sepet çekmecesi dışında kullanılmaz).
+   * 'group' taslak grubunun altındaki tam genişlik ink "Gönder".
    */
-  variant?: 'shelf' | 'group' | 'track';
+  variant?: 'group' | 'track';
   /** Dış tetikleyici (ör. ExpandableActionBar öğesi); disabled dışarıda hesaplanır. */
   trigger?: ReactNode;
 }
 
+const CHANNEL_ORDER: PurchaseOrderChannel[] = ['email', 'whatsapp', 'pdf'];
+
+function isoDateInDays(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+const longDate = (days: number) => {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' });
+};
+
 /**
- * Tedarikçiye sipariş e-postası — dışa dönük aksiyon olduğu için tek tık
- * yerine bilinçli bir onay adımı var: alıcı + sepet satırları + toplam
- * gösterilir. Adetler sepetten gider; fiyat/isim sunucu raporundan okunur.
- * E-posta kayıtlı değilse tetik pasifleşmez: alıcı satırı alana dönüşür,
- * "Kaydet ve gönder" önce adresi tedarikçiye kaydeder, sonra gönderir.
+ * Siparişi gönder — kanal seçimli onay penceresi. Seçilen kanalların hepsinden
+ * gider: e-posta sunucudan, WhatsApp hazır mesajla açılır (gönder tuşuna
+ * kullanıcı basar), PDF yazdırma penceresiyle. Kanal hazır değilse (e-posta /
+ * telefon yok) kartın içinde tamamlanır; tetik yalnız taslak boşken kapalıdır.
  */
 export function SendReportDialog({
   token,
   vendorId,
   vendorName,
-  email,
-  phone,
-  onContactSaved,
+  contact,
+  leadTimeDays,
   lines,
+  onContactSaved,
   onSent,
-  triggerClassName,
-  variant = 'shelf',
+  variant = 'group',
   trigger,
 }: SendReportDialogProps) {
   const { ref: sendRef, hoverProps } = useIconHover();
+  const draftSync = useDraftSyncContext();
   const [open, setOpen] = useState(false);
   const [sending, setSending] = useState(false);
+  const [channels, setChannels] = useState<Set<PurchaseOrderChannel>>(new Set());
   const [draftEmail, setDraftEmail] = useState('');
+  const [draftPhone, setDraftPhone] = useState('');
+  const [days, setDays] = useState(leadTimeDays);
   const emailField = useEmailField(draftEmail);
-  const needsEmail = !email;
-  const canSend = !needsEmail || (emailField.trimmed !== '' && emailField.valid);
-  const emailInputId = `send-email-${vendorId}`;
-  const emailErrorId = `send-email-error-${vendorId}`;
+
+  const savedPhone = contact.phone ? whatsappPhone(contact.phone) : null;
+  const typedPhone = draftPhone.trim() ? whatsappPhone(draftPhone) : null;
+  const emailReady = Boolean(contact.email) || (emailField.trimmed !== '' && emailField.valid);
+  const phoneReady = Boolean(savedPhone) || Boolean(typedPhone);
+  const ready: Record<PurchaseOrderChannel, boolean> = { email: emailReady, whatsapp: phoneReady, pdf: true };
+  const selected = CHANNEL_ORDER.filter(c => channels.has(c));
+  const canSend = selected.length > 0 && selected.every(c => ready[c]) && lines.length > 0;
 
   const totalCost = lines.reduce((sum, { line, qty }) => sum + qty * line.unitCost, 0);
   const hasEstimate = lines.some(({ line }) => line.isEstimate);
 
+  const toggle = (channel: PurchaseOrderChannel) =>
+    setChannels(prev => {
+      const next = new Set(prev);
+      if (next.has(channel)) next.delete(channel);
+      else next.add(channel);
+      return next;
+    });
+
   const send = async () => {
+    // Açılır pencere engellenmesin: WhatsApp sekmesi tıklama anında açılır, adres sonra verilir.
+    const waWindow = channels.has('whatsapp') ? window.open('about:blank', '_blank') : null;
     setSending(true);
     try {
-      if (needsEmail) {
+      await draftSync.flush();
+      const needsEmailSave = channels.has('email') && !contact.email;
+      const needsPhoneSave = channels.has('whatsapp') && !savedPhone;
+      if (needsEmailSave || needsPhoneSave) {
         const saved = await ApiRequests.vendors.updateContact(token, {
           vendorId,
           vendorName,
-          email: emailField.trimmed,
-          phone,
+          email: needsEmailSave ? emailField.trimmed : contact.email,
+          phone: needsPhoneSave ? draftPhone.trim() : contact.phone,
         });
-        const contact = saved.data?.data;
-        if (!contact) throw new Error('Empty vendor contact response');
-        onContactSaved?.({ email: contact.email, phone: contact.phone });
+        const next = saved.data?.data;
+        if (!next) throw new Error('Empty vendor contact response');
+        onContactSaved?.({ email: next.email, phone: next.phone });
       }
-      const res = await ApiRequests.vendors.sendReport(token, {
+
+      const res = await ApiRequests.purchaseOrders.send(token, {
         vendorId,
         lines: lines.map(({ line, qty }) => ({ variantId: line.variantId, qty })),
+        channels: selected,
+        expectedAt: isoDateInDays(days),
       });
       const data = res.data?.data;
-      if (!data) throw new Error('Empty send-report response');
+      if (!data) throw new Error('Empty send response');
+
+      if (data.whatsapp) {
+        const url = `https://wa.me/${data.whatsapp.phone}?text=${encodeURIComponent(data.whatsapp.text)}`;
+        if (waWindow) waWindow.location.href = url;
+        else toast('WhatsApp açılamadı', { action: { label: "WhatsApp'ı aç", onClick: () => window.open(url, '_blank') } });
+      }
+      if (channels.has('pdf')) printOrder(data.order, getActiveCurrency());
+
       setOpen(false);
-      toast.success(`Gönderildi: ${data.sentTo}`);
+      const via = [channels.has('email') && data.order.sentTo, channels.has('whatsapp') && 'WhatsApp', channels.has('pdf') && 'PDF']
+        .filter(Boolean)
+        .join(' · ');
+      toast.success(`${data.order.label} gönderildi`, { description: `${via}. Adetler "Yolda"ya geçti.` });
+      if (data.skipped > 0) toast.warning(`${data.skipped} ürün artık bu tedarikçide olmadığı için siparişe girmedi.`);
       onSent?.();
     } catch (error) {
-      logger.error('Vendor report send failed', { vendorId, error });
+      waWindow?.close();
+      logger.error('Purchase order send failed', { vendorId, error });
       toast.error(extractErrorMessage(error, 'Gönderilemedi.'));
     } finally {
       setSending(false);
@@ -120,111 +172,183 @@ export function SendReportDialog({
         if (sending) return;
         setOpen(next);
         if (next) {
+          // Kayıtlı bilgiye göre hazır kanallar seçili gelir; hiçbiri yoksa e-posta.
+          const initial = new Set<PurchaseOrderChannel>();
+          if (contact.email) initial.add('email');
+          if (savedPhone) initial.add('whatsapp');
+          if (initial.size === 0) initial.add('email');
+          setChannels(initial);
           setDraftEmail('');
+          setDraftPhone('');
+          setDays(leadTimeDays);
           emailField.reset();
         }
       }}
     >
       <DialogTrigger asChild>
         {trigger ?? (
-        <Button
-          variant={variant === 'shelf' ? 'ghost' : 'default'}
-          size={variant === 'track' ? 'segment' : 'sm'}
-          className={cn(
-            variant === 'group' && 'h-8 w-full gap-1.5 text-xs',
-            variant === 'shelf' && 'h-6 gap-1 px-2 text-xs',
-            'print:hidden',
-            triggerClassName,
-          )}
-          disabled={lines.length === 0}
-          aria-label={`${vendorName} siparişini e-posta ile gönder`}
-          {...hoverProps}
-        >
-          <PaperAirplaneIcon ref={sendRef} size={12} className="flex shrink-0 [&>svg]:size-3!" aria-hidden />
-          {variant === 'group' ? 'Sipariş Ver' : 'Gönder'}
-        </Button>
+          <Button
+            variant="default"
+            size={variant === 'track' ? 'segment' : 'sm'}
+            className={cn(variant === 'group' && 'h-8 w-full gap-1.5 text-xs', 'print:hidden')}
+            disabled={lines.length === 0}
+            aria-label={`${vendorName} siparişini gönder`}
+            {...hoverProps}
+          >
+            <PaperAirplaneIcon ref={sendRef} size={12} className="flex shrink-0 [&>svg]:size-3!" aria-hidden />
+            Gönder
+          </Button>
         )}
       </DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Sipariş ver — {vendorName}</DialogTitle>
+          <DialogTitle>Siparişi gönder</DialogTitle>
+          <DialogDescription className="tabular-nums">
+            {vendorName} · {lines.length} kalem · {formatPrice(totalCost)}
+            {hasEstimate && ' tahmini'}
+          </DialogDescription>
         </DialogHeader>
-        {needsEmail ? (
-          <div>
-            <label htmlFor={emailInputId} className="mb-1 block text-xs text-muted-foreground">
-              Tedarikçi e-postası
-            </label>
-            <Input
-              id={emailInputId}
-              type="email"
-              inputMode="email"
-              autoComplete="off"
-              autoFocus
-              value={draftEmail}
-              onChange={e => setDraftEmail(e.target.value)}
-              onBlur={emailField.onBlur}
-              placeholder="siparis@tedarikci.com"
-              className="h-8 md:text-base pointer-fine:text-sm"
-              disabled={sending}
-              aria-invalid={emailField.showError || undefined}
-              aria-describedby={emailField.showError ? emailErrorId : undefined}
-            />
-            {emailField.showError ? (
-              <p id={emailErrorId} className="mt-1 text-xs text-destructive">
-                Geçerli bir e-posta adresi girin.
-              </p>
-            ) : (
-              <p className="mt-1 text-xs text-muted-foreground">
-                {vendorName} için kayıtlı e-posta yok. Adres kaydedilir, sonraki siparişlerde sorulmaz.
-              </p>
-            )}
-          </div>
-        ) : (
-          <div className="flex justify-between gap-4 text-sm">
-            <span className="text-muted-foreground">Alıcı</span>
-            <span className="truncate font-medium text-foreground">{email}</span>
-          </div>
-        )}
-        {/* Sepet önizlemesi — e-postaya birebir bu satırlar gider */}
-        <ul className="max-h-64 divide-y divide-border overflow-y-auto rounded-md border border-border text-sm">
-          {lines.map(({ line, qty }) => (
-            <li key={line.variantId} className="flex items-center justify-between gap-3 px-3 py-2">
-              <div className="min-w-0">
-                <p className="truncate font-medium text-foreground">{line.productName}</p>
-                <p className="truncate text-xs text-muted-foreground">
-                  {[line.variantName, line.sku].filter(Boolean).join(' · ') || '—'}
-                </p>
+
+        <div className="space-y-2">
+          <p className="font-mono text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Kanallar</p>
+          <ChannelCard
+            label="E-posta"
+            checked={channels.has('email')}
+            onToggle={() => toggle('email')}
+            disabled={sending}
+            status={contact.email ? { text: 'Hazır', variant: 'success' } : { text: 'E-posta eksik', variant: 'warning' }}
+            description={
+              contact.email ? `${contact.email} · mağaza adın ve yanıt adresinle gider` : 'Adres kaydedilir, sonraki siparişlerde sorulmaz.'
+            }
+          >
+            {channels.has('email') && !contact.email && (
+              <div>
+                <Input
+                  type="email"
+                  inputMode="email"
+                  autoComplete="off"
+                  autoFocus
+                  value={draftEmail}
+                  onChange={e => setDraftEmail(e.target.value)}
+                  onBlur={emailField.onBlur}
+                  placeholder="siparis@tedarikci.com"
+                  className="h-8 md:text-base pointer-fine:text-sm"
+                  disabled={sending}
+                  aria-label={`${vendorName} e-postası`}
+                  aria-invalid={emailField.showError || undefined}
+                />
+                {emailField.showError && <p className="mt-1 text-xs text-destructive">Geçerli bir e-posta adresi girin.</p>}
               </div>
-              <div className="shrink-0 text-right tabular-nums">
-                <p
-                  className="text-foreground"
-                  title={line.isEstimate ? 'Alış fiyatı tanımlı değil; satış fiyatı kullanıldı' : undefined}
-                >
-                  {qty} × {formatPrice(line.unitCost)}
-                </p>
-                <p className="text-xs font-medium text-foreground">{formatPrice(qty * line.unitCost)}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
-        <div className="flex justify-between gap-4 text-sm">
-          <span className="text-muted-foreground">
-            Toplam · {lines.length} kalem
-            {hasEstimate && (
-              <span title="Bazı satırlarda alış fiyatı yok; satış fiyatı kullanıldı"> tahmini</span>
             )}
-          </span>
-          <span className="font-semibold tabular-nums text-foreground">{formatPrice(totalCost)}</span>
+          </ChannelCard>
+          <ChannelCard
+            label="WhatsApp"
+            checked={channels.has('whatsapp')}
+            onToggle={() => toggle('whatsapp')}
+            disabled={sending}
+            status={savedPhone ? { text: 'Hazır', variant: 'success' } : { text: 'Telefon eksik', variant: 'warning' }}
+            description="Hazır mesajla WhatsApp açılır, gönder tuşuna sen basarsın."
+          >
+            {channels.has('whatsapp') && !savedPhone && (
+              <div>
+                <Input
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="off"
+                  value={draftPhone}
+                  onChange={e => setDraftPhone(e.target.value)}
+                  placeholder="0 5xx xxx xx xx"
+                  className="h-8 md:text-base pointer-fine:text-sm"
+                  disabled={sending}
+                  aria-label={`${vendorName} telefonu`}
+                />
+                {draftPhone.trim() !== '' && !typedPhone && (
+                  <p className="mt-1 text-xs text-destructive">Geçerli bir telefon numarası girin.</p>
+                )}
+              </div>
+            )}
+          </ChannelCard>
+          <ChannelCard
+            label="PDF"
+            checked={channels.has('pdf')}
+            onToggle={() => toggle('pdf')}
+            disabled={sending}
+            status={{ text: 'İsteğe bağlı', variant: 'neutral' }}
+            description="Sipariş belgesi yazdırma penceresiyle açılır; PDF olarak kaydedebilirsin."
+          />
         </div>
+
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-sm text-foreground">Beklenen teslim</p>
+            <p className="text-xs text-muted-foreground">{longDate(days)}</p>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <NumberStepper size="md" value={days} min={0} max={180} onChange={setDays} label="Kaç gün sonra teslim" disabled={sending} />
+            gün sonra
+          </div>
+        </div>
+
+        {hasEstimate && (
+          <p className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
+            Alış fiyatı tanımlı olmayan ürünler tedarikçiye fiyatsız gider.
+          </p>
+        )}
+
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={sending}>
             Vazgeç
           </Button>
-          <Button type="button" onClick={send} disabled={sending || !canSend}>
-            {sending ? 'Gönderiliyor…' : needsEmail ? 'Kaydet ve gönder' : 'Gönder'}
+          <Button type="button" onClick={() => void send()} disabled={sending || !canSend}>
+            {sending
+              ? 'Gönderiliyor…'
+              : selected.length === 0
+                ? 'Kanal seçin'
+                : selected.length === 1
+                  ? 'Gönder'
+                  : `${selected.length} kanaldan gönder`}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function ChannelCard({
+  label,
+  checked,
+  onToggle,
+  disabled,
+  status,
+  description,
+  children,
+}: {
+  label: string;
+  checked: boolean;
+  onToggle: () => void;
+  disabled: boolean;
+  status: { text: string; variant: 'success' | 'warning' | 'neutral' };
+  description: string;
+  children?: ReactNode;
+}) {
+  return (
+    <div
+      className={cn(
+        'flex gap-3 rounded-lg border px-3 py-2.5 transition-colors duration-150',
+        checked ? 'border-foreground/30' : 'border-hairline',
+      )}
+    >
+      <div className="pt-0.5">
+        <AnimatedCheckbox checked={checked} onToggle={onToggle} label={`${label} ile gönder`} disabled={disabled} />
+      </div>
+      <div className="min-w-0 flex-1 space-y-1.5">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm font-medium text-foreground">{label}</p>
+          <Badge variant={status.variant}>{status.text}</Badge>
+        </div>
+        <p className="text-xs text-muted-foreground">{description}</p>
+        {children}
+      </div>
+    </div>
   );
 }

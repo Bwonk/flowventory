@@ -5,6 +5,7 @@ import {
   defaultQtyFor,
   MAX_ORDER_QTY,
   seedBasket,
+  basketFromReport,
   vendorBasketLines,
   vendorBasketTotals,
 } from '../basket';
@@ -26,7 +27,14 @@ function makeLine(overrides: Partial<PurchaseReportLine>): PurchaseReportLine {
     dailyAvg: 1,
     safetyStock: 0,
     reorderPoint: 0,
+    rawQty: 10,
     suggestedQty: 10,
+    incoming: 0,
+    incomingExpectedAt: null,
+    daysOfCover: null,
+    orderInDays: null,
+    inStockDays: 30,
+    draftQty: null,
     urgent: false,
     unitCost: 4,
     isEstimate: false,
@@ -37,7 +45,17 @@ function makeLine(overrides: Partial<PurchaseReportLine>): PurchaseReportLine {
 }
 
 function makeVendor(lines: PurchaseReportLine[], overrides?: Partial<PurchaseReportVendor>): PurchaseReportVendor {
-  return { vendorId: 'ven1', vendorName: 'Tedarikçi', lines, totalCost: 0, hasEstimate: false, ...overrides };
+  return {
+    vendorId: 'ven1',
+    vendorName: 'Tedarikçi',
+    lines,
+    totalCost: 0,
+    hasEstimate: false,
+    leadTimeDays: 7,
+    moq: null,
+    casePack: null,
+    ...overrides,
+  };
 }
 
 const needs = makeLine({ variantId: 'a', suggestedQty: 15, unitCost: 2 });
@@ -104,5 +122,13 @@ describe('basketTotals', () => {
       makeVendor([noNeeds], { vendorId: null, vendorName: 'Tedarikçi atanmamış' }),
     ];
     expect(basketTotals(vendors, { a: 10, b: 5 })).toEqual({ count: 2, total: 10 * 2 + 5 * 3, hasEstimate: true });
+  });
+});
+
+describe('basketFromReport', () => {
+  it('taslaktaki satırları adetleriyle döner', () => {
+    const inDraft = makeLine({ variantId: 'd', draftQty: 12 });
+    const report = { vendors: [makeVendor([needs, inDraft])] } as PurchaseReportApiResponse;
+    expect(basketFromReport(report)).toEqual({ d: 12 });
   });
 });

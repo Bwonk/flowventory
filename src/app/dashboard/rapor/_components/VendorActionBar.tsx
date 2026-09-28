@@ -1,7 +1,7 @@
 'use client';
 
 import { ExpandableActionBar, type ExpandableActionBarItem } from '@/components/motion/expandable-action-bar';
-import { EnvelopeIcon } from '@/components/ui/icons/envelope';
+import { Cog6ToothIcon } from '@/components/ui/icons/cog-6-tooth';
 import { PaperAirplaneIcon } from '@/components/ui/icons/paper-airplane';
 import { PlusIcon } from '@/components/ui/icons/plus';
 import { PrinterIcon } from '@/components/ui/icons/printer';
@@ -10,21 +10,27 @@ import type { PurchaseReportVendor } from '@/app/api/reports/purchase/route';
 import { AddProductsDialog } from './AddProductsDialog';
 import { vendorBasketLines, vendorBasketTotals, type BasketState } from './basket';
 import { SendReportDialog } from './SendReportDialog';
-import { VendorContactPopover } from './VendorContactPopover';
+import { VendorContactPopover, type VendorSettings } from './VendorContactPopover';
 
 interface VendorActionBarProps {
   token: string | null;
   vendor: PurchaseReportVendor;
-  contact: { email: string | null; phone: string | null };
+  contact: {
+    email: string | null;
+    phone: string | null;
+    leadTimeDays: number | null;
+    moq: number | null;
+    casePack: number | null;
+  };
   basket: BasketState;
   onPrint: () => void;
   onProductsAssigned: (vendorName: string) => Promise<void>;
-  onContactSaved: (vendorId: string, next: { email: string | null; phone: string | null }) => void;
+  onContactSaved: (vendorId: string, next: Partial<VendorSettings>) => void;
   onSent: (vendorId: string) => void;
 }
 
 /**
- * Aktif tedarikçinin işlem yolu — Ürün ekle · Yazdır · İletişim │ Gönder (ink).
+ * Aktif tedarikçinin işlem yolu — Ürün ekle · Tedarikçi ayarları · Yazdır │ Gönder (ink).
  * Kompakt ikonlar hover/focus'ta etiketlenir; tek ink birincil sayfanın asıl
  * hedefi olan Gönder'dir. Yazdır/Gönder yalnız sepet boşken kapalıdır —
  * e-posta eksikliği Gönder'i kapatmaz, pencere adresi sorar.
@@ -82,9 +88,9 @@ export function VendorActionBar({
       ? [
           {
             id: 'contact',
-            icon: <EnvelopeIcon ref={mail.ref} size={12} className="flex" aria-hidden />,
-            label: 'İletişim',
-            'aria-label': `${vendor.vendorName} iletişim bilgileri`,
+            icon: <Cog6ToothIcon ref={mail.ref} size={12} className="flex" aria-hidden />,
+            label: 'Tedarikçi ayarları',
+            'aria-label': `${vendor.vendorName} iletişim ve tedarik ayarları`,
             hoverProps: mail.hoverProps,
             wrap: button => (
               <VendorContactPopover
@@ -92,6 +98,7 @@ export function VendorActionBar({
                 vendorId={vendorId}
                 vendorName={vendor.vendorName}
                 contact={contact}
+                defaultLeadTimeDays={vendor.leadTimeDays}
                 onSaved={next => onContactSaved(vendorId, next)}
                 trigger={button}
               />
@@ -101,7 +108,8 @@ export function VendorActionBar({
             id: 'send',
             icon: <PaperAirplaneIcon ref={send.ref} size={12} className="flex" aria-hidden />,
             label: 'Gönder',
-            'aria-label': `${vendor.vendorName} siparişini e-posta ile gönder`,
+            'aria-label': `${vendor.vendorName} siparişini gönder, ${sendLines.length} kalem`,
+            badge: sendLines.length > 0 ? sendLines.length : undefined,
             variant: 'ink',
             separatorBefore: true,
             // E-posta eksikse de açık: pencere adresi sorar ve kaydeder.
@@ -113,8 +121,8 @@ export function VendorActionBar({
                 token={token}
                 vendorId={vendorId}
                 vendorName={vendor.vendorName}
-                email={contact.email}
-                phone={contact.phone}
+                contact={contact}
+                leadTimeDays={vendor.leadTimeDays}
                 onContactSaved={next => onContactSaved(vendorId, next)}
                 lines={sendLines}
                 onSent={() => onSent(vendorId)}

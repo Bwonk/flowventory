@@ -15,8 +15,8 @@ export function RaporSkeleton() {
       </div>
 
       <div className="mb-4 overflow-hidden rounded-lg border border-hairline bg-card">
-        <div className="-mr-px -mb-px grid grid-cols-1 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
+        <div className="-mr-px -mb-px grid grid-cols-1 lg:grid-cols-5">
+          {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="border-b border-r border-border p-5">
               <Skeleton className="h-3 w-24" />
               <Skeleton className="mt-3 h-6 w-20" />

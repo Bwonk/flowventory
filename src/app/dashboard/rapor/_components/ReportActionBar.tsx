@@ -14,6 +14,8 @@ import { AddVendorDialog } from './AddVendorDialog';
 import { BasketSheet } from './BasketSheet';
 import { basketTotals, type BasketState } from './basket';
 import { ReportParamsPopover } from './ReportParamsPopover';
+import { ArchiveBoxArrowDownIcon } from '@/components/ui/icons/archive-box-arrow-down';
+import { IncomingSheet } from './IncomingSheet';
 
 interface ReportActionBarProps {
   token: string | null;
@@ -29,6 +31,10 @@ interface ReportActionBarProps {
   onResetBasket: () => void;
   onVendorSent: (vendorId: string) => void;
   onVendorContactSaved: (vendorId: string, next: { email: string | null; phone: string | null }) => void;
+  /** Açık (gönderilmiş / kısmi) sipariş sayısı — Yolda rozeti. */
+  openOrderCount: number;
+  /** Yolda çekmecesinde teslim alma / iptal / geri al sonrası. */
+  onOrdersChanged: () => void;
   onPrint: () => void;
 }
 
@@ -51,12 +57,15 @@ export function ReportActionBar({
   onResetBasket,
   onVendorSent,
   onVendorContactSaved,
+  openOrderCount,
+  onOrdersChanged,
   onPrint,
 }: ReportActionBarProps) {
   const params = useIconHover();
   const addVendor = useIconHover();
   const refresh = useIconHover();
   const cart = useIconHover();
+  const incoming = useIconHover();
   const print = useIconHover();
   const totals = basketTotals(vendors, basket);
   const basketEmpty = Object.keys(basket).length === 0;
@@ -104,8 +113,8 @@ export function ReportActionBar({
     {
       id: 'basket',
       icon: <ShoppingCartIcon ref={cart.ref} size={12} className="flex" aria-hidden />,
-      label: 'Sepet',
-      'aria-label': `Sepet, ${totals.count} kalem`,
+      label: 'Taslaklar',
+      'aria-label': `Taslaklar, ${totals.count} kalem`,
       badge: totals.count > 0 ? <AnimatedNumber value={totals.count} /> : undefined,
       hoverProps: cart.hoverProps,
       wrap: button => (
@@ -121,6 +130,15 @@ export function ReportActionBar({
           trigger={button}
         />
       ),
+    },
+    {
+      id: 'incoming',
+      icon: <ArchiveBoxArrowDownIcon ref={incoming.ref} size={12} className="flex" aria-hidden />,
+      label: 'Yolda',
+      'aria-label': `Yolda, ${openOrderCount} açık sipariş`,
+      badge: openOrderCount > 0 ? <AnimatedNumber value={openOrderCount} /> : undefined,
+      hoverProps: incoming.hoverProps,
+      wrap: button => <IncomingSheet token={token} onChanged={onOrdersChanged} trigger={button} />,
     },
     {
       id: 'print',

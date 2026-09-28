@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertTriangle, Package, Truck, Wallet } from 'lucide-react';
+import { AlertTriangle, Package, PackageOpen, Truck, Wallet } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatPriceRounded } from '@/lib/currency';
 import { KpiTile } from '@/app/dashboard/_components/KpiTile';
@@ -27,7 +27,7 @@ export function ReportKpiStrip({ report, vendorCount, printVendorId }: ReportKpi
         printVendorId !== null && 'print:hidden',
       )}
     >
-      <div className="-mr-px -mb-px grid grid-cols-1 @2xl:grid-cols-4">
+      <div className="-mr-px -mb-px grid grid-cols-1 @2xl:grid-cols-5">
         <KpiTile
           icon={Wallet}
           label="Toplam Maliyet"
@@ -44,7 +44,7 @@ export function ReportKpiStrip({ report, vendorCount, printVendorId }: ReportKpi
           }
           stagger={0}
         />
-        <KpiTile icon={Package} label="Sipariş Satırı" value={report.lineCount} stagger={1} />
+        <KpiTile icon={Package} label="Önerilen Kalem" value={report.lineCount} stagger={1} />
         <KpiTile
           icon={AlertTriangle}
           label="Acil"
@@ -65,6 +65,18 @@ export function ReportKpiStrip({ report, vendorCount, printVendorId }: ReportKpi
             ) : undefined
           }
           stagger={3}
+        />
+        {/* Gönderilmiş siparişlerde gelmemiş adet — öneriden zaten düşüldü. */}
+        <KpiTile
+          icon={PackageOpen}
+          label="Yolda"
+          value={report.incomingQty.toLocaleString('tr-TR')}
+          footer={
+            <p className="truncate text-xs text-muted-foreground">
+              {report.openOrderCount > 0 ? `${report.openOrderCount} açık sipariş` : 'Açık sipariş yok'}
+            </p>
+          }
+          stagger={4}
         />
       </div>
     </section>

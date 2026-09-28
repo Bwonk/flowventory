@@ -1,9 +1,11 @@
 import { getMerchantSettings } from '@/lib/merchant-settings';
 import { prisma } from '@/lib/prisma';
-import { computePurchaseLine } from '@/lib/reports/purchase';
+import { parseVariantName } from '@/lib/products/variant-name';
+import { buildInStockMask, computeReplenishment } from '@/lib/reports/purchase';
 import { ensureFreshSync } from '@/lib/sync/ikas-sync';
 import { dateKeyInTz } from '@/lib/timezone';
 import type { AuthToken } from '@/models/auth-token';
+import { countOpenOrders, getDraftQtyByVariant, getIncomingByVariant } from '@/lib/purchase-orders/queries';
 
 /** Satış hızı penceresi (gün). */
 const SALES_WINDOW_DAYS = 30;
@@ -19,16 +21,31 @@ export type PurchaseReportLine = {
   dailyAvg: number;
   safetyStock: number;
   reorderPoint: number;
+  /** Yuvarlanmamış ihtiyaç: hedef seviye − stok − yolda (≥ 0). */
+  rawQty: number;
+  /** MOQ ve koliye yuvarlanmış öneri; sipariş noktasına inilmediyse 0. */
   suggestedQty: number;
   urgent: boolean;
+  /** Gönderilmiş siparişlerde henüz gelmemiş adet. */
+  incoming: number;
+  /** Yoldaki adetin en yakın beklenen teslim tarihi (ISO). */
+  incomingExpectedAt: string | null;
+  /** Eldeki stok kaç gün yeter (satış yoksa null). */
+  daysOfCover: number | null;
+  /** En geç sipariş için kalan gün; ≤ 0 = bugün/gecikti, satış yoksa null. */
+  orderInDays: number | null;
+  /** Ortalamaya giren stoklu gün sayısı (açıklama balonu için). */
+  inStockDays: number;
+  /** Tedarikçinin açık taslağındaki adet (tablodaki tik). */
+  draftQty: number | null;
   /** Birim maliyet — buyPrice yoksa sellPrice (isEstimate=true). */
   unitCost: number;
   isEstimate: boolean;
   lineTotal: number;
   /**
-   * Sipariş önerisi mi? Tedarikçiye atanmış ürünler öneri olmasa da listeye
-   * girer (tab'da tedarikçinin tüm ürünleri görünsün diye); toplamlar, e-posta
-   * ve yazdırma yalnız needsOrder satırları kapsar.
+   * Sipariş önerisi mi? (stok + yolda ≤ sipariş noktası) Tedarikçiye atanmış
+   * ürünler öneri olmasa da listeye girer (tab'da tedarikçinin tüm ürünleri
+   * görünsün diye); toplamlar yalnız needsOrder satırlarını kapsar.
    */
   needsOrder: boolean;
 };
@@ -39,6 +56,10 @@ export type PurchaseReportVendor = {
   lines: PurchaseReportLine[];
   totalCost: number;
   hasEstimate: boolean;
+  /** Etkin tedarik süresi (tedarikçi ayarı ya da mağaza varsayılanı). */
+  leadTimeDays: number;
+  moq: number | null;
+  casePack: number | null;
 };
 
 export type PurchaseReportApiResponse = {
@@ -50,26 +71,20 @@ export type PurchaseReportApiResponse = {
   totalCost: number;
   lineCount: number;
   urgentCount: number;
+  /** Açık (gönderilmiş / kısmi) sipariş sayısı. */
+  openOrderCount: number;
+  /** Tüm açık siparişlerde gelmemiş toplam adet. */
+  incomingQty: number;
 };
 
-function parseVariantName(variantValuesJson: string | null): string | null {
-  if (!variantValuesJson) return null;
-  try {
-    const values = JSON.parse(variantValuesJson) as Array<{ variantValueName?: string | null }>;
-    const name = values
-      .map(v => v.variantValueName)
-      .filter((n): n is string => Boolean(n))
-      .join(' · ');
-    return name || null;
-  } catch {
-    return null;
-  }
-}
+/** Stoklu gün maskesi için pencereden önce de bakılır: günün başlangıç stoğu. */
+const HISTORY_LOOKBACK_DAYS = SALES_WINDOW_DAYS + 15;
 
 /**
  * Tedarikçi bazlı satın alma önerisi raporu. Sync katmanından
- * (ProductSnapshot + SalesDaily) hesaplanır; formül `lib/reports/purchase.ts`.
- * Hem GET /api/reports/purchase hem tedarikçi e-postası bu fonksiyonu kullanır.
+ * (ProductSnapshot + SalesDaily + StockHistory) ve açık siparişlerden
+ * hesaplanır; formül `lib/reports/purchase.ts` → `computeReplenishment`.
+ * Hem GET /api/reports/purchase hem sipariş gönderimi bu fonksiyonu kullanır.
  */
 export async function buildPurchaseReport(
   merchantId: string,
@@ -89,10 +104,23 @@ export async function buildPurchaseReport(
     dayKeys.push(dateKeyInTz(d, timezone));
   }
   const windowStartKey = dayKeys[0];
+  const historyFrom = new Date(now.getTime() - HISTORY_LOOKBACK_DAYS * 24 * 60 * 60 * 1000);
 
-  const [snapshots, sales] = await Promise.all([
+  const [snapshots, sales, history, contacts, incomingByVariant, draftByVariant, openOrderCount] = await Promise.all([
     prisma.productSnapshot.findMany({ where: { merchantId } }),
     prisma.salesDaily.findMany({ where: { merchantId, date: { gte: windowStartKey } } }),
+    prisma.stockHistory.findMany({
+      where: { merchantId, recordedAt: { gte: historyFrom } },
+      select: { variantId: true, totalStock: true, recordedAt: true },
+      orderBy: { recordedAt: 'asc' },
+    }),
+    prisma.vendorContact.findMany({
+      where: { merchantId },
+      select: { vendorId: true, leadTimeDays: true, moq: true, casePack: true },
+    }),
+    getIncomingByVariant(merchantId),
+    getDraftQtyByVariant(merchantId),
+    countOpenOrders(merchantId),
   ]);
 
   // variantId → (date → qty)
@@ -103,6 +131,14 @@ export async function buildPurchaseReport(
     salesByVariant.set(row.variantId, byDate);
   }
 
+  const historyByVariant = new Map<string, Array<{ dateKey: string; totalStock: number }>>();
+  for (const row of history) {
+    const list = historyByVariant.get(row.variantId) ?? [];
+    list.push({ dateKey: dateKeyInTz(row.recordedAt, timezone), totalStock: row.totalStock });
+    historyByVariant.set(row.variantId, list);
+  }
+
+  const vendorSettings = new Map(contacts.map(c => [c.vendorId, c]));
   const vendors = new Map<string, PurchaseReportVendor>();
 
   for (const snap of snapshots) {
@@ -114,16 +150,24 @@ export async function buildPurchaseReport(
     // Tedarikçiye atanmış ürünler ise öneri olmasa da tab'da listelenir.
     if (!byDate && !hasVendor) continue;
 
-    const calc = byDate
-      ? computePurchaseLine({
-          dailyQuantities: dayKeys.map(key => byDate.get(key) ?? 0),
-          currentStock: snap.totalStock,
-          leadTimeDays,
-          targetStockDays,
-        })
-      : { dailyAvg: 0, safetyStock: 0, reorderPoint: 0, suggestedQty: 0, urgent: false };
+    const vendorSetting = snap.vendorId ? vendorSettings.get(snap.vendorId) : undefined;
+    const lead = vendorSetting?.leadTimeDays ?? leadTimeDays;
+    const incomingInfo = incomingByVariant.get(snap.variantId);
+    const incoming = incomingInfo?.qty ?? 0;
 
-    const needsOrder = calc.suggestedQty > 0;
+    const dailyQuantities = dayKeys.map(key => byDate?.get(key) ?? 0);
+    const calc = computeReplenishment({
+      dailyQuantities,
+      inStockMask: buildInStockMask(dayKeys, historyByVariant.get(snap.variantId) ?? [], dailyQuantities),
+      currentStock: snap.totalStock,
+      incoming,
+      leadTimeDays: lead,
+      targetStockDays,
+      moq: vendorSetting?.moq ?? null,
+      casePack: vendorSetting?.casePack ?? null,
+    });
+
+    const needsOrder = calc.needsOrder;
     if (!needsOrder && !hasVendor) continue;
 
     const isEstimate = snap.buyPrice == null;
@@ -140,8 +184,15 @@ export async function buildPurchaseReport(
       dailyAvg: Math.round(calc.dailyAvg * 100) / 100,
       safetyStock: calc.safetyStock,
       reorderPoint: calc.reorderPoint,
+      rawQty: calc.rawQty,
       suggestedQty: calc.suggestedQty,
-      urgent: needsOrder && calc.urgent,
+      urgent: calc.urgent,
+      incoming,
+      incomingExpectedAt: incomingInfo?.expectedAt?.toISOString() ?? null,
+      daysOfCover: calc.daysOfCover === null ? null : Math.round(calc.daysOfCover * 10) / 10,
+      orderInDays: calc.orderInDays,
+      inStockDays: calc.inStockDays,
+      draftQty: draftByVariant.get(snap.variantId) ?? null,
       unitCost,
       isEstimate,
       lineTotal: needsOrder ? Math.round(calc.suggestedQty * unitCost * 100) / 100 : 0,
@@ -155,9 +206,12 @@ export async function buildPurchaseReport(
       lines: [],
       totalCost: 0,
       hasEstimate: false,
+      leadTimeDays: lead,
+      moq: vendorSetting?.moq ?? null,
+      casePack: vendorSetting?.casePack ?? null,
     };
     vendor.lines.push(line);
-    // Toplam ve ~tahmini yalnız öneri satırlarından — KPI/e-posta anlamı değişmez.
+    // Toplam ve ~tahmini yalnız öneri satırlarından — KPI anlamı değişmez.
     if (needsOrder) {
       vendor.totalCost = Math.round((vendor.totalCost + line.lineTotal) * 100) / 100;
       vendor.hasEstimate = vendor.hasEstimate || isEstimate;
@@ -165,8 +219,8 @@ export async function buildPurchaseReport(
     vendors.set(vendorKey, vendor);
   }
 
-  // Öneri satırları üstte (acil önce, sonra adet), önerisizler ada göre;
-  // tedarikçiler maliyete göre, maliyetsizler ada göre sona.
+  // Öneri satırları üstte (acil önce, sonra en geç sipariş günü, adet),
+  // önerisizler ada göre; tedarikçiler maliyete göre, maliyetsizler ada göre sona.
   const vendorList = Array.from(vendors.values())
     .map(v => ({
       ...v,
@@ -174,6 +228,7 @@ export async function buildPurchaseReport(
         (a, b) =>
           Number(b.needsOrder) - Number(a.needsOrder) ||
           Number(b.urgent) - Number(a.urgent) ||
+          (a.orderInDays ?? Number.POSITIVE_INFINITY) - (b.orderInDays ?? Number.POSITIVE_INFINITY) ||
           b.suggestedQty - a.suggestedQty ||
           a.productName.localeCompare(b.productName, 'tr'),
       ),
@@ -183,6 +238,8 @@ export async function buildPurchaseReport(
     );
 
   const orderLines = vendorList.flatMap(v => v.lines).filter(l => l.needsOrder);
+  let incomingQty = 0;
+  for (const info of incomingByVariant.values()) incomingQty += info.qty;
 
   return {
     generatedAt: now.toISOString(),
@@ -193,5 +250,7 @@ export async function buildPurchaseReport(
     totalCost: Math.round(orderLines.reduce((s, l) => s + l.lineTotal, 0) * 100) / 100,
     lineCount: orderLines.length,
     urgentCount: orderLines.filter(l => l.urgent).length,
+    openOrderCount,
+    incomingQty,
   };
 }
