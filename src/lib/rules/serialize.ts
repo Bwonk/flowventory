@@ -1,6 +1,6 @@
 import { logger } from '@/lib/logger';
 import { describeActionSummary, describeRule } from './describe';
-import { storedWorkflowSchema, type RuleInput } from './schema';
+import { storedWorkflowSchema, workflowSchema, type RuleInput } from './schema';
 import {
   isRuleGranularity,
   isRuleScope,
@@ -38,6 +38,11 @@ export type TrackingRuleItem = {
   actionSummary: string;
   /** Liste ikonları için aşamalar boyunca tekrarsız aksiyon tipleri. */
   actionTypes: RuleActionType[];
+  /**
+   * Kayıtlı akış doğrulamadan geçemiyorsa nedeni. Motor bu kuralı çalıştırmaz;
+   * düzenleme sayfası akışı yine de yükler ki kullanıcı düzeltebilsin.
+   */
+  invalidReason: string | null;
 };
 
 export type RuleEventItem = {
@@ -82,6 +87,25 @@ export function parseWorkflow(json: string, ruleId?: string): RuleWorkflow {
 }
 
 /**
+ * Düzenleme için okuma: kurallar (refine) ihlal edilse de yapısal olarak
+ * geçerli akış döner — boş akışla açılan sayfa kurtarılamıyordu. Motor
+ * `parseWorkflow`'u kullanır ve geçersiz akışı çalıştırmaz.
+ */
+export function readWorkflowForEdit(json: string): { workflow: RuleWorkflow; invalidReason: string | null } {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(json);
+  } catch {
+    return { workflow: EMPTY_WORKFLOW, invalidReason: 'Kayıtlı akış okunamadı' };
+  }
+  const strict = storedWorkflowSchema.safeParse(raw);
+  if (strict.success) return { workflow: strict.data, invalidReason: null };
+  const reason = strict.error.issues[0]?.message ?? 'Kayıtlı akış geçersiz';
+  const structural = workflowSchema.safeParse(raw);
+  return { workflow: structural.success ? structural.data : EMPTY_WORKFLOW, invalidReason: reason };
+}
+
+/**
  * DB satırını motor tipine çevirir; enum alanı bozuksa (elle yazılmış) null.
  * Aşaması olmayan kural motorda tetiklenmez ama listede görünür.
  */
@@ -111,7 +135,8 @@ export function toRuleLike(row: RuleRow): TrackingRuleLike | null {
 
 /** DB satırı → API öğesi (cümle dahil). Enum alanı bozuksa güvenli varsayılanlara düşer. */
 export function toRuleItem(row: RuleRow): TrackingRuleItem {
-  const like: TrackingRuleLike = toRuleLike(row) ?? {
+  const engineLike = toRuleLike(row);
+  const like: TrackingRuleLike = engineLike ?? {
     id: row.id,
     name: row.name,
     scope: 'all',
@@ -123,7 +148,11 @@ export function toRuleItem(row: RuleRow): TrackingRuleItem {
     resetHours: 168,
     maxRunsPerDay: 1,
   };
-  const actionTypes = RULE_ACTION_TYPES.filter(t => like.workflow.stages.some(s => s.actions.some(a => a.type === t)));
+  const read = readWorkflowForEdit(row.workflowJson);
+  const { workflow } = read;
+  // Motorun atladığı kural (bozuk enum alanı) da "çalışmıyor" olarak görünsün.
+  const invalidReason = read.invalidReason ?? (engineLike ? null : 'Kural ayarları okunamadı');
+  const actionTypes = RULE_ACTION_TYPES.filter(t => workflow.stages.some(s => s.actions.some(a => a.type === t)));
   return {
     id: row.id,
     name: row.name,
@@ -132,15 +161,16 @@ export function toRuleItem(row: RuleRow): TrackingRuleItem {
     targetId: like.targetId,
     targetLabel: like.targetLabel,
     granularity: like.granularity,
-    workflow: like.workflow,
+    workflow,
     cooldownHours: like.cooldownHours,
     resetHours: like.resetHours,
     maxRunsPerDay: like.maxRunsPerDay,
     lastTriggeredAt: row.lastTriggeredAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
-    sentence: like.workflow.stages.length > 0 ? describeRule(like) : 'Koşullar okunamadı',
-    actionSummary: describeActionSummary(like.workflow),
+    sentence: workflow.stages.length > 0 ? describeRule({ ...like, workflow }) : 'Koşullar okunamadı',
+    actionSummary: describeActionSummary(workflow),
     actionTypes,
+    invalidReason,
   };
 }
 

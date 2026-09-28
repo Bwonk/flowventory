@@ -193,11 +193,19 @@ export async function evaluateTrackingRules(
       select: { ruleId: true, productId: true, variantId: true, stageIndex: true, actionsJson: true, createdAt: true },
     });
     const lastFired = new Map<string, number>();
+    // Varyant düzeyindeki tetiklerin ürün toplamı: kural ürün düzeyine
+    // geçince (ya da stok aksiyonu varyanta zorlayıp geri dönünce) eski
+    // tetikler bekleme süresini korusun — yoksa her eşleşme aynı anda düşer.
+    const lastFiredVariantByProduct = new Map<string, number>();
     const stockRuns = new Map<string, number>();
     for (const e of recent) {
       const targetKey = targetKeyOf(e);
       const stageKey = `${e.ruleId}:${targetKey}:${e.stageIndex}`;
       lastFired.set(stageKey, Math.max(lastFired.get(stageKey) ?? 0, e.createdAt.getTime()));
+      if (e.variantId) {
+        const productKey = `${e.ruleId}:${e.productId}:${e.stageIndex}`;
+        lastFiredVariantByProduct.set(productKey, Math.max(lastFiredVariantByProduct.get(productKey) ?? 0, e.createdAt.getTime()));
+      }
       if (now.getTime() - e.createdAt.getTime() < 24 * HOUR_MS) {
         const wrote = parseActionResults(e.actionsJson).some(a => a.type === 'adjust_stock' && a.ok);
         if (wrote) stockRuns.set(`${e.ruleId}:${targetKey}`, (stockRuns.get(`${e.ruleId}:${targetKey}`) ?? 0) + 1);
@@ -212,8 +220,14 @@ export async function evaluateTrackingRules(
         const { reset, hit } = evaluateRule(rule, target, states.get(`${rule.id}:${targetKey}`) ?? null, now);
         if (reset) resets.push({ ruleId: rule.id, targetKey });
         if (!hit) continue;
-        const last = lastFired.get(`${rule.id}:${targetKey}:${hit.stageIndex}`);
-        if (last !== undefined && now.getTime() - last < rule.cooldownHours * HOUR_MS) continue;
+        const productKey = `${rule.id}:${target.productId}:${hit.stageIndex}`;
+        const last = Math.max(
+          lastFired.get(`${rule.id}:${targetKey}:${hit.stageIndex}`) ?? 0,
+          // Varyant hedefinde: ürün düzeyindeki eski tetik (anahtarı yalnız productId).
+          // Ürün hedefinde: varyant düzeyindeki eski tetiklerin en yenisi.
+          target.variantId ? (lastFired.get(productKey) ?? 0) : (lastFiredVariantByProduct.get(productKey) ?? 0),
+        );
+        if (last > 0 && now.getTime() - last < rule.cooldownHours * HOUR_MS) continue;
         hits.push({ hit, rule, target });
       }
     }

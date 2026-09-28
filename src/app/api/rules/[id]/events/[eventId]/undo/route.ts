@@ -35,33 +35,60 @@ export async function POST(request: NextRequest, context: RouteContext) {
     if (!write) return NextResponse.json({ error: 'Geri alınacak stok yazımı yok' }, { status: 409 });
     if (write.undoneAt) return NextResponse.json({ error: 'Bu yazım zaten geri alındı' }, { status: 409 });
 
-    const ikasClient = getIkas(authToken);
-    const productRes = await ikasClient.queries.listProduct({ id: { eq: event.productId }, pagination: { page: 1, limit: 1 } });
-    if (!productRes.isSuccess) return NextResponse.json({ error: 'Stok okunamadı' }, { status: 502 });
-    const variant = productRes.data?.listProduct?.data?.[0]?.variants.find(v => v.id === event.variantId);
-    const location = variant?.stocks?.find(s => s?.stockLocationId === write.stockLocationId);
-    if (!variant || !location) return NextResponse.json({ error: 'Varyant ya da depo bulunamadı' }, { status: 404 });
-
-    const liveCount = location.stockCount ?? 0;
-    const newCount = computeUndoCount(liveCount, write);
-    const response = await ikasClient.mutations.saveVariantStocks({
-      input: {
-        stockInputs: [
-          { productId: event.productId, variantId: event.variantId, stockLocationId: write.stockLocationId, stockCount: newCount },
-        ],
-      },
+    // Önce talep et, sonra yaz: `actionsJson` okuduğumuz hâliyle duruyorsa
+    // undoneAt işlenir. Çift tık / iki sekme aynı anda gelirse yalnız biri
+    // kazanır — eskiden ikisi de stoktan farkı düşüyordu.
+    const readJson = event.actionsJson;
+    write.undoneAt = new Date().toISOString();
+    const claimedJson = JSON.stringify(results);
+    const claim = await prisma.trackingRuleEvent.updateMany({
+      where: { id: event.id, actionsJson: readJson },
+      data: { actionsJson: claimedJson },
     });
-    const errors = response.data?.saveVariantStocks?.errors;
-    if (!response.isSuccess || !response.data?.saveVariantStocks || (errors && errors.length > 0)) {
-      logger.error('Rule stock undo rejected', { errors });
-      return NextResponse.json({ error: 'Stok geri alınamadı' }, { status: 502 });
+    if (claim.count === 0) return NextResponse.json({ error: 'Bu yazım zaten geri alındı' }, { status: 409 });
+    const releaseClaim = () =>
+      prisma.trackingRuleEvent
+        .updateMany({ where: { id: event.id, actionsJson: claimedJson }, data: { actionsJson: readJson } })
+        .catch(error => logger.error('Rule undo claim release failed', { eventId: event.id, error }));
+
+    // ikas okuma/yazması başarısız olursa stok değişmedi: talep bırakılır, yeniden denenebilir.
+    let liveCount: number;
+    let newCount: number;
+    try {
+      const ikasClient = getIkas(authToken);
+      const productRes = await ikasClient.queries.listProduct({ id: { eq: event.productId }, pagination: { page: 1, limit: 1 } });
+      if (!productRes.isSuccess) {
+        await releaseClaim();
+        return NextResponse.json({ error: 'Stok okunamadı' }, { status: 502 });
+      }
+      const variant = productRes.data?.listProduct?.data?.[0]?.variants.find(v => v.id === event.variantId);
+      const location = variant?.stocks?.find(s => s?.stockLocationId === write.stockLocationId);
+      if (!variant || !location) {
+        await releaseClaim();
+        return NextResponse.json({ error: 'Varyant ya da depo bulunamadı' }, { status: 404 });
+      }
+
+      liveCount = location.stockCount ?? 0;
+      newCount = computeUndoCount(liveCount, write);
+      const response = await ikasClient.mutations.saveVariantStocks({
+        input: {
+          stockInputs: [
+            { productId: event.productId, variantId: event.variantId, stockLocationId: write.stockLocationId, stockCount: newCount },
+          ],
+        },
+      });
+      const errors = response.data?.saveVariantStocks?.errors;
+      if (!response.isSuccess || !response.data?.saveVariantStocks || (errors && errors.length > 0)) {
+        logger.error('Rule stock undo rejected', { errors });
+        await releaseClaim();
+        return NextResponse.json({ error: 'Stok geri alınamadı' }, { status: 502 });
+      }
+    } catch (error) {
+      await releaseClaim();
+      throw error;
     }
 
-    write.undoneAt = new Date().toISOString();
-    const updated = await prisma.trackingRuleEvent.update({
-      where: { id: event.id },
-      data: { actionsJson: JSON.stringify(results) },
-    });
+    const updated = await prisma.trackingRuleEvent.findUniqueOrThrow({ where: { id: event.id } });
 
     await refreshProductSnapshot(user.merchantId, authToken, event.productId).catch(error => {
       logger.warn('Snapshot refresh after rule undo failed', { productId: event.productId, error });

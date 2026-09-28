@@ -13,6 +13,7 @@ import { TableSection } from '@/components/shared/data-table/TableSection';
 import { PencilIcon } from '@/components/ui/icons/pencil';
 import { TrashIcon } from '@/components/ui/icons/trash';
 import type { AnimatedIconHandle } from '@/components/ui/icons/use-icon-hover';
+import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import type { RuleActionType } from '@/lib/rules/types';
 import { ActionIcon } from './ActionIcon';
@@ -52,13 +53,21 @@ export function RulesList({ rules, loading, onToggle, onDelete, onCreateFirst }:
         minWidth: 280,
         cell: rule => (
           <div className="min-w-0">
-            <Link
-              href={`/dashboard/kurallar/${rule.id}`}
-              className="block truncate font-medium text-foreground hover:underline underline-offset-4"
-              onClick={e => e.stopPropagation()}
-            >
-              {rule.name}
-            </Link>
+            <div className="flex min-w-0 items-center gap-1.5">
+              <Link
+                href={`/dashboard/kurallar/${rule.id}`}
+                className="block truncate font-medium text-foreground hover:underline underline-offset-4"
+                onClick={e => e.stopPropagation()}
+              >
+                {rule.name}
+              </Link>
+              {/* Motor geçersiz akışı çalıştırmaz — sessizce durmasın. */}
+              {rule.invalidReason && (
+                <Badge variant="critical" title={rule.invalidReason}>
+                  Çalışmıyor
+                </Badge>
+              )}
+            </div>
             <p className="truncate text-xs text-muted-foreground" title={rule.sentence}>
               {rule.sentence}
             </p>

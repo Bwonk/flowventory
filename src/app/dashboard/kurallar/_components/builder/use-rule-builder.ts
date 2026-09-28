@@ -186,7 +186,8 @@ export function useRuleBuilder(init: BuilderInit) {
         stage: {
           key: newKey(),
           conditions: [keyCondition({ op: 'and', condition: defaultCondition('stock_drop_since_stage', { leadTimeDays }) })],
-          actions: [keyAction(defaultAction('email'))],
+          // Bildirimle başlar: e-posta adresi kayıtlı olmayabilir (kayıt 422 veriyordu).
+          actions: [keyAction(defaultAction('notify'))],
         },
       }),
     [leadTimeDays],

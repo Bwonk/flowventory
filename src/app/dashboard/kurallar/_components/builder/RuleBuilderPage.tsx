@@ -8,6 +8,7 @@ import type { TrackingRuleItem } from '@/app/api/rules/route';
 import { extractErrorMessage } from '@/lib/api-error';
 import { ApiRequests } from '@/lib/api-requests';
 import { logger } from '@/lib/logger';
+import { hasActionType } from '@/lib/rules/actions-catalog';
 import type { RuleTemplate } from '@/lib/rules/templates';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -17,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useTargetOptions } from '../../hooks/use-target-options';
 import { FlowCanvas } from './FlowCanvas';
+import { stripKeys } from './stage-ops';
 import { StockConsentDialog } from './StockConsentDialog';
 import { useRuleBuilder } from './use-rule-builder';
 
@@ -84,6 +86,11 @@ export function RuleBuilderPage({ token, mode, rule, template, notificationEmail
   };
 
   const requestSave = () => {
+    // Sunucu da reddeder (422); kullanıcı onay dialogundan geçmeden burada söyle.
+    if (!notificationEmail && hasActionType(stripKeys(builder.state.workflow), 'email')) {
+      setIssue("E-posta aksiyonu için önce Ayarlar'dan bildirim adresi kaydedin ya da aksiyonu Bildirim yapın.");
+      return;
+    }
     if (builder.hasStockAction && !consentGiven) {
       // Onaydan önce formu doğrula; hata varsa dialog açılmasın.
       const { issue: validationIssue } = builder.toInput(true);
@@ -135,6 +142,11 @@ export function RuleBuilderPage({ token, mode, rule, template, notificationEmail
       />
 
       <div className="mx-auto max-w-3xl">
+        {rule?.invalidReason && (
+          <p className="mb-3 rounded-lg bg-muted px-3 py-2 text-sm text-foreground">
+            Bu kural şu an çalışmıyor: {rule.invalidReason}. Düzeltip kaydedince yeniden çalışır.
+          </p>
+        )}
         <div aria-live="polite" className="mb-4 min-h-5">
           {issue && <p className="text-sm text-destructive">{issue}</p>}
         </div>

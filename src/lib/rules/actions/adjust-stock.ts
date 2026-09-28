@@ -51,7 +51,11 @@ export async function adjustStockAction(
 
     const target = locations[0];
     const previousCount = target.stockCount ?? 0;
-    const newCount = previousCount + (computed.next - Math.max(0, total));
+    // Toplamı `computed.next`'e getiren fark ilk depoya yazılır. Gerçek toplam
+    // (negatif olabilir) kullanılır: −3'te "+5" eskiden 2'ye çıkıyor, detay 5 diyordu.
+    const newCount = previousCount + (computed.next - total);
+    // ikas yalnız mutlak stok yazar (saveVariantStocks); okuma ile yazma arası
+    // bu yüzden kısa tutulur — aralarına ağ çağrısı ya da snapshot tazeleme girmez.
 
     const response = await ikasClient.mutations.saveVariantStocks({
       input: {
@@ -73,7 +77,7 @@ export async function adjustStockAction(
     return {
       type: 'adjust_stock',
       ok: true,
-      detail: `Stok ${fmt(total)} → ${fmt(computed.next)} adet`,
+      detail: `Stok ${fmt(total)} → ${fmt(total + (newCount - previousCount))} adet`,
       stock: { stockLocationId: target.stockLocationId, previousCount, newCount },
     };
   } catch (error) {

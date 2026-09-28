@@ -50,6 +50,11 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     const toggle = toggleSchema.safeParse(body);
     let data: Record<string, unknown>;
     let workflowChanged = false;
+    const existing = await prisma.trackingRule.findFirst({
+      where: { id, merchantId: user.merchantId },
+      select: { workflowJson: true, scope: true, targetId: true, granularity: true },
+    });
+    if (!existing) return NextResponse.json({ error: 'Kural bulunamadı' }, { status: 404 });
     if (toggle.success) {
       data = toggle.data;
     } else {
@@ -63,15 +68,22 @@ export async function PUT(request: NextRequest, context: RouteContext) {
           return NextResponse.json({ error: 'E-posta aksiyonu için önce bildirim adresi kaydedin.' }, { status: 422 });
         }
       }
-      data = ruleDataFromInput(parsed.data);
-      workflowChanged = true;
+      const next = ruleDataFromInput(parsed.data);
+      data = next;
+      // Ad, bekleme süresi gibi alanlar aşama ilerlemesini etkilemez; yalnız
+      // akış, kapsam ya da değerlendirme birimi değişince sıfırlanır.
+      workflowChanged =
+        next.workflowJson !== existing.workflowJson ||
+        next.scope !== existing.scope ||
+        next.targetId !== existing.targetId ||
+        next.granularity !== existing.granularity;
     }
 
     // Sahiplik: id başka merchant'a aitse count 0 → 404 (var/yok sızdırmaz).
     const { count } = await prisma.trackingRule.updateMany({ where: { id, merchantId: user.merchantId }, data });
     if (count === 0) return NextResponse.json({ error: 'Kural bulunamadı' }, { status: 404 });
 
-    // Tam güncellemede aşamalar değişmiş olabilir: aşama ilerlemesi baştan başlar.
+    // Akış/kapsam/birim değiştiyse aşama ilerlemesi baştan başlar.
     if (workflowChanged) await prisma.trackingRuleState.deleteMany({ where: { ruleId: id, merchantId: user.merchantId } });
 
     const row = await prisma.trackingRule.findUnique({ where: { id } });

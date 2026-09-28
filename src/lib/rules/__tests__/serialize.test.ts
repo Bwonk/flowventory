@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseActionResults, parseWorkflow, ruleDataFromInput, toEventItem, toRuleItem } from '@/lib/rules/serialize';
+import { parseActionResults, parseWorkflow, readWorkflowForEdit, ruleDataFromInput, toEventItem, toRuleItem } from '@/lib/rules/serialize';
 
 const workflow = {
   stages: [
@@ -42,10 +42,30 @@ describe('toRuleItem', () => {
     expect(item.workflow).toEqual({ stages: [] });
     expect(item.sentence).toBe('Koşullar okunamadı');
   });
-  it('bozuk enum alanında güvenli varsayılana düşer', () => {
+  it('bozuk enum alanında güvenli varsayılana düşer, çalışmıyor olarak işaretler', () => {
     const item = toRuleItem({ ...row, granularity: 'sku' });
     expect(item.granularity).toBe('product');
-    expect(item.workflow.stages).toEqual([]);
+    expect(item.workflow.stages).toHaveLength(1);
+    expect(item.invalidReason).toBe('Kural ayarları okunamadı');
+  });
+  it('geçerli kuralda invalidReason null', () => {
+    expect(toRuleItem(row).invalidReason).toBeNull();
+  });
+  it('kurala aykırı ama yapısal olarak geçerli akışı düzenleme için yükler', () => {
+    const invalid = {
+      stages: [{ conditions: [{ op: 'and', condition: { metric: 'stock_drop_since_stage', threshold: 5 } }], actions: [{ type: 'notify' }] }],
+    };
+    const item = toRuleItem({ ...row, workflowJson: JSON.stringify(invalid) });
+    expect(item.workflow.stages).toHaveLength(1);
+    expect(item.invalidReason).toMatch(/2\. aşamadan/);
+    // Motor aynı akışı çalıştırmaz.
+    expect(parseWorkflow(JSON.stringify(invalid))).toEqual({ stages: [] });
+  });
+});
+
+describe('readWorkflowForEdit', () => {
+  it('okunamayan JSON → boş akış + neden', () => {
+    expect(readWorkflowForEdit('{nope')).toEqual({ workflow: { stages: [] }, invalidReason: 'Kayıtlı akış okunamadı' });
   });
 });
 
