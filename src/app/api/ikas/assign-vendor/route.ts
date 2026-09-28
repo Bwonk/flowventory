@@ -97,6 +97,18 @@ export async function POST(request: NextRequest) {
     }
 
     if (vendorId === null) {
+      // 25 Eyl 2026'dan önce yetkilendirilen kurulumların token'ında write_products
+      // yok; ikas updateProduct'ı UNAUTHORIZED ile reddeder. Kaldır-kur tüm veriyi
+      // sildiği için çözüm yeniden yetkilendirme (OAuth akışı token'ı günceller).
+      if (firstError && /unauthori[sz]ed|forbidden|permission/i.test(firstError)) {
+        return NextResponse.json(
+          {
+            error:
+              'ikas ürün düzenleme izni vermedi. Uygulamayı ikas panelinden yeniden yetkilendirin (kaldırıp kurmayın; veriler silinir).',
+          },
+          { status: 403 },
+        );
+      }
       return NextResponse.json(
         { error: firstError ? `Tedarikçi atanamadı: ${firstError}` : 'Tedarikçi atanamadı' },
         { status: 502 },
