@@ -142,6 +142,9 @@ export function AddProductsDialog({ token, vendorName, onAssigned, compact, trig
         if (saving) return;
         setOpen(next);
         if (!next) reset();
+        // Her açılışta taze liste: bileşen tedarikçi sekmeleri arasında paylaşılıyor;
+        // önceki atamadan kalan liste ürünü eski tedarikçide gösteriyordu.
+        if (next && !loading) setProducts(null);
       }}
     >
       <DialogTrigger asChild>
