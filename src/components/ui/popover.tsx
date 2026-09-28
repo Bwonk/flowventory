@@ -3,6 +3,7 @@
 import * as React from "react"
 import { Popover as PopoverPrimitive } from "radix-ui"
 
+import { useTriggerOrigin } from "@/lib/hooks/use-trigger-origin"
 import { cn } from "@/lib/utils"
 
 function Popover({
@@ -22,8 +23,10 @@ function PopoverContent({
   align = "center",
   sideOffset = 4,
   container,
+  onAnimationStart,
   ...props
 }: React.ComponentProps<typeof PopoverPrimitive.Content> & { container?: HTMLElement | null }) {
+  const handleAnimationStart = useTriggerOrigin(onAnimationStart)
   return (
     <PopoverPrimitive.Portal container={container}>
       <PopoverPrimitive.Content
@@ -31,11 +34,14 @@ function PopoverContent({
         align={align}
         sideOffset={sideOffset}
         className={cn(
-          // 150ms güçlü ease-out giriş, 100ms çıkış (çıkış girişten hızlı);
-          // reduced-motion'da yalnız fade (zoom/kayma motion-safe'te).
-          "z-50 w-72 origin-(--radix-popover-content-transform-origin) rounded-md border bg-popover p-4 text-popover-foreground shadow-md outline-hidden ease-out motion-safe:data-[side=bottom]:slide-in-from-top-2 motion-safe:data-[side=left]:slide-in-from-right-2 motion-safe:data-[side=right]:slide-in-from-left-2 motion-safe:data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:animate-out data-[state=closed]:duration-100 data-[state=closed]:fade-out-0 motion-safe:data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:duration-150 data-[state=open]:fade-in-0 motion-safe:data-[state=open]:zoom-in-95",
+          // Origin-aware: tetikleyicinin merkezinden 0.9 → 1 büyür, kapanışta
+          // oraya küçülür (kök useTriggerOrigin'den; bulunamazsa Radix'in
+          // tarafa bakan kökü). 150ms güçlü ease-out giriş, 100ms çıkış;
+          // reduced-motion'da yalnız fade (zoom motion-safe'te).
+          "z-50 w-72 origin-(--radix-popover-content-transform-origin) rounded-md border bg-popover p-4 text-popover-foreground shadow-md outline-hidden ease-out data-[state=closed]:animate-out data-[state=closed]:duration-100 data-[state=closed]:fade-out-0 motion-safe:data-[state=closed]:zoom-out-90 data-[state=open]:animate-in data-[state=open]:duration-150 data-[state=open]:fade-in-0 motion-safe:data-[state=open]:zoom-in-90",
           className
         )}
+        onAnimationStart={handleAnimationStart}
         {...props}
       />
     </PopoverPrimitive.Portal>

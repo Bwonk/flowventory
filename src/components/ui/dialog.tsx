@@ -4,6 +4,7 @@ import * as React from "react"
 import { Dialog as DialogPrimitive } from "radix-ui"
 import { XIcon } from "lucide-react"
 
+import { useTriggerOrigin } from "@/lib/hooks/use-trigger-origin"
 import { cn } from "@/lib/utils"
 
 function Dialog({
@@ -52,20 +53,24 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  onAnimationStart,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
 }) {
+  const handleAnimationStart = useTriggerOrigin(onAnimationStart)
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />
       <DialogPrimitive.Content
         data-slot="dialog-content"
-        // Giriş: fade + zoom + hafif yukarı süzülme, 200ms güçlü ease-out;
-        // çıkış girişten sessiz: 150ms. reduced-motion'da yalnız fade kalır
-        // (zoom/kayma motion-safe'te).
+        // Origin-aware: açan butonun merkezinden fade + 0.9 → 1 büyür, 200ms
+        // güçlü ease-out; kapanışta aynı noktaya 150ms'de küçülür (kök
+        // useTriggerOrigin'den; tetikleyici yoksa kendi ortası).
+        // reduced-motion'da yalnız fade kalır (zoom motion-safe'te).
+        onAnimationStart={handleAnimationStart}
         className={cn(
-          "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 motion-safe:data-[state=closed]:zoom-out-95 motion-safe:data-[state=open]:zoom-in-95 motion-safe:data-[state=open]:slide-in-from-bottom-2 data-[state=open]:duration-200 data-[state=closed]:duration-150 ease-out fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg sm:max-w-lg",
+          "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 motion-safe:data-[state=closed]:zoom-out-90 motion-safe:data-[state=open]:zoom-in-90 data-[state=open]:duration-200 data-[state=closed]:duration-150 ease-out fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg sm:max-w-lg",
           className
         )}
         {...props}

@@ -509,7 +509,7 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   `globals.css @theme` (`ease-out` / `ease-in-out` Tailwind'in zayıf
   varsayılanlarını ezer, `ease-drawer` utility'si). Spring'i ya da eğriyi
   elle yazmak yasak. Arayüz hareketi 300ms altında; `scale(0)` yok (en az
-  0.95); çıkış girişten kısa; klavyeyle tetiklenen hareket animasyonsuz
+  0.95; tek istisna origin-aware açılır katmanlar: 0.9); çıkış girişten kısa; klavyeyle tetiklenen hareket animasyonsuz
   (Emil Kowalski kuralları, `.claude/skills/review-animations`).
 - Sidebar aç/kapa: aralık + panel + bildirim drawer klibi **aynı** 250ms
   `ease-drawer` (`SIDEBAR_TRANSITION_MS`) — taşma/geri sekme yok. ⌘/Ctrl+B
@@ -517,8 +517,13 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   Aralık `width`'le çalışır (ikon şeridi gerçek 48px yerleşim ister; bilinçli).
   Menü hover'ı kayan hap değil, 150ms zemin rengi —
   [src/components/animate-ui/components/radix/sidebar.tsx](src/components/animate-ui/components/radix/sidebar.tsx).
-- Katmanlar: `Dialog` 200ms açılır / 150ms kapanır (`ease-out`, zoom 95);
-  `Popover` 150 / 100ms; `Sheet` (shadcn) 300 / 200ms `ease-drawer`;
+- Katmanlar: `Dialog` 200ms açılır / 150ms kapanır (`ease-out`, zoom 90);
+  `Popover` 150 / 100ms (zoom 90). İkisi de **origin-aware**: açan butonun
+  merkezinden büyür, kapanışta oraya küçülür — kök
+  [src/lib/hooks/use-trigger-origin.ts](src/lib/hooks/use-trigger-origin.ts)
+  (Radix `aria-controls` tetikleyicisi, yoksa son 1sn'deki basış; bulunamazsa
+  kendi ortası). Kayma (`slide-in-*`) yok, yönü kök verir. Goo menüler ve
+  `PopoverForm` zaten tetikleyiciden açılır; `Sheet` (shadcn) 300 / 200ms `ease-drawer`;
   bildirim drawer'ı ve mobil sidebar animate-ui Motion sheet'i (`SPRING`
   giriş, 200ms `EASE_DRAWER` çıkış, perde yalnız opaklık). Reduced-motion'da
   zoom/kayma düşer, kısa fade kalır; `reduced-transparency:` perdede blur'u
