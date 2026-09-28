@@ -29,6 +29,8 @@ interface VendorActionBarProps {
   onSent: (vendorId: string) => void;
   /** Tedarikçi ayarlarından silinince sayfa listesinden düşürür. */
   onVendorDeleted: (vendorId: string) => void;
+  /** "Ürünleri taşı ve sil" hedefleri. */
+  vendorOptions: ReadonlyArray<{ vendorId: string; vendorName: string }>;
 }
 
 /**
@@ -47,6 +49,7 @@ export function VendorActionBar({
   onContactSaved,
   onSent,
   onVendorDeleted,
+  vendorOptions,
 }: VendorActionBarProps) {
   const add = useIconHover();
   const print = useIconHover();
@@ -106,6 +109,9 @@ export function VendorActionBar({
                 onSaved={next => onContactSaved(vendorId, next)}
                 productCount={new Set(vendor.lines.map(l => l.productId)).size}
                 onDeleted={onVendorDeleted}
+                vendorOptions={vendorOptions}
+                incomingQty={vendor.lines.reduce((sum, l) => sum + l.incoming, 0)}
+                onMoved={onProductsAssigned}
                 trigger={button}
               />
             ),

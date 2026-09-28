@@ -33,6 +33,7 @@ import type { ReceivePurchaseOrderApiResponse } from '@/app/api/purchase-orders/
 import type { UndoReceiptApiResponse } from '@/app/api/purchase-orders/[id]/receipts/[receiptId]/undo/route';
 import type { CancelRemainingApiResponse } from '@/app/api/purchase-orders/[id]/cancel-remaining/route';
 import type { PurchaseOrderChannel } from '@/lib/purchase-orders/types';
+import type { VendorMoveApiResponse } from '@/app/api/vendors/move/route';
 
 export async function makePostRequest<T>({ url, data, token }: { url: string; data?: Record<string, unknown>; token?: string }) {
   return axios.post<ApiResponseType<T>>(url, data, {
@@ -172,6 +173,9 @@ export const ApiRequests = {
     ) => makePutRequest<VendorListItem>({ url: '/api/vendors', token, data: input }),
     delete: (token: string, input: { vendorId: string }) =>
       makeDeleteRequest<DeleteVendorApiResponse>({ url: '/api/vendors', token, data: input }),
+    /** Adım adım: `done` false ise tekrar çağır. */
+    move: (token: string, input: { fromVendorId: string; toVendorName: string; mode: 'merge' | 'rename' }) =>
+      makePostRequest<VendorMoveApiResponse>({ url: '/api/vendors/move', token, data: input }),
   },
   purchaseOrders: {
     listOpen: (token: string) => makeGetRequest<PurchaseOrdersApiResponse>({ url: '/api/purchase-orders', token }),

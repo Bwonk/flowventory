@@ -146,6 +146,7 @@ export function VendorTabsPanel({
           onContactSaved={onVendorContactSaved}
           onSent={onVendorSent}
           onVendorDeleted={onVendorDeleted}
+          vendorOptions={orderedVendors.flatMap(v => (v.vendorId ? [{ vendorId: v.vendorId, vendorName: v.vendorName }] : []))}
         />
       </div>
 

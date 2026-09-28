@@ -9,6 +9,8 @@ import { EnvelopeIcon } from '@/components/ui/icons/envelope';
 import { useIconHover } from '@/components/ui/icons/use-icon-hover';
 import { Input } from '@/components/ui/input';
 import { TrashIcon } from '@/components/ui/icons/trash';
+import { PencilIcon } from '@/components/ui/icons/pencil';
+import { OptionButton } from '@/components/shared/filters/Dropdown';
 import { extractErrorMessage } from '@/lib/api-error';
 import { cn } from '@/lib/utils';
 import { NumberStepper } from '@/components/shared/NumberStepper';
@@ -39,6 +41,12 @@ interface VendorContactPopoverProps {
   productCount: number;
   /** Silme sonrası sayfa listesinden düşürür. */
   onDeleted: (vendorId: string) => void;
+  /** "Ürünleri taşı ve sil" hedefleri (bu tedarikçi hariç tutulur). */
+  vendorOptions: ReadonlyArray<{ vendorId: string; vendorName: string }>;
+  /** Tedarikçinin gönderilmiş siparişlerde gelmemiş adedi (bilgi satırı). */
+  incomingQty: number;
+  /** Taşıma / yeniden adlandırma bitince: rapor tazelenir, hedef sekme açılır. */
+  onMoved: (vendorName: string) => Promise<void>;
   /** Dış tetikleyici (ör. ExpandableActionBar öğesi); verilmezse varsayılan ikon segment. */
   trigger?: ReactElement;
 }
@@ -57,10 +65,26 @@ export function VendorContactPopover({
   onSaved,
   productCount,
   onDeleted,
+  vendorOptions,
+  incomingQty,
+  onMoved,
   trigger,
 }: VendorContactPopoverProps) {
   const { ref: envelopeRef, hoverProps } = useIconHover();
   const trash = useIconHover();
+  const pencil = useIconHover();
+  const [editingName, setEditingName] = useState(false);
+  const [draftName, setDraftName] = useState(vendorName);
+  const [moveTarget, setMoveTarget] = useState<string | null>(null);
+  const [confirmMove, setConfirmMove] = useState(false);
+  // Adım adım taşıma ilerlemesi (ürün sayısı).
+  const [progress, setProgress] = useState<{ moved: number; total: number } | null>(null);
+  useEffect(() => {
+    if (!confirmMove) return;
+    const t = setTimeout(() => setConfirmMove(false), DELETE_CONFIRM_MS);
+    return () => clearTimeout(t);
+  }, [confirmMove]);
+  const targets = vendorOptions.filter(v => v.vendorId !== vendorId);
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState(contact.email ?? '');
   const [phone, setPhone] = useState(contact.phone ?? '');
@@ -99,6 +123,65 @@ export function VendorContactPopover({
     }
   };
 
+  /** Sunucu parti parti taşır; `done` olana kadar tekrar çağrılır. */
+  const runMove = async (mode: 'merge' | 'rename', toVendorName: string) => {
+    let moved = 0;
+    setProgress({ moved, total: productCount });
+    for (let guard = 0; guard < 200; guard++) {
+      const res = await ApiRequests.vendors.move(token, { fromVendorId: vendorId, toVendorName, mode });
+      const step = res.data?.data;
+      if (!step) throw new Error('Empty vendor move response');
+      moved += step.moved;
+      setProgress({ moved, total: productCount });
+      if (step.failed.length > 0) throw new Error(`${step.failed.length} ürün taşınamadı; tekrar deneyin.`);
+      if (step.done) return;
+      if (step.moved === 0) throw new Error('Taşıma ilerlemedi; tekrar deneyin.');
+    }
+    throw new Error('Taşıma tamamlanamadı; tekrar deneyin.');
+  };
+
+  const rename = async () => {
+    const next = draftName.trim();
+    if (!next || next.toLocaleLowerCase('tr') === vendorName.toLocaleLowerCase('tr')) {
+      setEditingName(false);
+      return;
+    }
+    try {
+      await runMove('rename', next);
+      setOpen(false);
+      toast.success(`Tedarikçi adı değişti: ${next}`);
+      await onMoved(next);
+    } catch (error) {
+      logger.error('Vendor rename failed', { vendorId, error });
+      toast.error(extractErrorMessage(error, 'Ad değiştirilemedi.'));
+    } finally {
+      setProgress(null);
+      setEditingName(false);
+    }
+  };
+
+  const moveAndDelete = async () => {
+    if (!moveTarget) return;
+    if (!confirmMove) {
+      setConfirmMove(true);
+      return;
+    }
+    setConfirmMove(false);
+    try {
+      await runMove('merge', moveTarget);
+      setOpen(false);
+      toast.success(`${productCount} ürün ${moveTarget} tedarikçisine taşındı, ${vendorName} silindi`);
+      onDeleted(vendorId);
+      await onMoved(moveTarget);
+    } catch (error) {
+      logger.error('Vendor move and delete failed', { vendorId, error });
+      toast.error(extractErrorMessage(error, 'Ürünler taşınamadı.'));
+    } finally {
+      setProgress(null);
+    }
+  };
+
+  const busy = saving || deleting || progress !== null;
   const emailField = useEmailField(email);
   const trimmedEmail = emailField.trimmed;
   const trimmedPhone = phone.trim();
@@ -142,9 +225,13 @@ export function VendorContactPopover({
       sideOffset={6}
       open={open}
       onOpenChange={next => {
-        if (saving || deleting) return;
+        if (busy) return;
         setOpen(next);
         setConfirmDelete(false);
+        setConfirmMove(false);
+        setEditingName(false);
+        setDraftName(vendorName);
+        setMoveTarget(null);
         if (next) {
           // Popover her açılışta kayıtlı değerlerden başlar.
           setEmail(contact.email ?? '');
@@ -172,7 +259,52 @@ export function VendorContactPopover({
       </GooPopoverTrigger>
       <GooPopoverContent aria-label="Tedarikçi ayarları" className="w-72 p-3">
         <PopoverHeader>
-          <PopoverTitle>{vendorName}</PopoverTitle>
+          {editingName ? (
+            <div className="flex items-center gap-1.5">
+              <Input
+                autoFocus
+                value={draftName}
+                onChange={e => setDraftName(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') void rename();
+                  if (e.key === 'Escape') {
+                    e.stopPropagation();
+                    setEditingName(false);
+                    setDraftName(vendorName);
+                  }
+                }}
+                aria-label="Tedarikçi adı"
+                className="h-8 md:text-base pointer-fine:text-sm"
+                disabled={busy}
+                maxLength={150}
+              />
+              <Button type="button" size="sm" className="h-8" onClick={() => void rename()} disabled={busy || !draftName.trim()}>
+                {progress ? `${progress.moved}/${progress.total}` : 'Kaydet'}
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-2">
+              <PopoverTitle className="truncate">{vendorName}</PopoverTitle>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-6 shrink-0 text-muted-foreground hover:text-foreground"
+                aria-label={`${vendorName} adını değiştir`}
+                title="Adı değiştir"
+                onClick={() => setEditingName(true)}
+                disabled={busy}
+                {...pencil.hoverProps}
+              >
+                <PencilIcon ref={pencil.ref} size={12} className="flex shrink-0 [&>svg]:size-3!" aria-hidden />
+              </Button>
+            </div>
+          )}
+          {editingName && productCount > 0 && (
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              ikas&apos;ta {productCount} ürün yeni ada taşınır; iletişim ve tedarik ayarları korunur.
+            </p>
+          )}
         </PopoverHeader>
         <div className="mt-2 space-y-2.5">
           <div>
@@ -232,18 +364,59 @@ export function VendorContactPopover({
             {saving ? 'Kaydediliyor…' : 'Kaydet'}
           </Button>
           <div className="border-t border-hairline pt-2.5">
-            {productCount > 0 ? (
-              <p className="text-xs text-muted-foreground">
-                Silmek için önce {productCount} ürünü başka tedarikçiye taşıyın; ikas ürünü tedarikçisiz bırakmaya izin
-                vermiyor.
+            {incomingQty > 0 && (
+              <p className="mb-2 text-xs text-muted-foreground">
+                Yolda {incomingQty.toLocaleString('tr-TR')} adet var; siparişler Yolda çekmecesinde kalır ve teslim alınabilir.
               </p>
+            )}
+            {productCount > 0 ? (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  {productCount} ürün var. ikas ürünü tedarikçisiz bırakmadığı için silmeden önce ürünler taşınır:
+                </p>
+                {targets.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">Taşınacak başka tedarikçi yok; önce Tedarikçi ekle.</p>
+                ) : (
+                  <div className="max-h-28 overflow-y-auto overscroll-contain rounded-md border border-hairline p-1" role="listbox" aria-label="Hedef tedarikçi">
+                    {targets.map(t => (
+                      <OptionButton
+                        key={t.vendorId}
+                        label={t.vendorName}
+                        selected={moveTarget === t.vendorName}
+                        onClick={() => {
+                          setMoveTarget(t.vendorName);
+                          setConfirmMove(false);
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={confirmMove ? 'destructive' : 'ghost'}
+                  onClick={() => void moveAndDelete()}
+                  disabled={busy || !moveTarget}
+                  className={cn('w-full gap-1.5', !confirmMove && 'text-destructive hover:text-destructive')}
+                  {...trash.hoverProps}
+                >
+                  <TrashIcon ref={trash.ref} size={12} className="flex shrink-0 [&>svg]:size-3!" aria-hidden />
+                  {progress && !editingName
+                    ? `Taşınıyor… ${progress.moved}/${progress.total}`
+                    : !moveTarget
+                      ? 'Hedef tedarikçi seçin'
+                      : confirmMove
+                        ? `${moveTarget}'e taşınıp silinsin mi? Onayla`
+                        : 'Ürünleri taşı ve sil'}
+                </Button>
+              </div>
             ) : (
               <Button
                 type="button"
                 size="sm"
                 variant={confirmDelete ? 'destructive' : 'ghost'}
                 onClick={() => void remove()}
-                disabled={saving || deleting}
+                disabled={busy}
                 className={cn('w-full gap-1.5', !confirmDelete && 'text-destructive hover:text-destructive')}
                 {...trash.hoverProps}
               >
