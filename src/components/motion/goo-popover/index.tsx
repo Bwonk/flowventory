@@ -397,6 +397,13 @@ export interface GooPopoverContentProps {
    * kilidine takılır.
    */
   container?: HTMLElement | null;
+  /**
+   * Açılışta odağın gideceği yer. "auto": seçili seçenek / ilk odaklanabilir
+   * (menüler ↑/↓ ile hemen gezilsin). "panel": panelin kendisi — içerik
+   * `focus-visible` halkalı butonlarla başlıyorsa fareyle açılışta halka
+   * çıkmasın (tarih seçici); Tab/↓ ile içeri girilir. Varsayılan "auto".
+   */
+  initialFocus?: 'auto' | 'panel';
 }
 
 export function GooPopoverContent({
@@ -405,6 +412,7 @@ export function GooPopoverContent({
   'aria-label': ariaLabel,
   onClick,
   container,
+  initialFocus = 'auto',
 }: GooPopoverContentProps) {
   const ctx = useGooPopoverContext('GooPopoverContent');
   const {
@@ -508,18 +516,20 @@ export function GooPopoverContent({
 
   // Açılışta odak panele geçer (portal body sonunda — Tab oraya ulaşmaz):
   // `autoFocus` alan kazandıysa dokunulmaz, yoksa seçili seçenek, o da yoksa ilk
-  // odaklanabilir öğe.
+  // odaklanabilir öğe; `initialFocus="panel"` ise panelin kendisi.
   const measured = layout !== null;
   useEffect(() => {
     if (!open || !present || !measured) return;
     const panel = contentRef.current;
     if (!panel || panel.contains(document.activeElement)) return;
     const target =
-      panel.querySelector<HTMLElement>('[data-selected="true"]') ?? panel.querySelector<HTMLElement>(FOCUSABLE) ?? panel;
+      initialFocus === 'panel'
+        ? panel
+        : (panel.querySelector<HTMLElement>('[data-selected="true"]') ?? panel.querySelector<HTMLElement>(FOCUSABLE) ?? panel);
     target.focus({ preventScroll: true });
     // Sayfa kaymasın, ama uzun listede seçili satır panelin içinde görünür olsun.
     if (target !== panel) target.scrollIntoView({ block: 'nearest' });
-  }, [open, present, measured, contentRef]);
+  }, [open, present, measured, contentRef, initialFocus]);
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const arrow = event.key === 'ArrowDown' || event.key === 'ArrowUp';

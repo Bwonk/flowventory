@@ -142,7 +142,12 @@ export function DateRangePicker<T extends string>({
           <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
         </Button>
       </GooPopoverTrigger>
-      <GooPopoverContent container={portalContainer} aria-label="Tarih aralığı" className="p-4">
+      <GooPopoverContent
+        container={portalContainer}
+        initialFocus="panel"
+        aria-label="Tarih aralığı"
+        className="p-4"
+      >
         {/* Hızlı aralıklar */}
         <div className="relative">
           <div
@@ -172,7 +177,6 @@ export function DateRangePicker<T extends string>({
                   type="button"
                   role="option"
                   aria-selected={active}
-                  data-selected={active}
                   onClick={() => selectQuickRange(r.value)}
                   className={cn(
                     'flex h-8 shrink-0 items-center justify-center rounded-md px-4 text-xs font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
