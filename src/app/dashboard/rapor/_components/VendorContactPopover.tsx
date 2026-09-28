@@ -1,7 +1,7 @@
 'use client';
 
 import { logger } from '@/lib/logger';
-import { useEffect, useState, type ReactElement } from 'react';
+import { useState, type ReactElement } from 'react';
 import { toast } from 'sonner';
 import { ApiRequests } from '@/lib/api-requests';
 import { Button } from '@/components/ui/button';
@@ -12,13 +12,10 @@ import { TrashIcon } from '@/components/ui/icons/trash';
 import { PencilIcon } from '@/components/ui/icons/pencil';
 import { OptionButton } from '@/components/shared/filters/Dropdown';
 import { extractErrorMessage } from '@/lib/api-error';
-import { cn } from '@/lib/utils';
 import { NumberStepper } from '@/components/shared/NumberStepper';
 import { GooPopover, GooPopoverContent, GooPopoverTrigger } from '@/components/motion/goo-popover';
 import { PopoverHeader, PopoverTitle } from '@/components/ui/popover';
 import { useEmailField } from './use-email-field';
-
-const DELETE_CONFIRM_MS = 5000;
 
 export type VendorSettings = {
   email: string | null;
@@ -76,14 +73,10 @@ export function VendorContactPopover({
   const [editingName, setEditingName] = useState(false);
   const [draftName, setDraftName] = useState(vendorName);
   const [moveTarget, setMoveTarget] = useState<string | null>(null);
-  const [confirmMove, setConfirmMove] = useState(false);
+  // Silme ayrı bir adımdır: form gizlenir, ne olacağı cümleyle yazılır, Vazgeç / Sil.
+  const [deleteStep, setDeleteStep] = useState(false);
   // Adım adım taşıma ilerlemesi (ürün sayısı).
   const [progress, setProgress] = useState<{ moved: number; total: number } | null>(null);
-  useEffect(() => {
-    if (!confirmMove) return;
-    const t = setTimeout(() => setConfirmMove(false), DELETE_CONFIRM_MS);
-    return () => clearTimeout(t);
-  }, [confirmMove]);
   const targets = vendorOptions.filter(v => v.vendorId !== vendorId);
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState(contact.email ?? '');
@@ -92,21 +85,10 @@ export function VendorContactPopover({
   const [moq, setMoq] = useState(contact.moq ?? 0);
   const [casePack, setCasePack] = useState(contact.casePack ?? 0);
   const [saving, setSaving] = useState(false);
-  // Kalıcı silme iki adımlı: ilk tık sorar, 5 sn içinde ikinci tık siler.
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  useEffect(() => {
-    if (!confirmDelete) return;
-    const t = setTimeout(() => setConfirmDelete(false), DELETE_CONFIRM_MS);
-    return () => clearTimeout(t);
-  }, [confirmDelete]);
 
   const remove = async () => {
     if (productCount > 0) return;
-    if (!confirmDelete) {
-      setConfirmDelete(true);
-      return;
-    }
     setDeleting(true);
     try {
       const res = await ApiRequests.vendors.delete(token, { vendorId });
@@ -119,7 +101,6 @@ export function VendorContactPopover({
       toast.error(extractErrorMessage(error, 'Tedarikçi silinemedi.'));
     } finally {
       setDeleting(false);
-      setConfirmDelete(false);
     }
   };
 
@@ -162,11 +143,6 @@ export function VendorContactPopover({
 
   const moveAndDelete = async () => {
     if (!moveTarget) return;
-    if (!confirmMove) {
-      setConfirmMove(true);
-      return;
-    }
-    setConfirmMove(false);
     try {
       await runMove('merge', moveTarget);
       setOpen(false);
@@ -227,8 +203,7 @@ export function VendorContactPopover({
       onOpenChange={next => {
         if (busy) return;
         setOpen(next);
-        setConfirmDelete(false);
-        setConfirmMove(false);
+        setDeleteStep(false);
         setEditingName(false);
         setDraftName(vendorName);
         setMoveTarget(null);
@@ -306,6 +281,25 @@ export function VendorContactPopover({
             </p>
           )}
         </PopoverHeader>
+        {deleteStep ? (
+          <DeleteStep
+            vendorName={vendorName}
+            productCount={productCount}
+            incomingQty={incomingQty}
+            targets={targets}
+            moveTarget={moveTarget}
+            onPickTarget={setMoveTarget}
+            busy={busy}
+            deleting={deleting}
+            progress={progress}
+            onCancel={() => {
+              setDeleteStep(false);
+              setMoveTarget(null);
+            }}
+            onDelete={() => void remove()}
+            onMoveAndDelete={() => void moveAndDelete()}
+          />
+        ) : (
         <div className="mt-2 space-y-2.5">
           <div>
             <label htmlFor={`contact-email-${vendorId}`} className="mb-1 block text-xs text-muted-foreground">
@@ -364,68 +358,21 @@ export function VendorContactPopover({
             {saving ? 'Kaydediliyor…' : 'Kaydet'}
           </Button>
           <div className="border-t border-hairline pt-2.5">
-            {incomingQty > 0 && (
-              <p className="mb-2 text-xs text-muted-foreground">
-                Yolda {incomingQty.toLocaleString('tr-TR')} adet var; siparişler Yolda çekmecesinde kalır ve teslim alınabilir.
-              </p>
-            )}
-            {productCount > 0 ? (
-              <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">
-                  {productCount} ürün var. ikas ürünü tedarikçisiz bırakmadığı için silmeden önce ürünler taşınır:
-                </p>
-                {targets.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">Taşınacak başka tedarikçi yok; önce Tedarikçi ekle.</p>
-                ) : (
-                  <div className="max-h-28 overflow-y-auto overscroll-contain rounded-md border border-hairline p-1" role="listbox" aria-label="Hedef tedarikçi">
-                    {targets.map(t => (
-                      <OptionButton
-                        key={t.vendorId}
-                        label={t.vendorName}
-                        selected={moveTarget === t.vendorName}
-                        onClick={() => {
-                          setMoveTarget(t.vendorName);
-                          setConfirmMove(false);
-                        }}
-                      />
-                    ))}
-                  </div>
-                )}
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={confirmMove ? 'destructive' : 'ghost'}
-                  onClick={() => void moveAndDelete()}
-                  disabled={busy || !moveTarget}
-                  className={cn('w-full gap-1.5', !confirmMove && 'text-destructive hover:text-destructive')}
-                  {...trash.hoverProps}
-                >
-                  <TrashIcon ref={trash.ref} size={12} className="flex shrink-0 [&>svg]:size-3!" aria-hidden />
-                  {progress && !editingName
-                    ? `Taşınıyor… ${progress.moved}/${progress.total}`
-                    : !moveTarget
-                      ? 'Hedef tedarikçi seçin'
-                      : confirmMove
-                        ? `${moveTarget}'e taşınıp silinsin mi? Onayla`
-                        : 'Ürünleri taşı ve sil'}
-                </Button>
-              </div>
-            ) : (
-              <Button
-                type="button"
-                size="sm"
-                variant={confirmDelete ? 'destructive' : 'ghost'}
-                onClick={() => void remove()}
-                disabled={busy}
-                className={cn('w-full gap-1.5', !confirmDelete && 'text-destructive hover:text-destructive')}
-                {...trash.hoverProps}
-              >
-                <TrashIcon ref={trash.ref} size={12} className="flex shrink-0 [&>svg]:size-3!" aria-hidden />
-                {deleting ? 'Siliniyor…' : confirmDelete ? `${vendorName} silinsin mi? Onayla` : 'Tedarikçiyi sil'}
-              </Button>
-            )}
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setDeleteStep(true)}
+              disabled={busy}
+              className="w-full gap-1.5"
+              {...trash.hoverProps}
+            >
+              <TrashIcon ref={trash.ref} size={12} className="flex shrink-0 text-destructive [&>svg]:size-3!" aria-hidden />
+              Tedarikçiyi sil…
+            </Button>
           </div>
         </div>
+        )}
       </GooPopoverContent>
     </GooPopover>
   );
@@ -439,6 +386,98 @@ function SupplyRow({ label, hint, children }: { label: string; hint: string; chi
         <p className="text-[11px] text-muted-foreground">{hint}</p>
       </div>
       {children}
+    </div>
+  );
+}
+
+/**
+ * Silme adımı: ne olacağı cümleyle (uzun adlar satırda kırılır), karar butonları
+ * kısa sabit etiketli — Vazgeç (outline) / Sil ya da Taşı ve sil (texture destructive).
+ */
+function DeleteStep({
+  vendorName,
+  productCount,
+  incomingQty,
+  targets,
+  moveTarget,
+  onPickTarget,
+  busy,
+  deleting,
+  progress,
+  onCancel,
+  onDelete,
+  onMoveAndDelete,
+}: {
+  vendorName: string;
+  productCount: number;
+  incomingQty: number;
+  targets: ReadonlyArray<{ vendorId: string; vendorName: string }>;
+  moveTarget: string | null;
+  onPickTarget: (name: string) => void;
+  busy: boolean;
+  deleting: boolean;
+  progress: { moved: number; total: number } | null;
+  onCancel: () => void;
+  onDelete: () => void;
+  onMoveAndDelete: () => void;
+}) {
+  const hasProducts = productCount > 0;
+  return (
+    <div className="mt-2 space-y-2.5">
+      <p className="text-sm font-medium text-foreground">
+        {hasProducts ? `Silmeden önce ${productCount} ürünü taşıyın` : 'Tedarikçiyi sil'}
+      </p>
+      {hasProducts ? (
+        <>
+          <p className="text-xs text-muted-foreground">ikas ürünü tedarikçisiz bırakmaz; ürünler seçtiğiniz tedarikçiye geçer.</p>
+          {targets.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Taşınacak başka tedarikçi yok. Önce sayfadan Tedarikçi ekle.</p>
+          ) : (
+            <div>
+              <p className="mb-1 text-xs text-muted-foreground">Ürünler nereye taşınsın?</p>
+              <div
+                className="max-h-32 overflow-y-auto overscroll-contain rounded-md border border-hairline p-1"
+                role="listbox"
+                aria-label="Hedef tedarikçi"
+              >
+                {targets.map(t => (
+                  <OptionButton key={t.vendorId} label={t.vendorName} selected={moveTarget === t.vendorName} onClick={() => onPickTarget(t.vendorName)} />
+                ))}
+              </div>
+            </div>
+          )}
+          {moveTarget && (
+            <p className="rounded-md bg-muted px-2.5 py-2 text-xs break-words text-foreground">
+              {productCount} ürün <span className="font-medium">{moveTarget}</span> tedarikçisine taşınır,{' '}
+              <span className="font-medium">{vendorName}</span> silinir.
+            </p>
+          )}
+        </>
+      ) : (
+        <p className="text-xs break-words text-muted-foreground">
+          <span className="font-medium text-foreground">{vendorName}</span> ve kayıtlı iletişim bilgileri silinir. Bu işlem
+          geri alınamaz.
+        </p>
+      )}
+      {incomingQty > 0 && (
+        <p className="text-xs text-muted-foreground">
+          Yolda {incomingQty.toLocaleString('tr-TR')} adet var; siparişler Yolda çekmecesinde kalır ve teslim alınabilir.
+        </p>
+      )}
+      <div className="flex gap-2">
+        <Button type="button" size="sm" variant="outline" className="flex-1" onClick={onCancel} disabled={busy}>
+          Vazgeç
+        </Button>
+        {hasProducts ? (
+          <Button type="button" size="sm" variant="destructive" className="flex-1" onClick={onMoveAndDelete} disabled={busy || !moveTarget}>
+            {progress ? `Taşınıyor ${progress.moved}/${progress.total}` : moveTarget ? 'Taşı ve sil' : 'Hedef seçin'}
+          </Button>
+        ) : (
+          <Button type="button" size="sm" variant="destructive" className="flex-1" onClick={onDelete} disabled={busy}>
+            {deleting ? 'Siliniyor…' : 'Sil'}
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

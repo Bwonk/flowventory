@@ -51,10 +51,10 @@ const buttonVariants = cva(
   }
 )
 
-// Siyah (default) ve beyaz (outline) butonlar cult-ui TextureButton'dan
-// (kullanıcı kararı, 28 Eyl 2026): default → primary, outline → secondary.
-// Diğer varyantlar (ghost, link, destructive, segment…) düz kalır.
-const TEXTURE_VARIANT = { default: "primary", outline: "secondary" } as const
+// Siyah (default), beyaz (outline) ve kırmızı (destructive) butonlar cult-ui
+// TextureButton'dan (kullanıcı kararları, 28 Eyl 2026): default → primary,
+// outline → secondary, destructive → destructive. Ghost, link, segment düz kalır.
+const TEXTURE_VARIANT = { default: "primary", outline: "secondary", destructive: "destructive" } as const
 
 // Texture'da yükseklik dış katmanda, dolgu/yazı iç yüzeyde yaşar.
 const textureOuterSize = cva("", {
@@ -120,7 +120,7 @@ function Button({
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean
   }) {
-  if (variant === "default" || variant === "outline") {
+  if (variant === "default" || variant === "outline" || variant === "destructive") {
     const { outer, inner } = splitTextureClassName(className)
     return (
       <TextureButton

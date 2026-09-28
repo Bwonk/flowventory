@@ -365,8 +365,11 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   card→muted yüzey). İki katmanlıdır: yükseklik/genişlik/yerleşim dış
   katmanda, dolgu/boşluk/yazı iç yüzeyde — `Button` çağıranın className'ini
   bu ikiye kendisi böler, çağrı yerleri değişmez. Koyu (ink) zeminde buton
-  `outline` (beyaz) kullanılır. Tehlikeli = `variant="destructive"`, ghost /
-  link / segment düz kalır. Birincil butonun yanındaki Vazgeç / İptal her
+  `outline` (beyaz) kullanılır. Kırmızı (yıkıcı) = `variant="destructive"` →
+  texture `destructive` (destructive gradyan kenar + yüzey; kullanıcı kararı,
+  28 Eyl 2026). Uygulamada kırmızı yazılı ghost buton yok — kırmızı aksiyon her
+  zaman texture destructive'dir; uzun ad/metin butona yazılmaz (sabit kısa
+  etiket, ayrıntı üstteki metinde). Ghost / link / segment düz kalır. Birincil butonun yanındaki Vazgeç / İptal her
   zaman `outline`'dır (popover içindeki küçük onay çiftleri dahil); ghost'a
   ya da elle yazılmış `<button>`'a düşürülmez — çift, ağırlığı farklı iki
   texture butonu olarak okunmalı. Sidebar geri bildirim butonu `ShimmerButton`dır,
