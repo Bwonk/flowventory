@@ -1,3 +1,4 @@
+import { kanca } from '@/lib/kanca';
 import { logger } from '@/lib/logger';
 import { config } from '@/globals/config';
 import { getSession, setSession } from '@/lib/session';
@@ -139,6 +140,12 @@ export async function GET(request: NextRequest) {
 
     // Store the token for future use
     await AuthTokenManager.put(token);
+
+    kanca.track('install', {
+      merchantId,
+      storeName: merchantResponse.data.getMerchant.storeName,
+    });
+    await kanca.flush(); // make sure the install is sent before the redirect
 
     const publicApiUrl = resolvePublicApiUrl(request);
 

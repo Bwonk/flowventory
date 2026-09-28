@@ -1,3 +1,4 @@
+import { kanca } from '@/lib/kanca';
 import { logger } from '@/lib/logger';
 import { OAuthAPI } from '@ikas/admin-api-client';
 import { AuthToken } from '../models/auth-token';
@@ -10,12 +11,14 @@ import { config } from '../globals/config';
  * @param token AuthToken object containing access and refresh tokens.
  */
 export function getIkas(token: AuthToken): ikasAdminGraphQLAPIClient<AuthToken> {
-  return new ikasAdminGraphQLAPIClient<AuthToken>({
-    graphApiUrl: config.graphApiUrl!,
-    accessToken: token.accessToken,
-    tokenData: token,
-    onCheckToken: () => onCheckToken(token),
-  });
+  return kanca.instrument(
+    new ikasAdminGraphQLAPIClient<AuthToken>({
+      graphApiUrl: config.graphApiUrl!,
+      accessToken: token.accessToken,
+      tokenData: token, // token.merchantId is attached to every call
+      onCheckToken: () => onCheckToken(token),
+    }),
+  );
 }
 
 /**

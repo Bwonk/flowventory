@@ -1,3 +1,4 @@
+import { kanca } from '@/lib/kanca';
 import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/prisma';
 import { invalidateSync, refreshProductSnapshot } from '@/lib/sync/ikas-sync';
@@ -60,7 +61,7 @@ type ProductishWebhookData = {
  * ikas'a GERİ yazıyordu — bu bir no-op'tu ve kaldırıldı. ikas stok verisinin
  * kaynağıdır; biz yalnızca yerel kopyamızı güncelleriz.
  */
-export async function POST(request: NextRequest) {
+export const POST = kanca.webhook(async (request: NextRequest) => {
   try {
     if (!CLIENT_SECRET) {
       // Misconfigured deployment; never proceed without a secret to verify against.
@@ -214,4 +215,4 @@ export async function POST(request: NextRequest) {
     logger.error('Error processing ikas webhook:', { error });
     return NextResponse.json({ error: 'Webhook processing failed' }, { status: 500 });
   }
-}
+});
