@@ -30,6 +30,8 @@ const CONFIRM_MS = 3000;
 const shortDate = (iso: string) => new Date(iso).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
 
 function statusBadge(order: PurchaseOrderItem): { label: string; variant: BadgeVariant } {
+  if (order.status === 'closed') return { label: 'Kapandı', variant: 'success' };
+  if (order.status === 'cancelled') return { label: 'İptal', variant: 'neutral' };
   if (isLate(order)) return { label: 'Gecikti', variant: 'warning' };
   if (order.status === 'partial') return { label: 'Kısmi', variant: 'info' };
   return { label: 'Gönderildi', variant: 'neutral' };
@@ -70,12 +72,13 @@ export function IncomingSheet({ token, onChanged, trigger }: IncomingSheetProps)
     if (open) void load();
   }, [open, load]);
 
+  // Kapanan sipariş çekmece açıkken listede kalır (satır içi "Geri al" erişilebilsin);
+  // bir sonraki açılışta sunucu yalnız açıkları döndürür.
   const replaceOrder = useCallback((next: PurchaseOrderItem) => {
     setOrders(prev => {
       if (!prev) return prev;
-      const stillOpen = next.status === 'sent' || next.status === 'partial';
-      if (!prev.some(o => o.id === next.id)) return stillOpen ? [next, ...prev] : prev;
-      return stillOpen ? prev.map(o => (o.id === next.id ? next : o)) : prev.filter(o => o.id !== next.id);
+      if (!prev.some(o => o.id === next.id)) return [next, ...prev];
+      return prev.map(o => (o.id === next.id ? next : o));
     });
   }, []);
 
@@ -154,7 +157,10 @@ function OrderGroup({
   );
   const [counts, setCounts] = useState<Record<string, number>>(initialCounts);
   useEffect(() => setCounts(initialCounts()), [initialCounts]);
-  const [busy, setBusy] = useState<'receive' | 'cancel' | null>(null);
+  const [busy, setBusy] = useState<'receive' | 'cancel' | 'undo' | null>(null);
+  // Son teslim — geri alma satırı çekmecenin içinde durur (toast'a bağlı değil).
+  const [lastReceipt, setLastReceipt] = useState<{ id: string; qty: number } | null>(null);
+  const isOpen = order.status === 'sent' || order.status === 'partial';
   const [confirmCancel, setConfirmCancel] = useState(false);
   useEffect(() => {
     if (!confirmCancel) return;
@@ -168,14 +174,18 @@ function OrderGroup({
 
   const undo = async (receiptId: string) => {
     if (!token) return;
+    setBusy('undo');
     try {
       const res = await ApiRequests.purchaseOrders.undoReceipt(token, order.id, receiptId);
       const next = res.data?.data?.order;
       if (next) onOrderChange(next);
+      setLastReceipt(prev => (prev?.id === receiptId ? null : prev));
       toast.success('Teslim geri alındı');
     } catch (error) {
       logger.error('Receipt undo failed', { orderId: order.id, error });
       toast.error(extractErrorMessage(error, 'Teslim geri alınamadı.'));
+    } finally {
+      setBusy(null);
     }
   };
 
@@ -190,6 +200,7 @@ function OrderGroup({
       const data = res.data?.data;
       if (!data) throw new Error('Empty receive response');
       onOrderChange(data.order);
+      setLastReceipt({ id: data.receiptId, qty: receiveTotal });
       toast.success(`${order.label}: ${receiveTotal.toLocaleString('tr-TR')} adet stoğa yazıldı`, {
         action: { label: 'Geri al', onClick: () => void undo(data.receiptId) },
         duration: 8000,
@@ -251,7 +262,11 @@ function OrderGroup({
                   </p>
                 </div>
                 {remaining === 0 ? (
-                  <Badge variant="success">Tamam</Badge>
+                  line.receivedQty >= line.qty ? (
+                    <Badge variant="success">Tamam</Badge>
+                  ) : (
+                    <Badge variant="neutral">İptal</Badge>
+                  )
                 ) : (
                   <NumberStepper
                     value={counts[line.variantId] ?? 0}
@@ -266,6 +281,21 @@ function OrderGroup({
             );
           })}
         </ul>
+        {lastReceipt && (
+          <div className="mx-2 mb-2 flex items-center justify-between gap-2 rounded-md bg-card px-3 py-1.5 text-xs text-muted-foreground">
+            <span className="tabular-nums">Son teslim: {lastReceipt.qty.toLocaleString('tr-TR')} adet stoğa yazıldı</span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-6 px-2 text-xs"
+              onClick={() => void undo(lastReceipt.id)}
+              disabled={busy !== null}
+            >
+              {busy === 'undo' ? 'Geri alınıyor…' : 'Geri al'}
+            </Button>
+          </div>
+        )}
+        {isOpen && (
         <div className="flex items-center justify-between gap-2 px-2 pb-2">
           <Button
             variant={confirmCancel ? 'destructive' : 'outline'}
@@ -284,6 +314,7 @@ function OrderGroup({
                 : `${receiveTotal.toLocaleString('tr-TR')} adedi teslim al`}
           </Button>
         </div>
+        )}
         {order.totalCost > 0 && (
           <p className="px-3 pb-2.5 text-[11px] tabular-nums text-muted-foreground">
             Sipariş tutarı {formatPrice(order.totalCost)}
