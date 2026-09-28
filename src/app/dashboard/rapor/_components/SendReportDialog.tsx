@@ -100,7 +100,8 @@ export function SendReportDialog({
   const phoneReady = Boolean(savedPhone) || Boolean(typedPhone);
   const ready: Record<PurchaseOrderChannel, boolean> = { email: emailReady, whatsapp: phoneReady, pdf: true };
   const selected = CHANNEL_ORDER.filter(c => channels.has(c));
-  const canSend = selected.length > 0 && selected.every(c => ready[c]) && lines.length > 0;
+  const missing = selected.find(c => !ready[c]);
+  const canSend = selected.length > 0 && !missing && lines.length > 0;
 
   const totalCost = lines.reduce((sum, { line, qty }) => sum + qty * line.unitCost, 0);
   const hasEstimate = lines.some(({ line }) => line.isEstimate);
@@ -304,7 +305,11 @@ export function SendReportDialog({
               ? 'Gönderiliyor…'
               : selected.length === 0
                 ? 'Kanal seçin'
-                : selected.length === 1
+                : missing === 'email'
+                  ? 'E-posta girin'
+                  : missing === 'whatsapp'
+                    ? 'Telefon girin'
+                    : selected.length === 1
                   ? 'Gönder'
                   : `${selected.length} kanaldan gönder`}
           </Button>

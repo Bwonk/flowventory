@@ -46,11 +46,20 @@ function SheetOverlay({
   )
 }
 
+/**
+ * Açık modal katmanın üstündeki bildirimler (sonner) tıklanabilir kalsın:
+ * toast'taki "Geri al" dışarı tık sayılıp katmanı kapatmasın.
+ */
+export function keepOpenOnToast(event: { target: EventTarget | null; preventDefault: () => void }) {
+  if (event.target instanceof Element && event.target.closest("[data-sonner-toaster]")) event.preventDefault()
+}
+
 function SheetContent({
   className,
   children,
   side = "right",
   showCloseButton = true,
+  onInteractOutside,
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Content> & {
   side?: "top" | "right" | "bottom" | "left"
@@ -78,6 +87,10 @@ function SheetContent({
             "motion-safe:data-[state=closed]:slide-out-to-bottom motion-safe:data-[state=open]:slide-in-from-bottom inset-x-0 bottom-0 h-auto border-t border-hairline",
           className
         )}
+        onInteractOutside={e => {
+          keepOpenOnToast(e)
+          onInteractOutside?.(e)
+        }}
         {...props}
       >
         {children}

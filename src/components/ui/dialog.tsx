@@ -6,6 +6,7 @@ import { Dialog as DialogPrimitive } from "radix-ui"
 import { CloseButton } from "@/components/ui/close-button"
 import { useTriggerOrigin } from "@/lib/hooks/use-trigger-origin"
 import { cn } from "@/lib/utils"
+import { keepOpenOnToast } from "@/components/ui/sheet"
 
 function Dialog({
   ...props
@@ -54,6 +55,7 @@ function DialogContent({
   children,
   showCloseButton = true,
   ref,
+  onInteractOutside,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
@@ -73,6 +75,10 @@ function DialogContent({
           "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 motion-safe:data-[state=closed]:zoom-out-90 motion-safe:data-[state=open]:zoom-in-90 data-[state=open]:duration-400 data-[state=closed]:duration-250 ease-reveal fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg sm:max-w-lg",
           className
         )}
+        onInteractOutside={e => {
+          keepOpenOnToast(e)
+          onInteractOutside?.(e)
+        }}
         {...props}
       >
         {children}
