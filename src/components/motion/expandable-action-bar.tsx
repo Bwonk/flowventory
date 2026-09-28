@@ -456,7 +456,10 @@ export function ExpandableActionBar({
                       'inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-medium tabular-nums',
                       item.badgeVariant === 'critical'
                         ? 'bg-critical text-critical-foreground'
-                        : 'bg-primary text-primary-foreground',
+                        : // Ink segmentte sayaç zeminle aynı renge düşmesin: renkler ters.
+                          item.variant === 'ink'
+                          ? 'bg-primary-foreground text-primary'
+                          : 'bg-primary text-primary-foreground',
                       isExpanded ? 'ml-1.5' : 'absolute top-0 right-0 h-3.5 min-w-3.5 text-[9px]',
                       classNames?.badge,
                     )}
