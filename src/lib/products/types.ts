@@ -15,7 +15,7 @@ export interface ProductRow {
   category?: string;
   thumbnail?: string;
   status: ProductStatus;
-  /** Kısmi tükenmede "N varyant tükendi" (getProductStatusLabel); yoksa varsayılan etiket. */
+  /** Kısmi tükenmede "N/M tükendi" (getProductStatusLabel); yoksa varsayılan etiket. */
   statusLabel?: string;
   totalStock: number;
   variantCount: number;

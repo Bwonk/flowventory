@@ -147,10 +147,10 @@ describe('applyVariantStockChange', () => {
 describe('getProductStatusLabel', () => {
   const stock = (count: number, id: string) => variant([{ stockCount: count, stockLocationId: 'loc-1' }], id);
 
-  it('bazı varyantlar tükendiyse "N varyant tükendi" döner (durum yine out)', () => {
+  it('bazı varyantlar tükendiyse "N/M tükendi" döner (durum yine out)', () => {
     const p = product([stock(0, 'l'), stock(100, 's'), stock(100, 'm'), stock(100, 'xl')]);
     expect(getProductStatus(p)).toBe('out');
-    expect(getProductStatusLabel(p, 'out')).toBe('1 varyant tükendi');
+    expect(getProductStatusLabel(p, 'out')).toBe('1/4 tükendi');
   });
 
   it('tüm varyantlar tükendiyse varsayılan etiket (undefined)', () => {

@@ -36,7 +36,7 @@ export function StockLifeBadge({ days, size = 'sm', title, className }: StockLif
     days === null ? 'Satışsız' : days > 365 ? '365+ gün' : `${days.toLocaleString('tr-TR')} gün`;
 
   return (
-    <Badge variant={variantFor(days)} size={size} title={title ?? tierFor(days)} className={cn('whitespace-nowrap tabular-nums', className)}>
+    <Badge variant={variantFor(days)} size={size} title={title ?? tierFor(days)} className={cn('tabular-nums', className)}>
       {label}
     </Badge>
   );

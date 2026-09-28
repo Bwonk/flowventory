@@ -6,8 +6,9 @@ import { cn } from '@/lib/utils';
  * Data-ink badge — uygulamadaki TEK rozet renk kaynağı (DESIGN.md §5).
  * shared/badges/* sarmalayıcıları yalnızca domain→variant eşler; kendi renk
  * haritası tutmaz. Renkler semantic token çiftlerinden; ham palet yasak.
+ * Hap asla kırılmaz (whitespace-nowrap): dar kolonda iki satırlık balona dönmesin.
  */
-const badgeVariants = cva('inline-flex items-center gap-1.5 rounded-full border font-medium', {
+const badgeVariants = cva('inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border font-medium', {
   variants: {
     variant: {
       neutral: 'border-transparent bg-muted text-muted-foreground',

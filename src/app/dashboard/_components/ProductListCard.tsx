@@ -21,7 +21,7 @@ export interface ProductListItem {
   /** Ürün adının altındaki ikincil satır. */
   meta?: string;
   status?: StockStatus;
-  /** Durum etiketi override'ı (kısmi tükenme: "N varyant tükendi"). */
+  /** Durum etiketi override'ı (kısmi tükenme: "N/M tükendi"). */
   statusLabel?: string;
   /** Sağdaki sayısal kolon (satış adedi / toplam stok). */
   value: number;

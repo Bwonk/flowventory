@@ -145,7 +145,7 @@ export function TableHeader<T>({
                     data-active={active}
                     data-direction={active ? sort?.direction : undefined}
                     className={cn(
-                      'group/sort relative inline-flex min-w-0 items-center rounded-sm whitespace-nowrap hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[active=true]:text-foreground',
+                      'group/sort relative inline-flex min-w-0 items-center rounded-sm whitespace-nowrap uppercase hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[active=true]:text-foreground',
                       PRESS_FEEDBACK_CLASS,
                     )}
                   >

@@ -173,7 +173,9 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   ([src/components/shared/badges/](src/components/shared/badges/):
   Status/Trend/SellThrough/StockLife/Category/Abc) ince adaptördür, kendi
   renk haritası tutmaz — yalnız domain→variant eşler. `StatusBadge`'in
-  `label` override'ı sayaç pili olarak sanksiyonludur ("8 tükendi").
+  `label` override'ı sayaç pili olarak sanksiyonludur ("8 tükendi"; kısmi
+  tükenmede oran "1/4 tükendi" — uzun cümle etiketi yasak). Taban hap
+  `whitespace-nowrap shrink-0`: rozet asla iki satıra kırılmaz.
   **Bilinçli istisna:** `AbcBadge` renkli taksonomidir (A=success, B=warning,
   C=neutral) — sınıf renk kodu tarama hızı için durum çiftlerini ödünç alır.
 - **Durum noktası:** tüm sinyal dotları `size-2 rounded-full bg-status-*`

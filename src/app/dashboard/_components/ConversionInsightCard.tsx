@@ -30,7 +30,7 @@ const COLUMNS: TableColumn<ConversionItem>[] = [
         <ProductThumb src={item.imageUrl ?? undefined} alt="" sizeClass="h-7 w-7" roundedClass="rounded" />
         <span className="truncate font-medium text-foreground">{item.productName}</span>
         {item.lowConversion && (
-          <Badge variant="warning" className="shrink-0">
+          <Badge variant="warning">
             Düşük Dönüşüm
           </Badge>
         )}
