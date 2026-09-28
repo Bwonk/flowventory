@@ -5,6 +5,7 @@ import {
   isRuleGranularity,
   isRuleScope,
   isRuleWindow,
+  MAX_RUNS_PER_DAY_LIMIT,
   RULE_ACTION_TYPES,
   type RuleActionResult,
   type RuleActionType,
@@ -129,7 +130,7 @@ export function toRuleLike(row: RuleRow): TrackingRuleLike | null {
     workflow: parseWorkflow(row.workflowJson, row.id),
     cooldownHours: row.cooldownHours,
     resetHours: row.resetHours,
-    maxRunsPerDay: Math.max(1, row.maxRunsPerDay),
+    maxRunsPerDay: Math.min(MAX_RUNS_PER_DAY_LIMIT, Math.max(1, row.maxRunsPerDay)),
   };
 }
 

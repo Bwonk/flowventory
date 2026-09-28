@@ -24,7 +24,12 @@ export default function KuralDuzenlePage() {
   const [error, setError] = useState<string | null>(null);
 
   const initialize = useCallback(async () => {
-    if (!id) return;
+    if (!id) {
+      // Yoksa iskelet sonsuza kadar kalıyordu.
+      setError('Kural bulunamadı.');
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {

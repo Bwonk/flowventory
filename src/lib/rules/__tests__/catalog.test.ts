@@ -91,7 +91,41 @@ describe('satın alma metrikleri', () => {
   });
   it('describe cümleleri', () => {
     expect(describeCondition({ metric: 'reorder_point_reached' })).toBe('yeniden sipariş noktasına gelirse');
-    expect(describeCondition({ metric: 'suggested_qty_above', threshold: 50 })).toBe('önerilen sipariş 50 adedi geçerse');
+    expect(describeCondition({ metric: 'suggested_qty_above', threshold: 50 })).toBe('önerilen sipariş 50 adede ulaşırsa');
+  });
+});
+
+describe('denetim düzeltmeleri', () => {
+  it('days_of_cover_below: stoğu biten ama satmayan ürün tetiklenmez', () => {
+    expect(evaluateCondition({ metric: 'days_of_cover_below', threshold: 7 }, target(0, 0))).toBeNull();
+    // Stoğu biten ve satan ürün tetiklenir (0 gün).
+    expect(evaluateCondition({ metric: 'days_of_cover_below', threshold: 7 }, target(0, 2))).not.toBeNull();
+  });
+  it('days_of_cover_below: 6,5 gün "< 7" sağlar (yuvarlanmaz)', () => {
+    expect(evaluateCondition({ metric: 'days_of_cover_below', threshold: 7 }, target(13, 2))).not.toBeNull();
+  });
+  it('stockout_before_lead_time: satışsız ürün tetiklenmez', () => {
+    expect(evaluateCondition({ metric: 'stockout_before_lead_time' }, target(0, 0))).toBeNull();
+  });
+  it('stock_drop: %9,5 düşüş %10 eşiğini sağlamaz', () => {
+    const t = target(181, 0, { previousStockByWindow: new Map([[24, 200]]) });
+    expect(evaluateCondition({ metric: 'stock_drop', threshold: 10, thresholdUnit: 'percent', windowHours: 24 }, t)).toBeNull();
+    expect(evaluateCondition({ metric: 'stock_drop', threshold: 9, thresholdUnit: 'percent', windowHours: 24 }, t)).not.toBeNull();
+  });
+  it('no_sales 24 saat: dün satış olduysa gece tetiklenmez', () => {
+    const soldByDate = new Map([['2026-09-15', 3]]);
+    const t = target(40, 0, { soldByDate });
+    expect(evaluateCondition({ metric: 'no_sales', windowHours: 24 }, t)).toBeNull();
+    expect(evaluateCondition({ metric: 'no_sales', windowHours: 24 }, target(40, 0, { soldByDate: new Map() }))).not.toBeNull();
+  });
+  it('reorder_point_reached: yoldaki adet sipariş noktasını geçiriyorsa tetiklenmez', () => {
+    expect(evaluateCondition({ metric: 'reorder_point_reached' }, target(20, 4, { incoming: 200 }))).toBeNull();
+    expect(evaluateCondition({ metric: 'reorder_point_reached' }, target(20, 4, { incoming: 5 }))).toContain('yolda 5');
+  });
+  it('suggested_qty_above: tedarikçi kolisine yuvarlanır', () => {
+    // ihtiyaç 128 → koli 50 → 150
+    const t = target(20, 4, { supply: { leadTimeDays: null, moq: null, casePack: 50 } });
+    expect(evaluateCondition({ metric: 'suggested_qty_above', threshold: 100 }, t)).toBe('Önerilen sipariş 150 adet (eşik 100).');
   });
 });
 

@@ -22,7 +22,10 @@ export function StockConsentDialog({ open, maxRunsPerDay, saving, onOpenChange, 
           <DialogDescription>Bu kural koşul sağlanınca ikas admin&apos;deki stoğa kendiliğinden yazar.</DialogDescription>
         </DialogHeader>
         <ul className="flex list-disc flex-col gap-1 pl-5 text-sm text-foreground">
-          <li>Varyant başına günde en fazla {maxRunsPerDay} yazım; tek seferde en fazla +{MAX_STOCK_STEP.toLocaleString('tr-TR')} adet.</li>
+          <li>
+            Bu kural varyant başına günde en fazla {maxRunsPerDay} kez yazar; tek seferde en fazla +
+            {MAX_STOCK_STEP.toLocaleString('tr-TR')} adet. Aynı varyantı yazan başka kurallar ayrıca sayılır.
+          </li>
           <li>Hedef, varyantın ilk deposudur.</li>
           <li>Her yazım zilde bildirim üretir ve kuralın geçmişinden geri alınabilir.</li>
         </ul>

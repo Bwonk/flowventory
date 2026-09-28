@@ -129,7 +129,8 @@ export function ConditionCard({ stageIndex, index, condition, removable, onSetMe
                   { value: 'percent', label: '%' },
                 ]}
                 value={condition.thresholdUnit}
-                onChange={u => onChange({ ...condition, thresholdUnit: u })}
+                // %'ye geçince eşik 100'e çekilir (500 kalıp kayıtta hata veriyordu).
+                onChange={u => onChange({ ...condition, thresholdUnit: u, threshold: u === 'percent' ? Math.min(condition.threshold, 100) : condition.threshold })}
                 aria-label="Eşik birimi"
               />
             ) : (

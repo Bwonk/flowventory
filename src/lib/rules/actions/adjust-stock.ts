@@ -16,6 +16,8 @@ export interface AdjustStockContext {
 }
 
 const fail = (detail: string): RuleActionResult => ({ type: 'adjust_stock', ok: false, detail });
+/** Geçici hata: bir sonraki turda yeniden denensin (olay bekleme süresini tüketmesin). */
+const retry = (detail: string): RuleActionResult => ({ type: 'adjust_stock', ok: false, detail, retryable: true });
 const fmt = (n: number) => n.toLocaleString('tr-TR');
 
 /**
@@ -29,7 +31,7 @@ export async function adjustStockAction(
   action: ActionOf<'adjust_stock'>,
 ): Promise<RuleActionResult> {
   if (!ctx.variantId) return fail('Stok aksiyonu varyant düzeyinde çalışır');
-  if (!ctx.authToken) return fail('ikas yetkisi bulunamadı (auth token yok)');
+  if (!ctx.authToken) return retry('ikas yetkisi bulunamadı (auth token yok)');
   if (ctx.runsToday >= ctx.maxRunsPerDay) return fail(`Günlük üst sınır doldu (${ctx.maxRunsPerDay}/gün)`);
 
   try {
@@ -38,7 +40,7 @@ export async function adjustStockAction(
       id: { eq: ctx.productId },
       pagination: { page: 1, limit: 1 },
     });
-    if (!productRes.isSuccess) return fail('Canlı stok okunamadı');
+    if (!productRes.isSuccess) return retry('Canlı stok okunamadı');
 
     const variant = productRes.data?.listProduct?.data?.[0]?.variants.find(v => v.id === ctx.variantId);
     if (!variant) return fail('Varyant bulunamadı');
@@ -67,7 +69,7 @@ export async function adjustStockAction(
     const errors = response.data?.saveVariantStocks?.errors;
     if (!response.isSuccess || !response.data?.saveVariantStocks || (errors && errors.length > 0)) {
       logger.error('Rule stock write failed', { merchantId: ctx.merchantId, productId: ctx.productId, errors });
-      return fail('ikas stok yazımını reddetti');
+      return retry('ikas stok yazımını reddetti');
     }
 
     await refreshProductSnapshot(ctx.merchantId, ctx.authToken, ctx.productId).catch(error => {
@@ -82,6 +84,6 @@ export async function adjustStockAction(
     };
   } catch (error) {
     logger.error('Rule stock action error', { merchantId: ctx.merchantId, productId: ctx.productId, error });
-    return fail('Stok yazılamadı');
+    return retry('Stok yazılamadı');
   }
 }

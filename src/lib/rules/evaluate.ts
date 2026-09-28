@@ -10,12 +10,12 @@ import type { AuthToken } from '@/models/auth-token';
 import { adjustStockAction } from './actions/adjust-stock';
 import { sendRuleEmails } from './actions/email';
 import { createRuleNotification } from './actions/notify';
-import { windowStartDateKey } from './catalog';
 import { evaluateRule, nextState, targetKeyOf, type RuleHit } from './evaluate-rule';
 import { parseActionResults, toRuleLike } from './serialize';
 import type { RuleActionResult, RuleTarget, RuleWindowHours, TrackingRuleLike } from './types';
 import { getDraftQtyByVariant, getIncomingByVariant } from '@/lib/purchase-orders/queries';
 import { addToDraftAction } from './actions/add-to-draft';
+import { METRIC_CATALOG, windowStartDateKey } from './catalog';
 
 const HOUR_MS = 60 * 60 * 1000;
 /** Satış verisi bu kadar geriye okunur (en geniş pencere 90 gün). */
@@ -179,6 +179,17 @@ export async function evaluateTrackingRules(
       ? classifyAbc(Array.from(products.values()).map(p => ({ id: p.productId, revenue: p.revenue30 })))
       : null;
 
+    // Satın alma koşulları raporla aynı formülü kullanır: yoldaki adet + tedarikçi ayarları.
+    const needsPurchase = rules.some(r =>
+      r.workflow.stages.some(s => s.conditions.some(n => METRIC_CATALOG[n.condition.metric].domain === 'satinalma')),
+    );
+    const purchaseCtx = needsPurchase
+      ? await Promise.all([
+          getIncomingByVariant(merchantId),
+          prisma.vendorContact.findMany({ where: { merchantId }, select: { vendorId: true, leadTimeDays: true, moq: true, casePack: true } }),
+        ]).then(([incoming, contacts]) => ({ incoming, supply: new Map(contacts.map(c => [c.vendorId, c])) }))
+      : null;
+
     const dayKeys = Array.from({ length: VELOCITY_WINDOW_DAYS }, (_, i) =>
       shiftDateKey(todayKey, -(VELOCITY_WINDOW_DAYS - 1 - i)),
     );
@@ -197,6 +208,8 @@ export async function evaluateTrackingRules(
       abcClass: abcByProduct?.get(a.productId) ?? null,
       leadTimeDays: settings.leadTimeDays,
       targetStockDays: settings.targetStockDays,
+      incoming: purchaseCtx ? a.variantIds.reduce((sum, v) => sum + (purchaseCtx.incoming.get(v)?.qty ?? 0), 0) : 0,
+      supply: purchaseCtx && a.vendorId ? purchaseCtx.supply.get(a.vendorId) : undefined,
       todayKey,
     });
     const productTargets = Array.from(products.values()).map(toTarget);
@@ -303,7 +316,14 @@ export async function evaluateTrackingRules(
           },
           stockAction,
         );
-        results.push(result);
+        // Yalnız stok aksiyonlu tetikte geçici hata: olay silinir ki bekleme süresi
+        // (≥ 24 saat) tüketilmesin ve sonraki turda yeniden denensin.
+        if (result.retryable && hit.actions.length === 1) {
+          await prisma.trackingRuleEvent.delete({ where: { id: eventId } }).catch(() => undefined);
+          logger.warn('Rule stock write deferred (retryable)', { merchantId, ruleId: hit.ruleId, detail: result.detail });
+          continue;
+        }
+        results.push({ ...result, retryable: undefined });
         if (result.ok && result.stock) {
           stockRuns.set(runKey, (stockRuns.get(runKey) ?? 0) + 1);
           stockAfter = target.currentStock + (result.stock.newCount - result.stock.previousCount);

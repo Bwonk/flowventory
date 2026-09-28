@@ -124,7 +124,14 @@ export function RuleBuilderPage({ token, mode, rule, template, notificationEmail
             <Button asChild variant="outline" disabled={saving}>
               <Link
                 href="/dashboard/kurallar"
+                // asChild + Link'te disabled etkisiz; kayıt sürerken çıkış kilitli.
+                aria-disabled={saving || undefined}
+                className={saving ? 'pointer-events-none opacity-50' : undefined}
                 onClick={event => {
+                  if (saving) {
+                    event.preventDefault();
+                    return;
+                  }
                   // Kirli taslak tek tıkla gitmesin: önce sor (yeni sekmede açma serbest).
                   if (!isDirty || event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
                   event.preventDefault();

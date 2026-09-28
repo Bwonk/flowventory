@@ -80,7 +80,8 @@ export function ActionCard({ index, action, usedTypes, removable, notificationEm
               size="sm"
               options={MODE_OPTIONS}
               value={action.mode}
-              onChange={mode => onChange({ ...action, mode })}
+              // "Artır"a geçince adet adım sınırına çekilir (1.200 kalıp kayıtta hata veriyordu).
+              onChange={mode => onChange({ ...action, mode, amount: mode === 'increase' ? Math.min(action.amount, MAX_STOCK_STEP) : action.amount })}
               aria-label="Stok işlemi"
             />
             <NumberStepper
@@ -104,6 +105,11 @@ export function ActionCard({ index, action, usedTypes, removable, notificationEm
             <span className="font-medium">{def.danger}</span> {def.hint}
           </span>
         </div>
+      )}
+      {action.type === 'adjust_stock' && action.mode === 'set' && (
+        <p className="mt-2 text-pretty text-xs text-muted-foreground">
+          Stok zaten {action.amount.toLocaleString('tr-TR')} ya da üstündeyse dokunulmaz; bu aksiyon stoğu düşürmez.
+        </p>
       )}
       {!def.danger && <p className="mt-2 text-pretty text-xs text-muted-foreground">{def.hint}</p>}
       {def.needsEmail && !notificationEmail && (

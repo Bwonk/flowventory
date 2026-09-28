@@ -50,7 +50,12 @@ export const MAX_ACTIONS = 4;
 /** Stok aksiyonu emniyeti (K5): tek yazımda en fazla bu kadar artış. */
 export const MAX_STOCK_STEP = 1_000;
 export const MAX_STOCK = 1_000_000;
-export const MAX_RUNS_PER_DAY_LIMIT = 10;
+/**
+ * Varyant başına günlük stok yazımı sınırı. Her aşama bekleme süresi (en az
+ * 24 saat) yüzünden günde en fazla bir kez çalışır; en fazla MAX_STAGES aşama
+ * olduğundan daha büyük değer etkisizdi (eskiden 10'a kadar seçilebiliyordu).
+ */
+export const MAX_RUNS_PER_DAY_LIMIT = 3;
 
 export const RULE_METRICS = [
   // stok
@@ -148,6 +153,8 @@ export interface RuleActionResult {
   type: RuleActionType;
   ok: boolean;
   detail: string;
+  /** Geçici hata (token yok, ikas hatası): olay silinir, bekleme süresi tüketilmez. Saklanmaz. */
+  retryable?: boolean;
   /** Yalnız başarılı stok yazımında: "Geri al" için gereken her şey. */
   stock?: {
     stockLocationId: string;
@@ -187,6 +194,10 @@ export interface RuleTarget {
   abcClass: AbcClass | null;
   leadTimeDays: number;
   targetStockDays: number;
+  /** Gönderilmiş siparişlerde gelmemiş adet — satın alma koşulları öneriden düşer. */
+  incoming?: number;
+  /** Tedarikçi ayarları (Satın Alma raporuyla aynı formül için). */
+  supply?: { leadTimeDays: number | null; moq: number | null; casePack: number | null };
   /** Bugünün gün anahtarı (merchant TZ) — pencere hesapları için. */
   todayKey: string;
   /** Aşama ≥ 2 değerlendirilirken motor doldurur. */

@@ -6,7 +6,7 @@
 
 import { agingBucket, AGING_BUCKET_ORDER, type AbcClass, type AgingBucketKey } from '@/lib/reports/abc';
 import { ACTION_ORDER, deriveAction, type ActionKey } from '@/lib/reports/actions';
-import { computePurchaseLine } from '@/lib/reports/purchase';
+import { computeReplenishment } from '@/lib/reports/purchase';
 import { isStockoutBeforeLeadTime, sellThroughBand, type SellThroughBand } from '@/lib/reports/sell-through';
 import { daysOfCover, velocityPerDay } from '@/lib/stock-history/projection';
 import { shiftDateKey } from '@/lib/timezone';
@@ -65,25 +65,45 @@ export function windowStartDateKey(todayKey: string, windowHours: number): strin
   return shiftDateKey(todayKey, -(days - 1));
 }
 
-function soldSince(t: RuleTarget, windowHours: RuleWindowHours): number {
-  const fromKey = windowStartDateKey(t.todayKey, windowHours);
+/**
+ * @param atLeast true → pencere en az `windowHours` kapsasın (bir gün fazlası).
+ *   "Satış yok" bunu kullanır: 24 saat = bugün olsaydı gece 00:05'te günün
+ *   henüz satışı olmayan her ürün tetikleniyor, mesaj "son 24 saatte" diyordu.
+ */
+function soldSince(t: RuleTarget, windowHours: RuleWindowHours, atLeast = false): number {
+  const fromKey = shiftDateKey(windowStartDateKey(t.todayKey, windowHours), atLeast ? -1 : 0);
   let sum = 0;
   for (const [date, qty] of t.soldByDate) if (date >= fromKey) sum += qty;
   return sum;
 }
 
+/** Satın Alma raporuyla aynı formül: yoldaki adet düşülür, tedarikçi süresi/MOQ/koli uygulanır. */
 function purchaseLine(t: RuleTarget) {
-  return computePurchaseLine({
+  return computeReplenishment({
     dailyQuantities: t.dailyQuantities,
     currentStock: t.currentStock,
-    leadTimeDays: t.leadTimeDays,
+    incoming: t.incoming ?? 0,
+    leadTimeDays: t.supply?.leadTimeDays ?? t.leadTimeDays,
     targetStockDays: t.targetStockDays,
+    moq: t.supply?.moq ?? null,
+    casePack: t.supply?.casePack ?? null,
   });
 }
 
+/** Analiz sayfasıyla aynı sınıflandırma (yaşlanma kovası, aksiyon kuyruğu): yuvarlanmış kapsama. */
+function analysisCover(t: RuleTarget): { cover: number | null } {
+  return { cover: daysOfCover(t.currentStock, velocityPerDay(t.soldQty30)) };
+}
+
+/**
+ * Stok ömrü (yuvarlanmamış). Satış yoksa null — stoğu biten ama satmayan
+ * (satıştan kalkmış) ürün "0 gün" sayılıp her turda tetikleniyordu. Karşılaştırma
+ * ham değerle: 6,5 gün "< 7" koşulunu sağlar (eskiden 7'ye yuvarlanıp kaçıyordu).
+ */
 function coverDays(t: RuleTarget): { velocity: number; cover: number | null } {
   const velocity = velocityPerDay(t.soldQty30);
-  return { velocity, cover: daysOfCover(t.currentStock, velocity) };
+  if (velocity <= 0) return { velocity, cover: null };
+  return { velocity, cover: Math.max(0, t.currentStock) / velocity };
 }
 
 const SELL_THROUGH_OPTIONS: ReadonlyArray<{ value: SellThroughBand; label: string }> = [
@@ -124,8 +144,10 @@ export const METRIC_CATALOG: { [M in RuleMetric]: MetricDef<M> } = {
       if (previous === null) return null;
       const drop = previous - t.currentStock;
       if (drop <= 0) return null;
-      const pct = previous > 0 ? Math.round((drop / previous) * 100) : null;
-      const hit = c.thresholdUnit === 'percent' ? pct !== null && pct >= c.threshold : drop >= c.threshold;
+      const exactPct = previous > 0 ? (drop / previous) * 100 : null;
+      const pct = exactPct === null ? null : Math.round(exactPct);
+      // Ham oranla karşılaştır: %9,5 düşüş "%10" eşiğini sağlamaz (yuvarlanınca sağlıyordu).
+      const hit = c.thresholdUnit === 'percent' ? exactPct !== null && exactPct >= c.threshold : drop >= c.threshold;
       if (!hit) return null;
       return `${windowSentence(c.windowHours)} stok ${fmt(previous)} → ${fmt(t.currentStock)} (−${fmt(drop)} adet${pct !== null ? `, %${pct}` : ''}).`;
     },
@@ -161,7 +183,7 @@ export const METRIC_CATALOG: { [M in RuleMetric]: MetricDef<M> } = {
     hint: 'Penceredeki satış adedi (gün çözünürlüğü — 24/48 saat takvim günü sayılır).',
     input: { kind: 'number', units: ['units'], min: 1, max: 1_000_000, defaultValue: () => 20 },
     window: 'measure',
-    describe: c => `${windowLabel(c.windowHours)} içinde satış ${fmt(c.threshold)} adedi geçerse`,
+    describe: c => `${windowLabel(c.windowHours)} içinde satış ${fmt(c.threshold)} adede ulaşırsa`,
     evaluate: (c, t) => {
       const sold = soldSince(t, c.windowHours);
       return sold >= c.threshold ? `${windowSentence(c.windowHours)} ${fmt(sold)} adet satıldı (eşik ${fmt(c.threshold)}).` : null;
@@ -171,12 +193,12 @@ export const METRIC_CATALOG: { [M in RuleMetric]: MetricDef<M> } = {
     metric: 'no_sales',
     domain: 'stok',
     label: 'Satış yok',
-    hint: 'Pencere boyunca hiç satış yoksa ve stok varsa.',
+    hint: 'En az pencere boyunca hiç satış yoksa ve stok varsa (24 saat: dün ve bugün satışsız).',
     input: { kind: 'none' },
     window: 'measure',
     describe: c => `${windowLabel(c.windowHours)} boyunca satış olmazsa`,
     evaluate: (c, t) => {
-      if (t.currentStock <= 0 || soldSince(t, c.windowHours) > 0) return null;
+      if (t.currentStock <= 0 || soldSince(t, c.windowHours, true) > 0) return null;
       return `${windowSentence(c.windowHours)} satış yok; ${fmt(t.currentStock)} adet stok bekliyor.`;
     },
   },
@@ -184,14 +206,15 @@ export const METRIC_CATALOG: { [M in RuleMetric]: MetricDef<M> } = {
     metric: 'reorder_point_reached',
     domain: 'satinalma',
     label: 'Yeniden sipariş noktası',
-    hint: 'Stok, tedarik süresi boyunca satışı karşılayacak seviyenin (emniyet stoğu dahil) altına indi.',
+    hint: 'Stok + yoldaki adet, tedarik süresi boyunca satışı karşılayacak seviyeye (emniyet stoğu dahil) ya da altına indi. Satın Alma raporundaki "öneri" ile aynı an.',
     input: { kind: 'none' },
     window: 'none',
     describe: () => 'yeniden sipariş noktasına gelirse',
     evaluate: (_c, t) => {
       const line = purchaseLine(t);
-      if (!line.urgent) return null;
-      return `Stok ${fmt(t.currentStock)} adet, yeniden sipariş noktası ${fmt(line.reorderPoint)} (öneri ${fmt(line.suggestedQty)} adet).`;
+      if (!line.needsOrder) return null;
+      const incoming = line.incoming > 0 ? `, yolda ${fmt(line.incoming)}` : '';
+      return `Stok ${fmt(t.currentStock)} adet${incoming}, yeniden sipariş noktası ${fmt(line.reorderPoint)} (öneri ${fmt(line.suggestedQty)} adet).`;
     },
   },
   below_safety_stock: {
@@ -212,10 +235,10 @@ export const METRIC_CATALOG: { [M in RuleMetric]: MetricDef<M> } = {
     metric: 'suggested_qty_above',
     domain: 'satinalma',
     label: 'Önerilen sipariş büyük',
-    hint: 'Satın alma raporunun önerdiği sipariş adedi eşiği geçerse.',
+    hint: 'Satın Alma raporunun önerdiği adet (yolda düşülmüş, koliye yuvarlanmış) eşiğe ulaşırsa. Rapordaki adetle birebir için varyant düzeyini seçin; ürün düzeyinde varyantların toplamı üzerinden hesaplanır.',
     input: { kind: 'number', units: ['units'], min: 1, max: 1_000_000, defaultValue: () => 50 },
     window: 'none',
-    describe: c => `önerilen sipariş ${fmt(c.threshold)} adedi geçerse`,
+    describe: c => `önerilen sipariş ${fmt(c.threshold)} adede ulaşırsa`,
     evaluate: (c, t) => {
       const line = purchaseLine(t);
       return line.suggestedQty >= c.threshold ? `Önerilen sipariş ${fmt(line.suggestedQty)} adet (eşik ${fmt(c.threshold)}).` : null;
@@ -258,7 +281,7 @@ export const METRIC_CATALOG: { [M in RuleMetric]: MetricDef<M> } = {
     describe: c => `yaşlandırma ${labelOf(AGING_OPTIONS, c.value).toLocaleLowerCase('tr')} ise`,
     evaluate: (c, t) => {
       if (t.currentStock <= 0) return null;
-      const { cover } = coverDays(t);
+      const { cover } = analysisCover(t);
       const bucket = agingBucket(cover);
       return bucket === c.value ? `Yaşlandırma kovası: ${labelOf(AGING_OPTIONS, bucket)} (${fmt(t.currentStock)} adet stok).` : null;
     },
@@ -283,7 +306,7 @@ export const METRIC_CATALOG: { [M in RuleMetric]: MetricDef<M> } = {
     describe: c => `aksiyon '${ACTION_LABELS[c.value]}' ise`,
     evaluate: (c, t) => {
       if (t.abcClass === null) return null;
-      const { cover } = coverDays(t);
+      const { cover } = analysisCover(t);
       const action = deriveAction(
         {
           abcClass: t.abcClass,

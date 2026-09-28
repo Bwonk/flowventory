@@ -129,6 +129,7 @@ export function TriggerCard({
                     options={products}
                     loading={optionsLoading}
                     value={state.targetId}
+                    valueLabel={state.targetLabel}
                     placeholder="Ürün seç"
                     searchPlaceholder="Ürün ara"
                     emptyText="Ürün bulunamadı"
@@ -140,6 +141,7 @@ export function TriggerCard({
                     options={vendors}
                     loading={optionsLoading}
                     value={state.targetId}
+                    valueLabel={state.targetLabel}
                     placeholder="Tedarikçi seç"
                     searchPlaceholder="Tedarikçi ara"
                     emptyText="Tedarikçi atanmış ürün yok"

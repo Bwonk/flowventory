@@ -140,12 +140,24 @@ export const ruleInputSchema = z
     name: z.string().trim().min(1, 'Kural adı gerekli').max(80, 'Kural adı en fazla 80 karakter'),
     scope: z.enum(RULE_SCOPES),
     targetId: z.string().trim().min(1).max(120).nullable().optional(),
-    targetLabel: z.string().trim().min(1).max(160).nullable().optional(),
+    // Görünen ad; ikas'ta 160+ karakterli ürün adı kaydı engelliyordu (İngilizce Zod hatası) → kırp.
+    targetLabel: z
+      .string()
+      .trim()
+      .min(1)
+      .transform(s => (s.length > 160 ? `${s.slice(0, 159)}…` : s))
+      .nullable()
+      .optional(),
     granularity: z.enum(RULE_GRANULARITIES).default('product'),
     workflow: workflowSchema,
     cooldownHours: windowSchema,
     resetHours: windowSchema.default(168),
-    maxRunsPerDay: z.number().int().min(1).max(MAX_RUNS_PER_DAY_LIMIT).default(1),
+    maxRunsPerDay: z
+      .number()
+      .int()
+      .min(1)
+      .transform(n => Math.min(n, MAX_RUNS_PER_DAY_LIMIT))
+      .default(1),
     enabled: z.boolean().default(true),
     /**
      * Stok aksiyonu onayı (K5): kullanıcı oluşturucuda uyarıyı onayladı.

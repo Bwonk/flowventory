@@ -55,7 +55,10 @@ export function RunSettings({ state, hasStockAction, onPatch }: RunSettingsProps
           </Setting>
         )}
         {hasStockAction && (
-          <Setting label="Günlük stok yazımı üst sınırı" hint="Varyant başına, son 24 saatte.">
+          <Setting
+            label="Günlük stok yazımı üst sınırı"
+            hint="Bu kural için varyant başına, son 24 saatte. Her aşama günde en fazla bir kez çalışır; sınır çok aşamalı kurallarda anlamlı."
+          >
             <div className="flex items-center gap-2">
               <NumberStepper
                 min={1}
