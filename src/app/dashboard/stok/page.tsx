@@ -12,6 +12,7 @@ import { ErrorState } from '@/components/shared/ErrorState';
 import { useMerchantCurrency } from '@/lib/currency';
 import { applyVariantStockChange, type VariantStockChange } from '@/lib/products/product';
 import { StokSkeleton } from './_components/StokSkeleton';
+import { ContentFadeIn } from '@/components/motion/content-fade-in';
 
 type Product = NonNullable<ListProductsApiResponse['products']>[0];
 
@@ -131,17 +132,19 @@ function StokPageContent() {
   }
 
   return (
-    <HomePage
-      token={token}
-      storeName={storeName}
-      products={products}
-      analytics={analytics}
-      viewStats={viewStats}
-      loading={loading}
-      initialStatusFilter={initialStatusFilter}
-      initialSelectedProductId={productParam || undefined}
-      onVariantStockChange={handleVariantStockChange}
-    />
+    <ContentFadeIn>
+      <HomePage
+        token={token}
+        storeName={storeName}
+        products={products}
+        analytics={analytics}
+        viewStats={viewStats}
+        loading={loading}
+        initialStatusFilter={initialStatusFilter}
+        initialSelectedProductId={productParam || undefined}
+        onVariantStockChange={handleVariantStockChange}
+      />
+    </ContentFadeIn>
   );
 }
 

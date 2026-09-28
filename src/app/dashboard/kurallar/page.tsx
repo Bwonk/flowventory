@@ -8,6 +8,7 @@ import { PageContainer } from '@/components/layout/PageContainer';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { ErrorState } from '@/components/shared/ErrorState';
 import { KurallarSkeleton } from './_components/KurallarSkeleton';
+import { ContentFadeIn } from '@/components/motion/content-fade-in';
 import { NewRuleMenu } from './_components/NewRuleMenu';
 import { RulesList } from './_components/RulesList';
 import { useTrackingRules } from './hooks/use-tracking-rules';
@@ -49,7 +50,11 @@ export default function KurallarPage() {
   if (initializing) return <KurallarSkeleton />;
   if (initError || !token) return <ErrorState description={initError ?? 'Sayfa yüklenemedi.'} onRetry={initialize} />;
 
-  return <KurallarContent token={token} notificationEmail={notificationEmail} />;
+  return (
+    <ContentFadeIn>
+      <KurallarContent token={token} notificationEmail={notificationEmail} />
+    </ContentFadeIn>
+  );
 }
 
 function KurallarContent({ token, notificationEmail }: { token: string; notificationEmail: string | null }) {

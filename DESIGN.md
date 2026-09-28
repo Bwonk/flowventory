@@ -591,6 +591,21 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   (`transition-opacity duration-150`). Her üçü `prefers-reduced-motion`'da
   kapalıdır (`animate-enter` CSS'te, metre `useReducedMotion` ile). Bu desen
   sayfa açılışına özeldir — state değişimlerinde yeniden tetiklenmez.
+- **Sert geçiş kapatmaları** (find-animation-opportunities, 28 Eyl 2026):
+  sayfa iskeleti → içerik
+  [ContentFadeIn](src/components/motion/content-fade-in.tsx) ile 200ms grup
+  opaklığı (yalnız opaklık — transform yok, `fixed` araç yolları kaymaz;
+  stok/rapor/analiz/kurallar/ayarlar); tablo sonuçsuz kalınca boş durum 150ms
+  opaklıkla girer (çıkış yok); bekliyor/pasif satır soluklaşması 150ms
+  (`transition-[color,background-color,opacity]`); ürün detayında Stok Yolu ↔
+  Satış Grafiği sekmesi 100ms söner / 150ms belirir; ürün detay modalı
+  kapanırken son ürünü tutar (çıkış boş kartta oynamaz). Başlarken popup'ında
+  adım içeriği yön farkındalıklı değişir (giriş ±8px + opaklık `SPRING`,
+  çıkış 120ms opaklık, `mode="wait"`), başlık 150/100ms opaklık, seçili
+  özelliğin açıklaması yükseklikle açılır. Plan kartında abonelik aktif olduğu
+  an rozet `popLayout` takası, aksiyon alanı 200ms çöker, durum satırında tik
+  bir kez çizilir (300ms) — konfeti yok. Hepsi reduced-motion'da anlık /
+  yalnız opaklık.
 - **Liste ve araç yolu ritmi** (§5 "Liste kalıbı" / "Araç yolu"): hover
   150ms renk; hap/paylaşımlı-layout kayması spring 350/35; tab içeriği
   değişirken eski içerik 100ms söner, yenisi 150ms belirir (yatay kayma yok —

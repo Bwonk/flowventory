@@ -200,7 +200,14 @@ export function Table<T>({
   const leadColumns = renderColumns.length + (selectable ? 1 : 0) + (sized ? 1 : 0);
   const showSkeleton = loading && sortedRows.length === 0;
 
-  if (!loading && sortedRows.length === 0 && emptyState) return <>{emptyState}</>;
+  // Boş durum (filtre/arama sonuçsuz) tablonun yerine geçer: yalnız giriş,
+  // 150ms opaklık — veri gelince çıkış beklemesin (tbody'nin 200ms'lik
+  // solması bu yolda çalışmıyordu).
+  if (!loading && sortedRows.length === 0 && emptyState) {
+    return (
+      <div className="animate-in fade-in-0 duration-150 ease-out motion-reduce:animate-none">{emptyState}</div>
+    );
+  }
 
   const renderRow = (entry: TableRow<T>, index: number): ReactNode => {
     const state = rowState?.(entry.row, index);
@@ -213,7 +220,8 @@ export function Table<T>({
         data-selected={isSelected || undefined}
         onClick={onRowClick ? () => onRowClick(entry.row) : undefined}
         className={cn(
-          'group transition-colors duration-150 hover:bg-muted/40',
+          // opacity de listede: bekliyor/pasif satır soluklaşması anında değil 150ms.
+          'group transition-[color,background-color,opacity] duration-150 ease-out hover:bg-muted/40',
           onRowClick && 'cursor-pointer',
           state?.pending && 'opacity-60',
           state?.disabled && 'opacity-50',

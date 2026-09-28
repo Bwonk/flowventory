@@ -5,6 +5,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/button';
 import { SubscriptionPanel } from '@/components/billing/SubscriptionPanel';
 import { AyarlarSkeleton } from './_components/AyarlarSkeleton';
+import { ContentFadeIn } from '@/components/motion/content-fade-in';
 import { NotificationSection } from './_components/NotificationSection';
 import { RulesLinkSection } from './_components/RulesLinkSection';
 import { SettingsSection } from './_components/SettingsSection';
@@ -33,40 +34,42 @@ export default function AyarlarPage() {
           </Button>
         </div>
       ) : (
-        <section className="divide-y divide-hairline rounded-lg border border-hairline bg-card">
-          {/* Bölüm id="veri-senkron" / "takip-scripti" taşır: Başlarken
-              rehberindeki senkron ve script adımları buraya derin bağlanır. */}
-          <SyncSection token={token} />
-          <TrackingScriptSection token={token} initialStatus={trackingStatus} />
-          {/* Bölüm id="bildirim-ayarlari" taşır: bildirim panelinin boş durumu
-              buraya derin bağlanır (NotificationDrawer). */}
-          <NotificationSection
-            token={token}
-            initialSettings={
-              settings
-                ? {
-                    notificationEmail: settings.notificationEmail,
-                    emailNotifications: settings.emailNotifications,
-                    digestFrequency: settings.digestFrequency,
-                    digestWeekday: settings.digestWeekday,
-                    digestHour: settings.digestHour,
-                    timezone: settings.timezone,
-                  }
-                : null
-            }
-          />
-          {/* Kurallar kendi sayfasında (/dashboard/kurallar); burada yalnız yönlendirme. */}
-          <RulesLinkSection />
-          {/* Aboneliğin kalıcı evi — Başlarken satırı emekli olduktan sonra da görünür. */}
-          <SettingsSection
-            id="plan"
-            eyebrow="ABONELİK"
-            title="Plan ve abonelik"
-            description="Mevcut planın, deneme süren ve yenileme tarihi."
-          >
-            <SubscriptionPanel />
-          </SettingsSection>
-        </section>
+        <ContentFadeIn>
+          <section className="divide-y divide-hairline rounded-lg border border-hairline bg-card">
+            {/* Bölüm id="veri-senkron" / "takip-scripti" taşır: Başlarken
+                rehberindeki senkron ve script adımları buraya derin bağlanır. */}
+            <SyncSection token={token} />
+            <TrackingScriptSection token={token} initialStatus={trackingStatus} />
+            {/* Bölüm id="bildirim-ayarlari" taşır: bildirim panelinin boş durumu
+                buraya derin bağlanır (NotificationDrawer). */}
+            <NotificationSection
+              token={token}
+              initialSettings={
+                settings
+                  ? {
+                      notificationEmail: settings.notificationEmail,
+                      emailNotifications: settings.emailNotifications,
+                      digestFrequency: settings.digestFrequency,
+                      digestWeekday: settings.digestWeekday,
+                      digestHour: settings.digestHour,
+                      timezone: settings.timezone,
+                    }
+                  : null
+              }
+            />
+            {/* Kurallar kendi sayfasında (/dashboard/kurallar); burada yalnız yönlendirme. */}
+            <RulesLinkSection />
+            {/* Aboneliğin kalıcı evi — Başlarken satırı emekli olduktan sonra da görünür. */}
+            <SettingsSection
+              id="plan"
+              eyebrow="ABONELİK"
+              title="Plan ve abonelik"
+              description="Mevcut planın, deneme süren ve yenileme tarihi."
+            >
+              <SubscriptionPanel />
+            </SettingsSection>
+          </section>
+        </ContentFadeIn>
       )}
     </PageContainer>
   );

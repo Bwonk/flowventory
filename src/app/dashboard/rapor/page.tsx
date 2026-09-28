@@ -11,6 +11,7 @@ import { ErrorState } from '@/components/shared/ErrorState';
 import { useMerchantCurrency } from '@/lib/currency';
 import { markReportViewed, markStoreSynced } from '@/lib/onboarding';
 import { RaporSkeleton } from './_components/RaporSkeleton';
+import { ContentFadeIn } from '@/components/motion/content-fade-in';
 import { clampQty, seedBasket, type BasketState } from './_components/basket';
 import { ReportActionBar } from './_components/ReportActionBar';
 import { InfoTip } from '@/components/shared/InfoTip';
@@ -235,84 +236,86 @@ export default function RaporPage() {
   ];
 
   return (
-    <PageContainer className="print:max-w-none print:p-0">
-      <PageHeader
-        eyebrow="RAPOR"
-        title="Satın Alma Raporu"
-        // Açıklama satırı yerine başlık yanındaki "i" balonu — araç yolu açılınca
-        // üstüne gelecek metin kalmaz; bilgi istendiğinde bir hover uzakta.
-        titleAccessory={
-          <InfoTip
-            ariaPrefix="Rapor bilgisi"
-            text={`Son ${report.salesWindowDays} günün satış hızına göre · ${generatedAt.toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' })}`}
-          />
-        }
-        // Sayfa araçları kompakt ikon yolunda (DESIGN.md §5 "Araç yolu"); print'te gizli.
-        actions={
-          <ReportActionBar
-            token={token}
-            leadTimeDays={report.leadTimeDays}
-            targetStockDays={report.targetStockDays}
-            onApplySettings={applySettings}
-            onVendorCreated={vendor => {
-              setVendorList(prev =>
-                [...prev, vendor].sort((a, b) => a.vendorName.localeCompare(b.vendorName, 'tr')),
-              );
-              // Yeni tedarikçinin tab'ı anında oluşur ve aktif olur.
-              setActiveVendorKey(vendor.vendorId);
-            }}
-            onRefresh={initialize}
+    <ContentFadeIn>
+      <PageContainer className="print:max-w-none print:p-0">
+        <PageHeader
+          eyebrow="RAPOR"
+          title="Satın Alma Raporu"
+          // Açıklama satırı yerine başlık yanındaki "i" balonu — araç yolu açılınca
+          // üstüne gelecek metin kalmaz; bilgi istendiğinde bir hover uzakta.
+          titleAccessory={
+            <InfoTip
+              ariaPrefix="Rapor bilgisi"
+              text={`Son ${report.salesWindowDays} günün satış hızına göre · ${generatedAt.toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' })}`}
+            />
+          }
+          // Sayfa araçları kompakt ikon yolunda (DESIGN.md §5 "Araç yolu"); print'te gizli.
+          actions={
+            <ReportActionBar
+              token={token}
+              leadTimeDays={report.leadTimeDays}
+              targetStockDays={report.targetStockDays}
+              onApplySettings={applySettings}
+              onVendorCreated={vendor => {
+                setVendorList(prev =>
+                  [...prev, vendor].sort((a, b) => a.vendorName.localeCompare(b.vendorName, 'tr')),
+                );
+                // Yeni tedarikçinin tab'ı anında oluşur ve aktif olur.
+                setActiveVendorKey(vendor.vendorId);
+              }}
+              onRefresh={initialize}
+              vendors={displayVendors}
+              vendorList={vendorList}
+              basket={basket}
+              onLineQtyChange={handleLineQtyChange}
+              onResetBasket={handleResetBasket}
+              onVendorSent={handleVendorSent}
+              onPrint={() => window.print()}
+            />
+          }
+        />
+
+        {/* Özet — tek tedarikçi yazdırmada çıktıya girmez */}
+        <ReportKpiStrip
+          report={report}
+          vendorCount={displayVendors.filter(v => v.vendorId !== null).length}
+          printVendorId={printVendorId}
+        />
+
+        {displayVendors.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 rounded-lg border border-hairline bg-card px-6 py-16 text-center">
+            <p className="text-sm font-medium text-foreground">Sipariş önerisi yok</p>
+            <p className="text-xs text-muted-foreground">
+              Satış hızı ve mevcut stok seviyelerine göre şu an sipariş gerektiren ürün bulunmuyor.
+            </p>
+          </div>
+        ) : (
+          <VendorTabsPanel
             vendors={displayVendors}
+            token={token}
             vendorList={vendorList}
+            stockOverrides={stockOverrides}
+            onStockChange={handleStockChange}
             basket={basket}
             onLineQtyChange={handleLineQtyChange}
-            onResetBasket={handleResetBasket}
             onVendorSent={handleVendorSent}
-            onPrint={() => window.print()}
+            onAssigned={handleAssigned}
+            onProductsAssigned={handleProductsAssigned}
+            onVendorContactSaved={handleVendorContactSaved}
+            onVendorDeleted={handleVendorDeleted}
+            activeKey={activeVendorKey}
+            onActiveKeyChange={setActiveVendorKey}
+            printVendorId={printVendorId}
+            onPrintVendor={setPrintVendorId}
           />
-        }
-      />
+        )}
 
-      {/* Özet — tek tedarikçi yazdırmada çıktıya girmez */}
-      <ReportKpiStrip
-        report={report}
-        vendorCount={displayVendors.filter(v => v.vendorId !== null).length}
-        printVendorId={printVendorId}
-      />
-
-      {displayVendors.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 rounded-lg border border-hairline bg-card px-6 py-16 text-center">
-          <p className="text-sm font-medium text-foreground">Sipariş önerisi yok</p>
-          <p className="text-xs text-muted-foreground">
-            Satış hızı ve mevcut stok seviyelerine göre şu an sipariş gerektiren ürün bulunmuyor.
-          </p>
-        </div>
-      ) : (
-        <VendorTabsPanel
-          vendors={displayVendors}
-          token={token}
-          vendorList={vendorList}
-          stockOverrides={stockOverrides}
-          onStockChange={handleStockChange}
-          basket={basket}
-          onLineQtyChange={handleLineQtyChange}
-          onVendorSent={handleVendorSent}
-          onAssigned={handleAssigned}
-          onProductsAssigned={handleProductsAssigned}
-          onVendorContactSaved={handleVendorContactSaved}
-          onVendorDeleted={handleVendorDeleted}
-          activeKey={activeVendorKey}
-          onActiveKeyChange={setActiveVendorKey}
-          printVendorId={printVendorId}
-          onPrintVendor={setPrintVendorId}
-        />
-      )}
-
-      {/* Print altbilgisi */}
-      <p className="hidden text-xs text-muted-foreground print:block">
-        Flowventory satın alma raporu · {generatedAt.toLocaleString('tr-TR')} · Tedarik süresi {report.leadTimeDays} gün,
-        hedef stok {report.targetStockDays} gün. Alış fiyatı tanımlı olmayan ürünlerde satış fiyatı kullanılmıştır.
-      </p>
-    </PageContainer>
+        {/* Print altbilgisi */}
+        <p className="hidden text-xs text-muted-foreground print:block">
+          Flowventory satın alma raporu · {generatedAt.toLocaleString('tr-TR')} · Tedarik süresi {report.leadTimeDays} gün,
+          hedef stok {report.targetStockDays} gün. Alış fiyatı tanımlı olmayan ürünlerde satış fiyatı kullanılmıştır.
+        </p>
+      </PageContainer>
+    </ContentFadeIn>
   );
 }

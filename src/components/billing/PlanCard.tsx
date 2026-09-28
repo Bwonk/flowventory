@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Check, Crown } from 'lucide-react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -9,6 +10,7 @@ import { PLAN } from '@/lib/billing/plan';
 import type { SubscriptionState } from '@/lib/billing/entitlement';
 import { useSubscription } from '@/lib/billing/use-subscription';
 import { formatMoneyRounded } from '@/lib/format';
+import { EASE_OUT, springOrInstant } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 
 const dateFormatter = new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -35,6 +37,7 @@ const MANAGE_HINT = 'ikas panelinde uygulamanın sağ üstündeki "Planı Yönet
 export function PlanCard() {
   const { summary, loading, error, pending, refresh, startCheckout, cancelPending } = useSubscription();
   const [starting, setStarting] = useState(false);
+  const reduceMotion = useReducedMotion();
 
   const handleCheckout = async () => {
     setStarting(true);
@@ -72,17 +75,62 @@ export function PlanCard() {
         ? 'Aboneliği yenile'
         : 'Şimdi abone ol';
 
+  const actions: ReactNode = loading ? (
+      <Skeleton className="h-9 w-full bg-primary-foreground/10" />
+    ) : error ? (
+      <div className="flex items-center justify-between gap-3 text-sm text-primary-foreground/70">
+        Abonelik durumu alınamadı.
+        <Button type="button" size="sm" variant="outline" onClick={() => void refresh()}>
+          Tekrar dene
+        </Button>
+      </div>
+    ) : state === 'active' ? null : !summary?.billingEnabled ? (
+      <p className="rounded-md border border-primary-foreground/15 px-4 py-2 text-center text-sm text-primary-foreground/60">
+        Abonelik çok yakında açılıyor
+      </p>
+    ) : (
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full flex-1"
+          onClick={() => void handleCheckout()}
+          disabled={starting || pending}
+        >
+          {ctaLabel}
+        </Button>
+        {pending && (
+          <Button
+            type="button"
+            variant="ghost"
+            className="text-primary-foreground/70 hover:bg-primary-foreground/10 hover:text-primary-foreground"
+            onClick={cancelPending}
+          >
+            Vazgeç
+          </Button>
+        )}
+      </div>
+    );
+
   return (
     <div>
       <div className="relative rounded-lg bg-primary p-6 text-primary-foreground">
-        <span
-          className={cn(
-            'absolute -top-2.5 right-5 rounded-full px-2.5 py-1 font-mono text-[10px] font-medium uppercase tracking-wider',
-            badge.className,
-          )}
-        >
-          {badge.label}
-        </span>
+        {/* Durum değişince (ör. ödeme → Aktif) rozet yerinde takas olur. */}
+        <AnimatePresence initial={false} mode="popLayout">
+          <motion.span
+            key={state}
+            initial={{ opacity: 0, scale: reduceMotion ? 1 : 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: reduceMotion ? 1 : 0.95 }}
+            transition={springOrInstant(reduceMotion)}
+            className={cn(
+              'absolute -top-2.5 right-5 rounded-full px-2.5 py-1 font-mono text-[10px] font-medium uppercase tracking-wider',
+              badge.className,
+            )}
+          >
+            {badge.label}
+          </motion.span>
+        </AnimatePresence>
 
         <p className="flex items-center gap-1.5 text-sm font-medium text-primary-foreground/70">
           <Crown className="size-4" aria-hidden />
@@ -107,47 +155,29 @@ export function PlanCard() {
         </ul>
 
         <div className="mt-6">
-          {loading ? (
-            <Skeleton className="h-9 w-full bg-primary-foreground/10" />
-          ) : error ? (
-            <div className="flex items-center justify-between gap-3 text-sm text-primary-foreground/70">
-              Abonelik durumu alınamadı.
-              <Button type="button" size="sm" variant="outline" onClick={() => void refresh()}>
-                Tekrar dene
-              </Button>
-            </div>
-          ) : state === 'active' ? null : !summary?.billingEnabled ? (
-            <p className="rounded-md border border-primary-foreground/15 px-4 py-2 text-center text-sm text-primary-foreground/60">
-              Abonelik çok yakında açılıyor
-            </p>
-          ) : (
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full flex-1"
-                onClick={() => void handleCheckout()}
-                disabled={starting || pending}
+          {/* Aksiyon alanı; abonelik aktif olunca yükseklik + opaklıkla çöker.
+              p-1/-m-1: overflow-hidden buton odak halkasını kırpmasın. */}
+          <AnimatePresence initial={false}>
+            {actions && (
+              <motion.div
+                key="actions"
+                exit={{
+                  height: 0,
+                  opacity: 0,
+                  transition: { duration: reduceMotion ? 0 : 0.2, ease: EASE_OUT },
+                }}
+                className="-m-1 overflow-hidden p-1"
               >
-                {ctaLabel}
-              </Button>
-              {pending && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="text-primary-foreground/70 hover:bg-primary-foreground/10 hover:text-primary-foreground"
-                  onClick={cancelPending}
-                >
-                  Vazgeç
-                </Button>
-              )}
-            </div>
-          )}
+                <div className="pb-3">{actions}</div>
+              </motion.div>
+            )}
+          </AnimatePresence>
           {statusLine && (
             <p
-              className={cn('text-center text-xs text-primary-foreground/60', state !== 'active' && 'mt-3')}
+              className="flex items-center justify-center gap-1.5 text-center text-xs text-primary-foreground/60"
               aria-live="polite"
             >
+              {state === 'active' && !pending && <DrawnCheck reduceMotion={reduceMotion} />}
               {pending ? 'ikas ödeme ekranı açıldı; ödeme tamamlanınca burası kendiliğinden güncellenir.' : statusLine}
             </p>
           )}
@@ -159,5 +189,23 @@ export function PlanCard() {
         göre oranlanır. {summary?.billingEnabled === false ? 'Deneme süren boyunca tüm özellikler açık.' : MANAGE_HINT}
       </p>
     </div>
+  );
+}
+
+/** Abonelik aktif satırının tiki — bir kez çizilir (300ms, EASE_OUT). */
+function DrawnCheck({ reduceMotion }: { reduceMotion: boolean | null }) {
+  return (
+    <svg viewBox="0 0 24 24" className="size-3.5 shrink-0 text-primary-foreground" fill="none" aria-hidden>
+      <motion.path
+        d="M5 12.5l4.5 4.5L19 7.5"
+        stroke="currentColor"
+        strokeWidth={2.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        initial={{ pathLength: reduceMotion ? 1 : 0 }}
+        animate={{ pathLength: 1 }}
+        transition={{ duration: reduceMotion ? 0 : 0.3, ease: EASE_OUT }}
+      />
+    </svg>
   );
 }

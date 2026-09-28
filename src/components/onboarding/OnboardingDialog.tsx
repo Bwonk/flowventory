@@ -1,7 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { AnimatePresence, motion, useReducedMotion, type Variants } from 'motion/react';
 import { Check, ClipboardList, LineChart, Package, SlidersHorizontal, type LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ArrowRightIcon } from '@/components/ui/icons/arrow-right';
@@ -13,7 +14,7 @@ import { AnimatedNumber } from '@/components/shared/AnimatedNumber';
 import { PLAN } from '@/lib/billing/plan';
 import { confirmDefaultThreshold, useOnboardingSteps } from '@/lib/onboarding';
 import { DEFAULT_STOCK_THRESHOLD } from '@/lib/stock-threshold';
-import { springOrInstant } from '@/lib/motion';
+import { EASE_OUT, SPRING, springOrInstant } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 
 export const ONBOARDING_TOTAL_STEPS = 3;
@@ -114,16 +115,28 @@ const TONE_DOT: Record<NonNullable<PreviewRow['tone']>, string> = {
 
 function OnboardingDialogHeader() {
   const { currentStep } = useOnboarding();
+  const reduceMotion = useReducedMotion();
   const config = STEP_CONFIG[currentStep - 1];
   return (
     <DialogHeader className="items-center !text-center">
       <p className="font-mono text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
         Başlarken
       </p>
-      <DialogTitle className="text-xl font-semibold tracking-tight text-foreground md:text-2xl">
-        {config.title}
-      </DialogTitle>
-      <DialogDescription>{config.description}</DialogDescription>
+      {/* Başlık/açıklama adımla birlikte 150ms opaklıkla değişir (çıkış 100ms). */}
+      <AnimatePresence initial={false} mode="wait">
+        <motion.div
+          key={currentStep}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1, transition: { duration: reduceMotion ? 0 : 0.15, ease: EASE_OUT } }}
+          exit={{ opacity: 0, transition: { duration: reduceMotion ? 0 : 0.1, ease: EASE_OUT } }}
+          className="flex flex-col items-center gap-2"
+        >
+          <DialogTitle className="text-xl font-semibold tracking-tight text-foreground md:text-2xl">
+            {config.title}
+          </DialogTitle>
+          <DialogDescription>{config.description}</DialogDescription>
+        </motion.div>
+      </AnimatePresence>
       <div className="flex w-full justify-center pt-3">
         <Onboarding.StepIndicator variant="pills" className="w-full max-w-40" />
       </div>
@@ -168,7 +181,23 @@ function FeatureStep() {
                 />
                 <div>
                   <p className="text-sm font-medium text-foreground">{feature.title}</p>
-                  {isActive && <p className="mt-1 text-sm text-muted-foreground">{feature.description}</p>}
+                  <AnimatePresence initial={false}>
+                    {isActive && (
+                      <motion.div
+                        key="description"
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{
+                          height: springOrInstant(reduceMotion),
+                          opacity: { duration: reduceMotion ? 0 : 0.15 },
+                        }}
+                        className="overflow-hidden"
+                      >
+                        <p className="pt-1 text-sm text-muted-foreground">{feature.description}</p>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               </div>
             </FeatureCarousel.Item>
@@ -293,6 +322,61 @@ function SetupStep({ onNavigate }: { onNavigate: (href: string) => void }) {
   );
 }
 
+// ─── Adım geçişi ──────────────────────────────────────────────────────────
+
+// Yön farkındalıklı: ileri giden adım sağdan 8px, geri giden soldan girer.
+// Çıkış girişten sessiz (120ms, yalnız opaklık); mode="wait" ile üst üste binmez.
+const stepVariants: Variants = {
+  enter: (dir: number) => ({ opacity: 0, x: dir * 8 }),
+  center: { opacity: 1, x: 0, transition: { x: SPRING, opacity: { duration: 0.15, ease: EASE_OUT } } },
+  exit: { opacity: 0, transition: { duration: 0.12, ease: EASE_OUT } },
+};
+
+const reducedStepVariants: Variants = {
+  enter: { opacity: 0 },
+  center: { opacity: 1, transition: { duration: 0.12 } },
+  exit: { opacity: 0, transition: { duration: 0.08 } },
+};
+
+/**
+ * Upstream `Onboarding.Step` aktif olmayan adımı anında unmount ediyor; burada
+ * adım içeriği anahtarlı bir motion kabuğunda değişir. Çıkan kabuk kendi
+ * adımının içeriğini tutar (içerik currentStep'e değil anahtara bağlı).
+ */
+function AnimatedStepContent({ onNavigate }: { onNavigate: (href: string) => void }) {
+  const { currentStep } = useOnboarding();
+  const reduceMotion = useReducedMotion();
+  // Yön, önceki adım state'te tutularak render sırasında türetilir.
+  const [previousStep, setPreviousStep] = useState(currentStep);
+  const [direction, setDirection] = useState<1 | -1>(1);
+  if (currentStep !== previousStep) {
+    setPreviousStep(currentStep);
+    setDirection(currentStep > previousStep ? 1 : -1);
+  }
+
+  return (
+    <AnimatePresence initial={false} mode="wait" custom={direction}>
+      <motion.div
+        key={currentStep}
+        custom={direction}
+        variants={reduceMotion ? reducedStepVariants : stepVariants}
+        initial="enter"
+        animate="center"
+        exit="exit"
+        data-slot="onboarding-step"
+      >
+        {currentStep === 1 ? (
+          <FeatureStep />
+        ) : currentStep === 2 ? (
+          <SetupStep onNavigate={onNavigate} />
+        ) : (
+          <PlanCard />
+        )}
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
 // ─── Dialog ───────────────────────────────────────────────────────────────
 
 /**
@@ -340,15 +424,7 @@ export function OnboardingDialog({
           >
             <OnboardingDialogHeader />
             <div className="my-6 min-h-48">
-              <Onboarding.Step step={1}>
-                <FeatureStep />
-              </Onboarding.Step>
-              <Onboarding.Step step={2}>
-                <SetupStep onNavigate={navigate} />
-              </Onboarding.Step>
-              <Onboarding.Step step={3}>
-                <PlanCard />
-              </Onboarding.Step>
+              <AnimatedStepContent onNavigate={navigate} />
             </div>
             <Onboarding.Navigation completeLabel="Uygulamaya geç" />
           </Onboarding>

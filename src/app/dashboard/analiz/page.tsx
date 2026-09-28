@@ -10,6 +10,7 @@ import { ErrorState } from '@/components/shared/ErrorState';
 import { useMerchantCurrency } from '@/lib/currency';
 import { AnalizContent } from './_components';
 import { AnalizSkeleton } from './_components/AnalizSkeleton';
+import { ContentFadeIn } from '@/components/motion/content-fade-in';
 import { parseAbcParam, parseActionParam, parseAgingParam, parseBandParam } from './_components/constants';
 import type { AnalysisInitialFilters } from './_components/hooks/use-analysis-filters';
 
@@ -67,7 +68,11 @@ function AnalizPageContent() {
   if (error) return <ErrorState description={error} onRetry={initialize} />;
   if (!insight) return null;
 
-  return <AnalizContent insight={insight} token={token} initialFilters={initialFilters} onWindowChange={setWindowDays} />;
+  return (
+    <ContentFadeIn>
+      <AnalizContent insight={insight} token={token} initialFilters={initialFilters} onWindowChange={setWindowDays} />
+    </ContentFadeIn>
+  );
 }
 
 export default function AnalizPage() {

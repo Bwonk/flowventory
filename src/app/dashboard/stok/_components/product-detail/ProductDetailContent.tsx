@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { EASE_OUT } from '@/lib/motion';
 import { DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import type { AnalyticsApiResponse } from '@/app/api/ikas/analytics/route';
 import type { SingleProductViewStats } from '@/app/api/product-view/stats/route';
@@ -56,6 +58,7 @@ export const ProductDetailContent: React.FC<{
   const [viewDetail, setViewDetail] = useState<SingleProductViewStats | null>(null);
   const [viewLoading, setViewLoading] = useState(false);
   const [chartTab, setChartTab] = useState<ChartTab>('runway');
+  const reduceMotion = useReducedMotion();
   const [runwayDays, setRunwayDays] = useState<StockWindowDays>(30);
   // StockEditor'daki onaylanmamış toplam — grafikte soluk projeksiyon olarak görünür.
   const [draftTotal, setDraftTotal] = useState<number | null>(null);
@@ -305,31 +308,43 @@ export const ProductDetailContent: React.FC<{
               onChange={setChartTab}
               className="shrink-0 self-start"
             />
-            {chartTab === 'runway' ? (
-              <StockRunwayChart
-                data={stockHistory.data}
-                loading={stockHistory.loading}
-                error={stockHistory.error}
-                draftStock={selectedVariant ? draftTotal : null}
-                days={runwayDays}
-                onDaysChange={setRunwayDays}
-                className="shrink-0"
-              />
-            ) : (
-            <TrendChart
-              title="Satış Grafiği"
-              subtitle={selectedVariant ? getVariantName(selectedVariant) : 'Tüm Varyantlar'}
-              data={productTrendData}
-              metrics={!selectedVariantId || selectedVariantId === 'all' ? ['revenue', 'quantity', 'views'] : ['revenue', 'quantity']}
-              defaultMetric="revenue"
-              defaultPeriod="last30d"
-              height={240}
-              hourlyFetch={fetchHourly}
-              hourlyViewFetch={fetchHourlyViews}
-              layout="modal"
-              portalContainer={portalContainer}
-            />
-            )}
+            {/* Sekme içeriği: eski 100ms söner, yeni 150ms belirir; yalnız
+                opaklık — grafik ağır, yatay kayma yok (DESIGN.md §6). */}
+            <AnimatePresence initial={false} mode="wait">
+              <motion.div
+                key={chartTab}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1, transition: { duration: reduceMotion ? 0 : 0.15, ease: EASE_OUT } }}
+                exit={{ opacity: 0, transition: { duration: reduceMotion ? 0 : 0.1, ease: EASE_OUT } }}
+                className={chartTab === 'runway' ? 'shrink-0' : undefined}
+              >
+                {chartTab === 'runway' ? (
+                  <StockRunwayChart
+                    data={stockHistory.data}
+                    loading={stockHistory.loading}
+                    error={stockHistory.error}
+                    draftStock={selectedVariant ? draftTotal : null}
+                    days={runwayDays}
+                    onDaysChange={setRunwayDays}
+                    className="shrink-0"
+                  />
+                ) : (
+                  <TrendChart
+                    title="Satış Grafiği"
+                    subtitle={selectedVariant ? getVariantName(selectedVariant) : 'Tüm Varyantlar'}
+                    data={productTrendData}
+                    metrics={!selectedVariantId || selectedVariantId === 'all' ? ['revenue', 'quantity', 'views'] : ['revenue', 'quantity']}
+                    defaultMetric="revenue"
+                    defaultPeriod="last30d"
+                    height={240}
+                    hourlyFetch={fetchHourly}
+                    hourlyViewFetch={fetchHourlyViews}
+                    layout="modal"
+                    portalContainer={portalContainer}
+                  />
+                )}
+              </motion.div>
+            </AnimatePresence>
           </div>
         </div>
       </div>

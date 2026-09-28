@@ -23,6 +23,12 @@ interface ProductDetailModalProps {
 export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product, analytics, token, viewStats, onClose, onVariantStockChange }) => {
   const { threshold } = useStockThreshold();
   const [portalContainer, setPortalContainer] = React.useState<HTMLElement | null>(null);
+  // Kapanışta `product` hemen null olur; Dialog'un 150ms çıkışı boş kart
+  // üzerinde oynamasın diye son ürün tutulur (önceki render'dan bilgi saklama
+  // kalıbı — ref yerine state, StrictMode güvenli). Dialog çıkıştan sonra
+  // içeriği zaten kaldırır.
+  const [shownProduct, setShownProduct] = React.useState(product);
+  if (product && product !== shownProduct) setShownProduct(product);
 
   return (
     <Dialog open={!!product} onOpenChange={open => !open && onClose()}>
@@ -37,10 +43,10 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
           }
         }}
       >
-        {product && (
+        {shownProduct && (
           <ProductDetailContent
-            key={product.id}
-            product={product}
+            key={shownProduct.id}
+            product={shownProduct}
             token={token}
             viewStats={viewStats}
             analytics={analytics}
