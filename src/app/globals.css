@@ -68,10 +68,12 @@
   /* Hareket eğrileri — tek kaynak (DESIGN.md §6, src/lib/motion.ts ile
      birebir). Tailwind'in zayıf varsayılan ease-out/ease-in-out'unu ezer:
      `ease-out` giren/çıkan öğe, `ease-in-out` yer değiştiren öğe,
-     `ease-drawer` sheet/çekmece/kenar paneli. */
+     `ease-drawer` sheet/çekmece/kenar paneli, `ease-reveal` origin-aware
+     açılır katman (Dialog/Popover — büyüme sonuna kadar görünsün). */
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-reveal: cubic-bezier(0.33, 1, 0.68, 1);
   /* ShimmerButton (magicui) keyframe'leri — yalnız geri bildirim panelinin
      Gönder butonu kullanır; bkz. src/components/ui/shimmer-button.tsx */
   --animate-shimmer-slide: shimmer-slide var(--speed) ease-in-out infinite alternate;

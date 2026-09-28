@@ -20,6 +20,12 @@ export const EASE_OUT = [0.23, 1, 0.32, 1] as const;
 /** Güçlü ease-in-out — ekranda yer değiştiren/biçim değiştiren öğe. */
 export const EASE_IN_OUT = [0.77, 0, 0.175, 1] as const;
 
+/**
+ * Yumuşak ease-out — origin-aware açılır katman (Dialog/Popover). `EASE_OUT`
+ * hareketi ilk karelerde bitirir; bu eğri büyümeyi sonuna kadar gösterir.
+ */
+export const EASE_REVEAL = [0.33, 1, 0.68, 1] as const;
+
 /** iOS benzeri çekmece eğrisi — sheet/drawer/kenar paneli. */
 export const EASE_DRAWER = [0.32, 0.72, 0, 1] as const;
 

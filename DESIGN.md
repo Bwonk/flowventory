@@ -505,7 +505,8 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
 - **Token'lar — tek kaynak:** [src/lib/motion.ts](src/lib/motion.ts)
   (`SPRING` = kanonik 350/35, `INSTANT`, `springOrInstant(reduce)`,
   `EASE_OUT` `(0.23,1,0.32,1)`, `EASE_IN_OUT` `(0.77,0,0.175,1)`,
-  `EASE_DRAWER` `(0.32,0.72,0,1)`, `PRESS_FEEDBACK_CLASS`) ve
+  `EASE_DRAWER` `(0.32,0.72,0,1)`, `EASE_REVEAL` `(0.33,1,0.68,1)`,
+  `PRESS_FEEDBACK_CLASS`) ve
   `globals.css @theme` (`ease-out` / `ease-in-out` Tailwind'in zayıf
   varsayılanlarını ezer, `ease-drawer` utility'si). Spring'i ya da eğriyi
   elle yazmak yasak. Arayüz hareketi 300ms altında; `scale(0)` yok (en az
@@ -517,9 +518,10 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   Aralık `width`'le çalışır (ikon şeridi gerçek 48px yerleşim ister; bilinçli).
   Menü hover'ı kayan hap değil, 150ms zemin rengi —
   [src/components/animate-ui/components/radix/sidebar.tsx](src/components/animate-ui/components/radix/sidebar.tsx).
-- Katmanlar: `Dialog` 300ms açılır / 200ms kapanır (`ease-out`, zoom 90);
-  `Popover` 250 / 150ms (zoom 90) — büyüme hissedilsin diye diğer arayüz
-  hareketlerinden uzun. İkisi de **origin-aware**: açan butonun
+- Katmanlar: `Dialog` 400ms açılır / 250ms kapanır, `Popover` 300 / 180ms;
+  ikisi de `ease-reveal` (yumuşak ease-out) + zoom 90 — büyüme gözle
+  hissedilsin diye kullanıcı isteğiyle diğer arayüz hareketlerinden uzun
+  (300ms sınırının bilinçli istisnası). İkisi de **origin-aware**: açan butonun
   merkezinden büyür, kapanışta oraya küçülür — kök
   [src/lib/hooks/use-trigger-origin.ts](src/lib/hooks/use-trigger-origin.ts)
   (Radix `aria-controls` tetikleyicisi, yoksa son 1sn'deki basış; bulunamazsa
@@ -563,7 +565,7 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   yerine salt cross-fade, yükseklik ve hap anlık. İkon dışı animasyonlarda
   `useReducedMotion()` doğrudan `motion/react`'ten alınır — `useIconHover`
   yalnızca ikon animasyonları içindir.
-- **Başlarken popup'ı hareketi** — Dialog'un kendi 300/200ms geçişi; adım
+- **Başlarken popup'ı hareketi** — Dialog'un kendi 400/250ms geçişi; adım
   değişimi upstream gibi anlık (aktif olmayan adım unmount). Özellik
   önizlemesi `AnimatePresence mode="wait"`: giriş opacity + 6px `SPRING`,
   çıkış 100ms opaklık. Kurulum numara ↔ tik rozeti `popLayout` +
