@@ -58,6 +58,7 @@ export function FlowCanvas({ builder, products, vendors, optionsLoading, notific
     <div className="flex flex-col items-stretch">
       <TriggerCard
         state={state}
+        forcesVariant={builder.forcesVariant}
         hasStockAction={builder.hasStockAction}
         products={products}
         vendors={vendors}

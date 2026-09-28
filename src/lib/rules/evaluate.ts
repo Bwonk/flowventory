@@ -14,6 +14,8 @@ import { windowStartDateKey } from './catalog';
 import { evaluateRule, nextState, targetKeyOf, type RuleHit } from './evaluate-rule';
 import { parseActionResults, toRuleLike } from './serialize';
 import type { RuleActionResult, RuleTarget, RuleWindowHours, TrackingRuleLike } from './types';
+import { getDraftQtyByVariant, getIncomingByVariant } from '@/lib/purchase-orders/queries';
+import { addToDraftAction } from './actions/add-to-draft';
 
 const HOUR_MS = 60 * 60 * 1000;
 /** Satış verisi bu kadar geriye okunur (en geniş pencere 90 gün). */
@@ -46,6 +48,25 @@ function variantLabel(json: string | null): string {
   } catch {
     return '';
   }
+}
+
+type DraftContext = {
+  draftQty: Map<string, number>;
+  incoming: Map<string, number>;
+  vendorSettings: Map<string, { leadTimeDays: number | null; moq: number | null; casePack: number | null }>;
+};
+
+async function loadDraftContext(merchantId: string): Promise<DraftContext> {
+  const [draftQty, incoming, contacts] = await Promise.all([
+    getDraftQtyByVariant(merchantId),
+    getIncomingByVariant(merchantId),
+    prisma.vendorContact.findMany({ where: { merchantId }, select: { vendorId: true, leadTimeDays: true, moq: true, casePack: true } }),
+  ]);
+  return {
+    draftQty,
+    incoming: new Map(Array.from(incoming, ([variantId, info]) => [variantId, info.qty])),
+    vendorSettings: new Map(contacts.map(c => [c.vendorId, c])),
+  };
 }
 
 /**
@@ -237,6 +258,8 @@ export async function evaluateTrackingRules(
     }
 
     const created: Array<{ eventId: string; hit: RuleHit; results: RuleActionResult[]; body: string }> = [];
+    // Taslak aksiyonu olan ilk tetikte yüklenir.
+    let draftCtx: DraftContext | undefined;
     const emailQueue: Array<{ eventId: string; title: string; body: string }> = [];
 
     for (const { hit, rule, target } of hits) {
@@ -290,12 +313,27 @@ export async function evaluateTrackingRules(
         }
       }
 
-      // 2) Bildirim. Stok yazıldıysa bildirim aksiyonu olmasa da zorunlu bilgilendirme (K5).
+      // 1b) Taslağa ekle — tedarikçinin sipariş taslağı; stoğa dokunmaz.
+      let draftFailed = false;
+      if (hit.actions.some(a => a.type === 'add_to_draft')) {
+        draftCtx ??= await loadDraftContext(merchantId);
+        const result = await addToDraftAction({ merchantId, currencyCode: settings.currencyCode, target, ...draftCtx });
+        results.push(result);
+        draftFailed = !result.ok;
+        body = `${body} ${result.ok ? result.detail : `Taslağa eklenemedi: ${result.detail}`}.`;
+        // Aynı turda aynı varyant ikinci kez eklenmesin.
+        if (result.ok && target.variantId) draftCtx.draftQty.set(target.variantId, 1);
+      }
+
+      // 2) Bildirim. Stok yazıldıysa bildirim aksiyonu olmasa da zorunlu bilgilendirme (K5);
+      // taslağa eklenemediyse de (ör. tedarikçi yok) sessiz kalmaz.
       const notify = { ruleId: hit.ruleId, productId: hit.productId, title: hit.title, body, dedupeKey: hit.dedupeKey };
       if (hit.actions.some(a => a.type === 'notify')) {
         results.push(await createRuleNotification(merchantId, notify));
       } else if (stockAfter !== undefined) {
         await createRuleNotification(merchantId, { ...notify, title: `${rule.name}: stok güncellendi`, dedupeKey: `${hit.dedupeKey}:stock` });
+      } else if (draftFailed) {
+        await createRuleNotification(merchantId, { ...notify, title: `${rule.name}: taslağa eklenemedi`, dedupeKey: `${hit.dedupeKey}:draft` });
       }
 
       // 3) E-posta turun sonunda toplu.

@@ -3,13 +3,19 @@
 import { forwardRef } from 'react';
 import { ArchiveBoxArrowDownIcon } from '@/components/ui/icons/archive-box-arrow-down';
 import { BellIcon } from '@/components/ui/icons/bell';
+import { ClipboardDocumentListIcon } from '@/components/ui/icons/clipboard-document-list';
 import { EnvelopeIcon } from '@/components/ui/icons/envelope';
 import type { AnimatedIcon, AnimatedIconHandle } from '@/components/ui/icons/use-icon-hover';
 import { ACTION_CATALOG, type ActionIcon as ActionIconKey } from '@/lib/rules/actions-catalog';
 import type { RuleActionType } from '@/lib/rules/types';
 import { cn } from '@/lib/utils';
 
-const ICONS: Record<ActionIconKey, AnimatedIcon> = { bell: BellIcon, mail: EnvelopeIcon, 'package-plus': ArchiveBoxArrowDownIcon };
+const ICONS: Record<ActionIconKey, AnimatedIcon> = {
+  bell: BellIcon,
+  mail: EnvelopeIcon,
+  'package-plus': ArchiveBoxArrowDownIcon,
+  draft: ClipboardDocumentListIcon,
+};
 
 /** `[&>svg]`: Button/menü öğesi içindeki `[&_svg]` boyut ve renk kuralları ikonu ezmesin. */
 const TONES = {

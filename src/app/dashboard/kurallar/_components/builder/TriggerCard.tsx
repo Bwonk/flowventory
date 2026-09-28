@@ -28,6 +28,8 @@ const GRANULARITY_OPTIONS: ReadonlyArray<{ value: RuleGranularity; label: string
 interface TriggerCardProps {
   state: BuilderState;
   hasStockAction: boolean;
+  /** Stok ya da taslak aksiyonu varsa değerlendirme birimi varyanta kilitlenir. */
+  forcesVariant: boolean;
   products: TargetOption[];
   vendors: TargetOption[];
   optionsLoading: boolean;
@@ -65,11 +67,20 @@ function Collapse({ children, className }: { children: ReactNode; className?: st
  * Tetikleyici: kapsam cümlesi + "Değiştir" → kart içinde kapsam, hedef ve
  * değerlendirme birimi. Varsayılan kapalı; hedef seçilmemişse açık başlar.
  */
-export function TriggerCard({ state, hasStockAction, products, vendors, optionsLoading, onScopeChange, onPatch }: TriggerCardProps) {
+export function TriggerCard({
+  state,
+  hasStockAction,
+  forcesVariant,
+  products,
+  vendors,
+  optionsLoading,
+  onScopeChange,
+  onPatch,
+}: TriggerCardProps) {
   const [open, setOpen] = useState(state.scope !== 'all' && !state.targetId);
   const bolt = useIconHover();
   const toggle = useIconHover();
-  const granularity = hasStockAction ? 'variant' : state.granularity;
+  const granularity = forcesVariant ? 'variant' : state.granularity;
   const countHint =
     state.scope === 'all' && !optionsLoading && products.length > 0
       ? `${products.length} ürün izlenir${granularity === 'variant' ? ' · her varyant ayrı değerlendirilir' : ''}`
@@ -142,11 +153,15 @@ export function TriggerCard({ state, hasStockAction, products, vendors, optionsL
                   size="sm"
                   options={GRANULARITY_OPTIONS}
                   value={granularity}
-                  onChange={g => !hasStockAction && onPatch({ granularity: g })}
+                  onChange={g => !forcesVariant && onPatch({ granularity: g })}
                   aria-label="Değerlendirme birimi"
-                  className={hasStockAction ? 'pointer-events-none opacity-60' : undefined}
+                  className={forcesVariant ? 'pointer-events-none opacity-60' : undefined}
                 />
-                {hasStockAction && <p className="mt-1 text-xs text-muted-foreground">Stok aksiyonu varyant düzeyinde çalışır.</p>}
+                {forcesVariant && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {hasStockAction ? 'Stok aksiyonu' : 'Taslağa ekleme'} varyant düzeyinde çalışır.
+                  </p>
+                )}
               </div>
             </div>
           </Collapse>

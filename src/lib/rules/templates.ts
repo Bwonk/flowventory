@@ -5,7 +5,7 @@ import type { RuleGranularity, RuleWindowHours, RuleWorkflow } from './types';
  * olarak açar; kapsam her zaman "Tüm ürünler" başlar.
  */
 
-export type RuleTemplateKey = 'low-stock-notify' | 'fast-drain-escalate' | 'auto-restock';
+export type RuleTemplateKey = 'low-stock-notify' | 'fast-drain-escalate' | 'reorder-draft';
 
 export interface RuleTemplate {
   key: RuleTemplateKey;
@@ -63,11 +63,11 @@ export const RULE_TEMPLATES: readonly RuleTemplate[] = [
     },
   },
   {
-    key: 'auto-restock',
-    name: 'Kritik stokta otomatik stok ekle',
-    description: 'Varyant stoğu 10’un altına inince bildirim + stoğu 5 artır.',
+    key: 'reorder-draft',
+    name: 'Sipariş noktasında taslağa ekle',
+    description: 'Varyant sipariş noktasına inince bildirim + tedarikçi taslağına önerilen adetle ekle.',
     rule: {
-      name: 'Kritik stokta otomatik stok ekle',
+      name: 'Sipariş noktasında taslağa ekle',
       granularity: 'variant',
       cooldownHours: 24,
       resetHours: 168,
@@ -75,8 +75,8 @@ export const RULE_TEMPLATES: readonly RuleTemplate[] = [
       workflow: {
         stages: [
           {
-            conditions: [{ op: 'and', condition: { metric: 'stock_below', threshold: 10 } }],
-            actions: [{ type: 'notify' }, { type: 'adjust_stock', mode: 'increase', amount: 5 }],
+            conditions: [{ op: 'and', condition: { metric: 'reorder_point_reached' } }],
+            actions: [{ type: 'notify' }, { type: 'add_to_draft' }],
           },
         ],
       },

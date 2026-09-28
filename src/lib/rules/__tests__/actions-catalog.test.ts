@@ -6,6 +6,7 @@ import {
   defaultAction,
   describeAction,
   hasActionType,
+  needsVariantGranularity,
   shortActionLabel,
 } from '@/lib/rules/actions-catalog';
 import { actionSchema } from '@/lib/rules/schema';
@@ -29,6 +30,13 @@ describe('aksiyon kataloğu', () => {
     expect(describeAction({ type: 'adjust_stock', mode: 'set', amount: 1200 })).toBe('stoğu 1.200 yap');
     expect(shortActionLabel({ type: 'adjust_stock', mode: 'increase', amount: 5 })).toBe('Stok +5');
     expect(shortActionLabel({ type: 'adjust_stock', mode: 'set', amount: 20 })).toBe('Stok = 20');
+    expect(describeAction({ type: 'add_to_draft' })).toBe('tedarikçi taslağına ekle');
+    expect(shortActionLabel({ type: 'add_to_draft' })).toBe('Taslağa ekle');
+  });
+  it('taslağa ekleme ve stok aksiyonu varyant düzeyi ister', () => {
+    const wf = (type: 'notify' | 'add_to_draft') => ({ stages: [{ conditions: [], actions: [{ type }] }] });
+    expect(needsVariantGranularity(wf('add_to_draft'))).toBe(true);
+    expect(needsVariantGranularity(wf('notify'))).toBe(false);
   });
   it('hasActionType aşamalar boyunca arar', () => {
     const workflow = {

@@ -101,7 +101,7 @@ export interface ConditionNode {
   condition: RuleCondition;
 }
 
-export const RULE_ACTION_TYPES = ['notify', 'email', 'adjust_stock'] as const;
+export const RULE_ACTION_TYPES = ['notify', 'email', 'add_to_draft', 'adjust_stock'] as const;
 export type RuleActionType = (typeof RULE_ACTION_TYPES)[number];
 
 export const STOCK_ADJUST_MODES = ['increase', 'set'] as const;
@@ -111,7 +111,9 @@ export type StockAdjustMode = (typeof STOCK_ADJUST_MODES)[number];
 export type RuleAction =
   | { type: 'notify' }
   | { type: 'email' }
-  | { type: 'adjust_stock'; mode: StockAdjustMode; amount: number };
+  | { type: 'adjust_stock'; mode: StockAdjustMode; amount: number }
+  /** Tedarikçinin sipariş taslağına önerilen adetle ekle (stoğa dokunmaz). */
+  | { type: 'add_to_draft' };
 
 export type ActionOf<T extends RuleActionType> = Extract<RuleAction, { type: T }>;
 

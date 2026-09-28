@@ -64,6 +64,7 @@ export const conditionNodeSchema = z.object({
 export const actionSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('notify') }),
   z.object({ type: z.literal('email') }),
+  z.object({ type: z.literal('add_to_draft') }),
   z.object({
     type: z.literal('adjust_stock'),
     mode: z.enum(['increase', 'set']),
@@ -131,6 +132,7 @@ function refineWorkflow(workflow: RuleWorkflow, ctx: z.RefinementCtx, basePath: 
 export const storedWorkflowSchema = workflowSchema.superRefine((w, ctx) => refineWorkflow(w, ctx, []));
 
 const hasStockAction = (w: RuleWorkflow) => w.stages.some(s => s.actions.some(a => a.type === 'adjust_stock'));
+const hasDraftAction = (w: RuleWorkflow) => w.stages.some(s => s.actions.some(a => a.type === 'add_to_draft'));
 
 /** Kural oluşturma/düzenleme gövdesi — route'larda `safeParse` ile kullanılır. */
 export const ruleInputSchema = z
@@ -163,6 +165,9 @@ export const ruleInputSchema = z
       if (v.stockWriteConsent !== true) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['stockWriteConsent'], message: 'Stok aksiyonu için onay gerekli' });
       }
+    }
+    if (hasDraftAction(v.workflow) && v.granularity !== 'variant') {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['granularity'], message: 'Taslağa ekleme varyant düzeyinde çalışır' });
     }
   });
 

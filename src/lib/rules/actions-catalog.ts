@@ -16,7 +16,7 @@ import {
 } from './types';
 
 /** İkon anahtarı — UI lucide ikonuna eşler (lib React'e dokunmaz). */
-export type ActionIcon = 'bell' | 'mail' | 'package-plus';
+export type ActionIcon = 'bell' | 'mail' | 'package-plus' | 'draft';
 
 export type ActionInput = { kind: 'none' } | { kind: 'stock' };
 
@@ -60,6 +60,15 @@ export const ACTION_CATALOG: { [T in RuleActionType]: ActionDef<T> } = {
     describe: () => 'e-posta gönder',
     short: () => 'E-posta',
   },
+  add_to_draft: {
+    type: 'add_to_draft',
+    label: 'Taslağa ekle',
+    hint: 'Ürünü tedarikçisinin sipariş taslağına önerilen adetle ekler; taslakta zaten varsa dokunmaz. Stoğa yazmaz, siparişi siz gönderirsiniz.',
+    icon: 'draft',
+    input: { kind: 'none' },
+    describe: () => 'tedarikçi taslağına ekle',
+    short: () => 'Taslağa ekle',
+  },
   adjust_stock: {
     type: 'adjust_stock',
     label: 'Stoğu değiştir',
@@ -90,6 +99,8 @@ export function defaultAction(type: RuleActionType): RuleAction {
       return { type };
     case 'email':
       return { type };
+    case 'add_to_draft':
+      return { type };
     case 'adjust_stock':
       return { type, mode: 'increase', amount: 5 };
   }
@@ -101,6 +112,11 @@ export function workflowActions(workflow: RuleWorkflow): RuleAction[] {
 
 export function hasActionType(workflow: RuleWorkflow, type: RuleActionType): boolean {
   return workflowActions(workflow).some(a => a.type === type);
+}
+
+/** Varyant düzeyinde çalışması gereken aksiyon var mı (stok yazımı, taslağa ekleme)? */
+export function needsVariantGranularity(workflow: RuleWorkflow): boolean {
+  return hasActionType(workflow, 'adjust_stock') || hasActionType(workflow, 'add_to_draft');
 }
 
 export type StockComputation =

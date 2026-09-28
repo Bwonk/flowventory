@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useReducer, useState } from 'react';
 import type { TrackingRuleItem } from '@/app/api/rules/route';
-import { defaultAction, hasActionType } from '@/lib/rules/actions-catalog';
+import { defaultAction, hasActionType, needsVariantGranularity } from '@/lib/rules/actions-catalog';
 import { defaultCondition } from '@/lib/rules/catalog';
 import { ruleInputSchema, type RuleInput } from '@/lib/rules/schema';
 import type { RuleTemplate } from '@/lib/rules/templates';
@@ -222,6 +222,7 @@ export function useRuleBuilder(init: BuilderInit) {
   const removeAction = useCallback((stage: number, index: number) => dispatch({ type: 'removeAction', stage, index }), []);
 
   const hasStockAction = hasActionType(state.workflow, 'adjust_stock');
+  const forcesVariant = needsVariantGranularity(state.workflow);
 
   // Kirli taslak: açılıştaki hâlden farklı her şey (yeni kuralda eklenen her şey).
   const [initialSnapshot] = useState(() => snapshot(state));
@@ -232,7 +233,8 @@ export function useRuleBuilder(init: BuilderInit) {
       const parsed = ruleInputSchema.safeParse({
         ...state,
         workflow: stripKeys(state.workflow),
-        granularity: hasActionType(state.workflow, 'adjust_stock') ? 'variant' : state.granularity,
+        // Stok yazımı ve taslağa ekleme varyant başına çalışır.
+        granularity: needsVariantGranularity(state.workflow) ? 'variant' : state.granularity,
         stockWriteConsent,
       });
       if (parsed.success) return { input: parsed.data, issue: null };
@@ -244,6 +246,7 @@ export function useRuleBuilder(init: BuilderInit) {
   return {
     state,
     hasStockAction,
+    forcesVariant,
     isDirty,
     patch,
     setScope,
