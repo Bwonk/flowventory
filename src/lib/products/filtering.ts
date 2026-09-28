@@ -1,6 +1,13 @@
 import type { Product, ProductRow, StatusFilter, StockRange, SortBy, VariantSales } from './types';
 import { STATUS_SEVERITY } from './constants';
-import { getDaysRemaining, getProductCategory, getProductStatus, getProductThumbnail, getTotalStock } from './product';
+import {
+  getDaysRemaining,
+  getProductCategory,
+  getProductStatus,
+  getProductStatusLabel,
+  getProductThumbnail,
+  getTotalStock,
+} from './product';
 
 /** Ürünü tek satıra indirger: en kötü varyant durumu + toplam stok. */
 export function flattenToProducts(
@@ -10,17 +17,21 @@ export function flattenToProducts(
   viewStats?: Record<string, number> | null,
   salesByVariant?: VariantSales[],
 ): ProductRow[] {
-  return products.map(product => ({
+  return products.map(product => {
+    const status = getProductStatus(product, criticalThreshold, warningThreshold);
+    return {
     productId: product.id,
     productName: product.name,
     category: getProductCategory(product),
     thumbnail: getProductThumbnail(product),
-    status: getProductStatus(product, criticalThreshold, warningThreshold),
+    status,
+    statusLabel: getProductStatusLabel(product, status),
     totalStock: getTotalStock(product),
     variantCount: product.variants.length,
     viewCount: viewStats?.[product.id],
     daysRemaining: getDaysRemaining(product, salesByVariant ?? []),
-  }));
+    };
+  });
 }
 
 export function matchesStockRange(stock: number, range: StockRange): boolean {

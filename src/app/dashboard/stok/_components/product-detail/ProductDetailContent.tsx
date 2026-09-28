@@ -12,6 +12,7 @@ import { STATUS_SEVERITY } from '@/lib/products/constants';
 import {
   getProductCategory,
   getProductStatus,
+  getProductStatusLabel,
   getProductThumbnail,
   getTotalStock,
   getVariantName,
@@ -217,7 +218,7 @@ export const ProductDetailContent: React.FC<{
             <span>{totalStock} adet stok</span>
           </div>
         </div>
-        <StatusBadge status={overallStatus} size="md" />
+        <StatusBadge status={overallStatus} label={getProductStatusLabel(product, overallStatus)} size="md" />
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto md:overflow-hidden">

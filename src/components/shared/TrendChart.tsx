@@ -50,6 +50,12 @@ interface TrendChartProps {
   defaultMetric?: ChartMetric;
   defaultPeriod?: ChartPeriod;
   height?: number;
+  /**
+   * `modal`: ürün detayındaki sıkı kart — Stok Yolu kartıyla aynı kabuk
+   * (hairline, p-4), başlık dar ekranda alt alta. Eskiden modalın tüm alanını
+   * dolduran çerçevesiz grid'di; sekme altına taşınınca çerçevesiz kalıyor ve
+   * yüksekliği ebeveynden alamadığı için grafik alanı çökebiliyordu.
+   */
   layout?: 'default' | 'modal';
   portalContainer?: HTMLElement | null;
   /** Boş durumdaki ikincil ipucu satırı (bağlama göre değişir: varyantlı sayfa vs dashboard). */
@@ -319,7 +325,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({
   return (
     <div className={cn(
       layout === 'default' && 'flex flex-col rounded-lg border border-hairline bg-card p-5',
-      layout === 'modal' && 'grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] p-6 md:p-0',
+      layout === 'modal' && 'flex flex-col rounded-lg border border-hairline bg-card p-4',
     )}>
       <div className={cn(
         'mb-5 flex flex-wrap gap-4',
@@ -359,11 +365,11 @@ export const TrendChart: React.FC<TrendChartProps> = ({
       </div>
 
       {hourlyLoading ? (
-        <div className={cn('flex items-center justify-center py-10', layout === 'modal' ? 'min-h-0 overflow-hidden' : 'min-h-[160px]')}>
+        <div className="flex min-h-[160px] items-center justify-center py-10">
           <p className="text-sm text-muted-foreground">Yükleniyor...</p>
         </div>
       ) : hasNoDataAtAll || isAllZero ? (
-        <div className={cn('flex flex-col items-center justify-center py-10 text-center', layout === 'modal' ? 'min-h-0 overflow-hidden' : 'min-h-[160px]')}>
+        <div className="flex min-h-[160px] flex-col items-center justify-center py-10 text-center">
           {hourlyError && period === 'last24h' ? (
             <p className="text-sm font-medium text-foreground">Saatlik veri alınamadı.</p>
           ) : (
@@ -378,7 +384,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({
           )}
         </div>
       ) : (
-        <div className={cn('w-full', layout === 'modal' && 'min-h-0 overflow-hidden')} style={layout === 'default' ? { height: chartHeight } : undefined}>
+        <div className="w-full" style={{ height: chartHeight }}>
           <ChartContainer
             config={chartConfig}
             className="h-full w-full"
@@ -416,7 +422,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({
       )}
 
       {!hasNoDataAtAll && !isAllZero && totalValue > 0 && (
-        <div className={cn('mt-4 border-t border-hairline pt-4', layout === 'modal' && 'shrink-0')}>
+        <div className="mt-4 border-t border-hairline pt-4">
           <p className="text-xs text-muted-foreground">{formatSummary(totalValue, effectiveMetric, period)}</p>
         </div>
       )}

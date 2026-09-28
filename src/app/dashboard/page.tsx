@@ -42,7 +42,7 @@ import {
   formatStockAge,
   minStock,
 } from './lib/metrics';
-import { getProductThumbnail } from '@/lib/products/product';
+import { getProductStatusLabel, getProductThumbnail } from '@/lib/products/product';
 
 export default function DashboardPage() {
   const {
@@ -145,13 +145,15 @@ export default function DashboardPage() {
     () =>
       lowStockProducts.slice(0, 10).map((p, i) => {
         const stock = minStock(p);
+        const status = stock === 0 ? 'out' : 'warning';
         return {
           productId: p.id,
           index: i + 1,
           image: getProductThumbnail(p),
           name: p.name,
           meta: `${p.variants.length} varyant`,
-          status: stock === 0 ? 'out' : 'warning',
+          status,
+          statusLabel: getProductStatusLabel(p, status),
           value: getTotalStock(p),
         };
       }),

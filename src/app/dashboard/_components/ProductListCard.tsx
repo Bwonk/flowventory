@@ -21,6 +21,8 @@ export interface ProductListItem {
   /** Ürün adının altındaki ikincil satır. */
   meta?: string;
   status?: StockStatus;
+  /** Durum etiketi override'ı (kısmi tükenme: "N varyant tükendi"). */
+  statusLabel?: string;
   /** Sağdaki sayısal kolon (satış adedi / toplam stok). */
   value: number;
 }
@@ -93,7 +95,7 @@ export const ProductListCard: React.FC<ProductListCardProps> = ({
               header: statusHeader,
               width: '120px',
               cell: (item: ProductListItem) =>
-                item.status ? <StatusBadge status={item.status} size="sm" /> : <span className="text-muted-foreground">—</span>,
+                item.status ? <StatusBadge status={item.status} label={item.statusLabel} size="sm" /> : <span className="text-muted-foreground">—</span>,
             } satisfies TableColumn<ProductListItem>,
           ]
         : []),

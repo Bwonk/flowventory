@@ -71,7 +71,7 @@ const COLUMNS: TableColumn<ProductRow>[] = [
       </div>
     ),
   },
-  { key: 'status', header: 'Durum', sortable: true, width: '128px', cell: row => <StatusBadge status={row.status} size="sm" /> },
+  { key: 'status', header: 'Durum', sortable: true, width: '128px', cell: row => <StatusBadge status={row.status} label={row.statusLabel} size="sm" /> },
   {
     key: 'views',
     header: 'Görüntülenme',

@@ -16,6 +16,20 @@ export function getProductStatus(
   return worst;
 }
 
+/**
+ * Ürün düzeyi durum etiketi. Durum en kötü varyanttan geldiği için bazı
+ * varyantları tükenmiş ama stoğu olan ürün "Tükendi" görünüp yanındaki
+ * toplam stokla (ör. 300 adet) çelişiyordu; kısmi tükenmede
+ * "N varyant tükendi" döner. Tamamen tükenmiş ya da durum 'out' değilse
+ * undefined — varsayılan etiket kullanılır. Durum/filtre anlamı değişmez.
+ */
+export function getProductStatusLabel(product: Product, status: ProductStatus): string | undefined {
+  if (status !== 'out') return undefined;
+  const outCount = product.variants.filter(v => getVariantStock(v) === 0).length;
+  if (outCount === 0 || outCount === product.variants.length) return undefined;
+  return `${outCount} varyant tükendi`;
+}
+
 /** Ürünün ilk kategori adını döndürür; kategori yoksa undefined. */
 export function getProductCategory(product: Product): string | undefined {
   return product.categories?.find(c => !!c.name)?.name ?? undefined;

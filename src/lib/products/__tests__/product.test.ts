@@ -3,6 +3,7 @@ import type { Product, Variant } from '@/lib/products/types';
 import {
   applyVariantStockChange,
   getProductStatus,
+  getProductStatusLabel,
   getTotalStock,
   getVariantStock,
   getVariantStockLocations,
@@ -140,5 +141,25 @@ describe('applyVariantStockChange', () => {
   it('eşleşmeyen üründe listeyi olduğu gibi bırakır', () => {
     const next = applyVariantStockChange(list, { productId: 'zzz', variantId: 'v1', stockLocationId: 'loc-1', stockCount: 0 });
     expect(next[0]).toBe(list[0]);
+  });
+});
+
+describe('getProductStatusLabel', () => {
+  const stock = (count: number, id: string) => variant([{ stockCount: count, stockLocationId: 'loc-1' }], id);
+
+  it('bazı varyantlar tükendiyse "N varyant tükendi" döner (durum yine out)', () => {
+    const p = product([stock(0, 'l'), stock(100, 's'), stock(100, 'm'), stock(100, 'xl')]);
+    expect(getProductStatus(p)).toBe('out');
+    expect(getProductStatusLabel(p, 'out')).toBe('1 varyant tükendi');
+  });
+
+  it('tüm varyantlar tükendiyse varsayılan etiket (undefined)', () => {
+    const p = product([stock(0, 'a'), stock(0, 'b')]);
+    expect(getProductStatusLabel(p, 'out')).toBeUndefined();
+  });
+
+  it('durum out değilse etikete dokunmaz', () => {
+    const p = product([stock(3, 'a'), stock(100, 'b')]);
+    expect(getProductStatusLabel(p, 'critical')).toBeUndefined();
   });
 });
