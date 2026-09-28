@@ -62,6 +62,9 @@ export async function POST(request: NextRequest) {
     let vendorId: string | null = null;
     const assigned: string[] = [];
     const failed: string[] = [];
+    // ikas'ın ret nedeni: loglanır ve tümü başarısızsa kullanıcıya gösterilir
+    // (eskiden yalnız "atanamadı" dönüyor, 502'nin nedeni hiçbir yerde görünmüyordu).
+    let firstError: string | null = null;
 
     for (const productId of productIds) {
       try {
@@ -70,6 +73,12 @@ export async function POST(request: NextRequest) {
         });
         const vendor = response.data?.updateProduct?.vendor;
         if (!response.isSuccess || !vendor) {
+          const reason =
+            response.errors?.map(e => e.message).join('; ') ||
+            response.error ||
+            'Yanıtta tedarikçi yok';
+          logger.warn('Vendor assign rejected by ikas', { productId, vendorName, reason });
+          firstError ??= reason;
           failed.push(productId);
           continue;
         }
@@ -82,12 +91,16 @@ export async function POST(request: NextRequest) {
         });
       } catch (error) {
         logger.warn('Vendor assign failed for product', { productId, error });
+        firstError ??= error instanceof Error ? error.message : 'İstek başarısız';
         failed.push(productId);
       }
     }
 
     if (vendorId === null) {
-      return NextResponse.json({ error: 'Tedarikçi atanamadı' }, { status: 502 });
+      return NextResponse.json(
+        { error: firstError ? `Tedarikçi atanamadı: ${firstError}` : 'Tedarikçi atanamadı' },
+        { status: 502 },
+      );
     }
 
     const data: AssignVendorApiResponse = { vendorId, vendorName, assigned, failed };
