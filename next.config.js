@@ -5,6 +5,9 @@ const nextConfig = {
   // CDN'e gider, fonksiyon paketine girmez — dosya izlemesine elle ekle.
   outputFileTracingIncludes: {
     '/api/tracking-script/install': ['./public/tracker.js'],
+    // Sipariş PDF'i (react-pdf) fontları diskten okur — e-posta eki ve PDF indirme.
+    '/api/purchase-orders/send': ['./src/lib/documents/fonts/*.ttf'],
+    '/api/purchase-orders/[id]/pdf': ['./src/lib/documents/fonts/*.ttf'],
   },
   // Webpack configuration
   webpack: (config) => {

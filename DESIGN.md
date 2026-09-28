@@ -43,7 +43,8 @@ utility'ler [src/app/globals.css](src/app/globals.css) içinde tanımlıdır.
 ### Renk
 
 Tüm renkler [src/app/globals.css](src/app/globals.css) `:root` token'larından
-gelir. **Arbitrary hex yasak**; tek istisna print-only siyah/beyaz düzeltmeleri.
+gelir. **Arbitrary hex yasak**; istisnalar print-only siyah/beyaz düzeltmeleri
+ve `src/lib/documents/` (PDF / e-posta / yazdırma belgeleri — §5 "Belgeler").
 
 | Rol | Token |
 | --- | --- |
@@ -461,6 +462,24 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   adet iptal edilsin mi?" yapar, 3 sn içinde ikinci tık uygular (tek grup, geri
   dönüşü küçük iş için Dialog açılmaz). Teslim toast'ında "Geri al". Stok
   yalnız teslim almada yazılır; satırda hızlı stok butonu yok.
+- **Belgeler (sipariş PDF'i, tedarikçi e-postası, rapor çıktısı):**
+  [src/lib/documents/](src/lib/documents/) — ekranın kâğıt karşılığı; ekran
+  yazdırılmaz. **İki ayrı belge** (kullanıcı kararı, 28 Eyl 2026): tedarikçiye
+  yalnız *satın alma siparişi* gider (A4 PDF, sunucuda `@react-pdf/renderer`
+  ile — e-posta eki, Gönder'deki "PDF" kanalı ve Yolda'daki "PDF" aynı
+  dosya); stok, satış hızı, "kaç gün yeter" ve öneri *iç rapordadır* (A4
+  yatay HTML, gizli iframe'de yazdırılır, `@page { margin: 0 }` tarayıcının
+  tarih/URL satırlarını kaldırır). Sipariş formu: mono büyük PO no, dört
+  kutulu meta şeridi (tarih · beklenen teslim · para birimi · kalem/adet),
+  üç taraf kutusu (tedarikçi · sipariş veren — unvan/V.D./VKN ikas mağaza
+  hesabından · teslimat adresi; boş alan basılmaz), tam ürün adı (asla
+  kırpılmaz), koli etiketi, "Geldi" kutusu, notlar + toplam, kaşe/imza,
+  "Bu belge fatura yerine geçmez". Fiyatı bilinmeyen satır "Teyit edin" —
+  satış fiyatı tedarikçiye gitmez. Tutarlar **"21.950,00 TL"** (Geist'te ₺
+  glifi yok; `docMoney`). Mono etiketler önceden `toLocaleUpperCase('tr-TR')`
+  ile büyütülür (CSS/PDF `uppercase` "SIPARIŞ" yazar). Renk yalnız uyarıda
+  (teyit, acil/az kalan gün çubuğu). Belge dosyaları PDF ve e-posta
+  istemcisi token okuyamadığı için hex taşır (§1 istisnası).
 - **Satır içi başlık (`EditableTitle`):**
   [src/components/shared/EditableTitle.tsx](src/components/shared/EditableTitle.tsx),
   `PageHeader.titleSlot` ile. h1 tipografisi aynen kalır. Tek kabuk iki halde

@@ -206,6 +206,12 @@ export const ApiRequests = {
         url: `/api/purchase-orders/${encodeURIComponent(orderId)}/cancel-remaining`,
         token,
       }),
+    /** Tedarikçi belgesi (A4 PDF) — JSON değil, ham dosya. */
+    pdf: (token: string, orderId: string) =>
+      axios.get<Blob>(`/api/purchase-orders/${encodeURIComponent(orderId)}/pdf`, {
+        responseType: 'blob',
+        headers: { Authorization: `JWT ${token}` },
+      }),
   },
   rules: {
     list: (token: string) => makeGetRequest<RulesApiResponse>({ url: '/api/rules', token }),

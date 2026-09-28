@@ -19,15 +19,16 @@ import { ReportActionBar } from './_components/ReportActionBar';
 import { InfoTip } from '@/components/shared/InfoTip';
 import { ReportKpiStrip } from './_components/ReportKpiStrip';
 import { VendorTabsPanel } from './_components/VendorTabsPanel';
+import { printReport } from './_components/print-report';
 import type { VendorListItem } from '@/app/api/vendors/route';
 
 /**
  * Satın Alma Raporu sayfası.
  *
  * Üstte KPI şeridi, altında tedarikçi tab'lı tek panel; leadTime/hedef gün
- * ayarları buradan güncellenebilir. "Yazdır" tarayıcının print → PDF akışını
- * kullanır (Türkçe karakter sorunları olmadığı için jspdf yerine print CSS
- * tercih edildi).
+ * ayarları buradan güncellenebilir. "Yazdır" ekranı değil ayrı bir A4 yatay
+ * rapor belgesini yazdırır (`print-report`); tedarikçiye giden sipariş
+ * belgesi sunucuda çizilen PDF'tir.
  */
 export default function RaporPage() {
   // Mağaza para birimini tazeler; formatPrice aktif kodu okur.
@@ -81,23 +82,6 @@ export default function RaporPage() {
   // Ürün Ekle sonrası aktif tab'ı adıyla yeniden hedefle: local- id ilk
   // atamada gerçek ikas id'sine dönüştüğü için key değişir, tab zıplamasın.
   const [pendingVendorName, setPendingVendorName] = useState<string | null>(null);
-
-  // Tek tedarikçi yazdırma: doluyken diğer tablar ve özet print'te gizlenir.
-  // afterprint (iptalde de tetiklenir) durumu sıfırlar; rAF class'ların
-  // print'ten önce flush olmasını garantiler.
-  const [printVendorId, setPrintVendorId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const reset = () => setPrintVendorId(null);
-    window.addEventListener('afterprint', reset);
-    return () => window.removeEventListener('afterprint', reset);
-  }, []);
-
-  useEffect(() => {
-    if (printVendorId === null) return;
-    const frame = requestAnimationFrame(() => window.print());
-    return () => cancelAnimationFrame(frame);
-  }, [printVendorId]);
 
   const fetchReport = useCallback(async (currentToken: string): Promise<boolean> => {
     try {
@@ -313,7 +297,7 @@ export default function RaporPage() {
               onVendorContactSaved={handleVendorContactSaved}
               openOrderCount={report.openOrderCount}
               onOrdersChanged={handleOrdersChanged}
-              onPrint={() => window.print()}
+              onPrint={() => printReport(report, displayVendors, basket, null)}
             />
           }
         />
@@ -322,7 +306,6 @@ export default function RaporPage() {
         <ReportKpiStrip
           report={report}
           vendorCount={displayVendors.filter(v => v.vendorId !== null).length}
-          printVendorId={printVendorId}
         />
 
         {displayVendors.length === 0 ? (
@@ -346,8 +329,7 @@ export default function RaporPage() {
             onVendorDeleted={handleVendorDeleted}
             activeKey={activeVendorKey}
             onActiveKeyChange={setActiveVendorKey}
-            printVendorId={printVendorId}
-            onPrintVendor={setPrintVendorId}
+            onPrintVendor={key => printReport(report, displayVendors, basket, key)}
           />
         )}
 

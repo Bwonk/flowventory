@@ -21,11 +21,11 @@ import { Input } from '@/components/ui/input';
 import { AnimatedCheckbox } from '@/components/shared/AnimatedCheckbox';
 import { NumberStepper } from '@/components/shared/NumberStepper';
 import { cn } from '@/lib/utils';
-import { formatPrice, getActiveCurrency } from '@/lib/currency';
+import { formatPrice } from '@/lib/currency';
 import { whatsappPhone, type PurchaseOrderChannel } from '@/lib/purchase-orders/types';
 import type { BasketLine } from './basket';
 import { extractErrorMessage } from '@/lib/api-error';
-import { printOrder } from './print-order';
+import { openOrderPdf, reservePdfWindow } from './order-pdf';
 import { useDraftSyncContext } from './use-draft-sync';
 import { useEmailField } from './use-email-field';
 
@@ -69,7 +69,7 @@ const longDate = (days: number) => {
 /**
  * Siparişi gönder — kanal seçimli onay penceresi. Seçilen kanalların hepsinden
  * gider: e-posta sunucudan, WhatsApp hazır mesajla açılır (gönder tuşuna
- * kullanıcı basar), PDF yazdırma penceresiyle. Kanal hazır değilse (e-posta /
+ * kullanıcı basar), PDF yeni sekmede (sunucuda çizilen, e-posta ekiyle aynı dosya). Kanal hazır değilse (e-posta /
  * telefon yok) kartın içinde tamamlanır; tetik yalnız taslak boşken kapalıdır.
  */
 export function SendReportDialog({
@@ -117,6 +117,8 @@ export function SendReportDialog({
   const send = async () => {
     // Açılır pencere engellenmesin: WhatsApp sekmesi tıklama anında açılır, adres sonra verilir.
     const waWindow = channels.has('whatsapp') ? window.open('about:blank', '_blank') : null;
+    // Tarayıcı tek tıklamada ikinci sekmeye izin vermeyebilir; o zaman PDF toast'tan açılır.
+    const pdfWindow = channels.has('pdf') ? reservePdfWindow() : null;
     setSending(true);
     try {
       await draftSync.flush();
@@ -148,7 +150,7 @@ export function SendReportDialog({
         if (waWindow) waWindow.location.href = url;
         else toast('WhatsApp açılamadı', { action: { label: "WhatsApp'ı aç", onClick: () => window.open(url, '_blank') } });
       }
-      if (channels.has('pdf')) printOrder(data.order, getActiveCurrency());
+      if (channels.has('pdf')) void openOrderPdf(token, data.order.id, data.order.label, pdfWindow);
 
       setOpen(false);
       const via = [channels.has('email') && data.order.sentTo, channels.has('whatsapp') && 'WhatsApp', channels.has('pdf') && 'PDF']
@@ -159,6 +161,7 @@ export function SendReportDialog({
       onSent?.();
     } catch (error) {
       waWindow?.close();
+      pdfWindow?.close();
       logger.error('Purchase order send failed', { vendorId, error });
       toast.error(extractErrorMessage(error, 'Gönderilemedi.'));
     } finally {
@@ -219,7 +222,7 @@ export function SendReportDialog({
             disabled={sending}
             status={contact.email ? { text: 'Hazır', variant: 'success' } : { text: 'E-posta eksik', variant: 'warning' }}
             description={
-              contact.email ? `${contact.email} · mağaza adın ve yanıt adresinle gider` : 'Adres kaydedilir, sonraki siparişlerde sorulmaz.'
+              contact.email ? `${contact.email} · sipariş PDF'i ekte, yanıtlar sana döner` : 'Adres kaydedilir, sonraki siparişlerde sorulmaz.'
             }
           >
             {channels.has('email') && !contact.email && (
@@ -275,7 +278,7 @@ export function SendReportDialog({
             onToggle={() => toggle('pdf')}
             disabled={sending}
             status={{ text: 'İsteğe bağlı', variant: 'neutral' }}
-            description="Sipariş belgesi yazdırma penceresiyle açılır; PDF olarak kaydedebilirsin."
+            description="Sipariş belgesi (A4) yeni sekmede açılır; indirip yazdırabilirsin. E-postada da ektedir."
           />
         </div>
 

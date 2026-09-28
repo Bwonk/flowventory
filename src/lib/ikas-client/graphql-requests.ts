@@ -10,6 +10,35 @@ export const GET_MERCHANT = gql`
   }
 `;
 
+// Sipariş belgeleri (PDF / e-posta) için "sipariş veren" kutusu: unvan, vergi
+// bilgisi, adres. Ayrı işlem — getMerchant'ı kullanan akışlar bu alanları taşımasın.
+export const GET_MERCHANT_PROFILE = gql`
+  query getMerchantProfile {
+    getMerchant {
+      id
+      email
+      storeName
+      phoneNumber
+      address {
+        company
+        title
+        taxOffice
+        taxNumber
+        vkn
+        addressLine1
+        addressLine2
+        postalCode
+        city {
+          name
+        }
+        district {
+          name
+        }
+      }
+    }
+  }
+`;
+
 export const GET_AUTHORIZED_APP = gql`
   query getAuthorizedApp {
     getAuthorizedApp {

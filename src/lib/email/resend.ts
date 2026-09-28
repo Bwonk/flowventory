@@ -33,6 +33,8 @@ export interface ResendMessage {
   html: string;
   /** Tedarikçi yanıtı mağazaya dönsün (bildirim adresi). */
   replyTo?: string;
+  /** Ek dosyalar (sipariş PDF'i). */
+  attachments?: Array<{ filename: string; content: Buffer }>;
 }
 
 export async function sendViaResend(message: ResendMessage): Promise<void> {

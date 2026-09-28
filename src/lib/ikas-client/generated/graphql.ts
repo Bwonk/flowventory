@@ -445,6 +445,35 @@ export interface GetMerchantQuery {
   getMerchant: GetMerchantQueryData;
 }
 
+export type GetMerchantProfileQueryVariables = {}
+
+export type GetMerchantProfileQueryData = {
+  id: string;
+  email: string;
+  storeName?: string;
+  phoneNumber?: string;
+  address?: {
+  company?: string;
+  title?: string;
+  taxOffice?: string;
+  taxNumber?: string;
+  vkn?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  postalCode?: string;
+  city?: {
+  name?: string;
+};
+  district?: {
+  name?: string;
+};
+};
+}
+
+export interface GetMerchantProfileQuery {
+  getMerchant: GetMerchantProfileQueryData;
+}
+
 export type GetAuthorizedAppQueryVariables = {}
 
 export type GetAuthorizedAppQueryData = {
@@ -730,6 +759,36 @@ export class GeneratedQueries {
   }
 `;
     return this.client.query<Partial<GetMerchantQuery>>({ query });
+  }
+
+  async getMerchantProfile(): Promise<APIResult<Partial<GetMerchantProfileQuery>>> {
+    const query = `
+  query getMerchantProfile {
+    getMerchant {
+      id
+      email
+      storeName
+      phoneNumber
+      address {
+        company
+        title
+        taxOffice
+        taxNumber
+        vkn
+        addressLine1
+        addressLine2
+        postalCode
+        city {
+          name
+        }
+        district {
+          name
+        }
+      }
+    }
+  }
+`;
+    return this.client.query<Partial<GetMerchantProfileQuery>>({ query });
   }
 
   async getAuthorizedApp(): Promise<APIResult<Partial<GetAuthorizedAppQuery>>> {

@@ -1,7 +1,6 @@
 'use client';
 
 import { AlertTriangle, Package, PackageOpen, Truck, Wallet } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { formatPriceRounded } from '@/lib/currency';
 import { KpiTile } from '@/app/dashboard/_components/KpiTile';
 import type { PurchaseReportApiResponse } from '@/app/api/reports/purchase/route';
@@ -10,22 +9,17 @@ interface ReportKpiStripProps {
   report: PurchaseReportApiResponse;
   /** Tab'daki tedarikçi sayısı (henüz ürünsüz yeni kayıtlar dahil). */
   vendorCount: number;
-  /** Doluyken tek tedarikçi yazdırılıyor demektir; şerit çıktıya girmez. */
-  printVendorId: string | null;
 }
 
 /** Satın alma raporu metrik paneli — dashboard KPI motifi, düz hairline kart. */
-export function ReportKpiStrip({ report, vendorCount, printVendorId }: ReportKpiStripProps) {
+export function ReportKpiStrip({ report, vendorCount }: ReportKpiStripProps) {
   const hasEstimate = report.vendors.some(v => v.hasEstimate);
   const unassignedLines = report.vendors.find(v => v.vendorId === null)?.lines.length ?? 0;
 
   return (
     <section
       aria-label="Rapor özeti"
-      className={cn(
-        '@container mb-4 overflow-hidden rounded-lg border border-hairline bg-card',
-        printVendorId !== null && 'print:hidden',
-      )}
+      className="@container mb-4 overflow-hidden rounded-lg border border-hairline bg-card"
     >
       <div className="-mr-px -mb-px grid grid-cols-1 @2xl:grid-cols-5">
         <KpiTile

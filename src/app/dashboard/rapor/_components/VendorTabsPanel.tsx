@@ -16,7 +16,7 @@ import { VendorActionBar } from './VendorActionBar';
 import type { VendorSettings } from './VendorContactPopover';
 import { VendorOrderTable } from './VendorOrderTable';
 
-/** Tab/print anahtarı — printVendorId ile aynı konvansiyon. */
+/** Tab ve yazdırma anahtarı: tedarikçi id, tedarikçisiz grup için "none". */
 export function vendorKey(vendor: PurchaseReportVendor): string {
   return vendor.vendorId ?? 'none';
 }
@@ -39,7 +39,7 @@ interface VendorTabsPanelProps {
   onVendorDeleted: (vendorId: string) => void;
   activeKey: string | null;
   onActiveKeyChange: (key: string) => void;
-  printVendorId: string | null;
+  /** Seçili tedarikçinin raporunu yazdırır (ayrı belge). */
   onPrintVendor: (key: string) => void;
 }
 
@@ -62,7 +62,6 @@ export function VendorTabsPanel({
   onVendorDeleted,
   activeKey,
   onActiveKeyChange,
-  printVendorId,
   onPrintVendor,
 }: VendorTabsPanelProps) {
   const reduceMotion = useReducedMotion();
@@ -161,10 +160,9 @@ export function VendorTabsPanel({
             const key = vendorKey(vendor);
             const vendorTotals = vendorBasketTotals(vendor, basket);
             const isShown = key === shownVendorKey;
-            // Print'te sepetinde satır olan ve (global yazdırmada ya da seçili
-            // tedarikçi yazdırmada) hedeflenen içerik açılır.
-            const printable =
-              vendorTotals.count > 0 && (printVendorId === null || printVendorId === key);
+            // Tarayıcının kendi yazdırmasında (Ctrl+P) sepetinde satır olan tedarikçiler açılır;
+            // "Yazdır" butonları ayrı rapor belgesini basar (print-report).
+            const printable = vendorTotals.count > 0;
             return (
               <div
                 key={key}

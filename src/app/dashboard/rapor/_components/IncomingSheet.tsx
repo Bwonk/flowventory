@@ -21,6 +21,7 @@ import { formatPrice } from '@/lib/currency';
 import { logger } from '@/lib/logger';
 import { EASE_OUT, INSTANT } from '@/lib/motion';
 import { isLate, remainingQty, type PurchaseOrderItem } from '@/lib/purchase-orders/types';
+import { openOrderPdf, reservePdfWindow } from './order-pdf';
 
 const COLLAPSE: Transition = { opacity: { duration: 0.12 }, height: { duration: 0.2, ease: EASE_OUT, delay: 0.04 } };
 const ENTER: Transition = { opacity: { duration: 0.15 }, height: { duration: 0 } };
@@ -247,7 +248,20 @@ function OrderGroup({
               {order.expectedAt && ` · beklenen ${shortDate(order.expectedAt)}`}
             </p>
           </div>
-          <Badge variant={badge.variant}>{badge.label}</Badge>
+          <div className="flex shrink-0 items-center gap-1.5">
+            {token && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 font-mono text-[11px] text-muted-foreground hover:text-foreground"
+                onClick={() => void openOrderPdf(token, order.id, order.label, reservePdfWindow())}
+                aria-label={`${order.label ?? 'Sipariş'} belgesini PDF olarak aç`}
+              >
+                PDF
+              </Button>
+            )}
+            <Badge variant={badge.variant}>{badge.label}</Badge>
+          </div>
         </div>
         <ul className="mx-2 mb-2 divide-y divide-border rounded-md bg-card">
           {order.lines.map(line => {

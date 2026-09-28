@@ -1,17 +1,18 @@
 import { Prisma } from '@prisma/client';
-import { getIkas } from '@/helpers/api-helpers';
+import { renderPurchaseOrderPdf } from '@/lib/documents/purchase-order-pdf';
+import type { PurchaseOrderDocument } from '@/lib/documents/purchase-order';
 import { logger } from '@/lib/logger';
 import { getMerchantSettings } from '@/lib/merchant-settings';
 import { prisma } from '@/lib/prisma';
 import { sendPurchaseOrderEmail } from '@/lib/vendors/purchase-email';
 import type { AuthToken } from '@/models/auth-token';
+import { buildOrderDocument, fetchMerchantProfile } from './document';
 import { replaceDraftLines, TX_TIMEOUT_MS, type DraftLineInput } from './drafts';
 import { toOrderItem } from './serialize';
 import { applyStockDeltas, type StockWrite } from './stock';
 import {
   buildOrderText,
   OPEN_STATUSES,
-  orderLabel,
   remainingQty,
   statusFromLines,
   whatsappPhone,
@@ -31,16 +32,6 @@ export class PurchaseOrderError extends Error {
 }
 
 const withLines = { lines: true } as const;
-
-async function storeName(authToken: AuthToken): Promise<string | null> {
-  try {
-    const res = await getIkas(authToken).queries.getMerchant();
-    return res.data?.getMerchant?.storeName?.trim() || null;
-  } catch (error) {
-    logger.warn('Store name lookup failed', { error });
-    return null;
-  }
-}
 
 /** Mağaza içinde sıradaki sipariş numarası; eşzamanlı çakışmada unique indeks korur. */
 async function nextNumber(tx: Prisma.TransactionClient, merchantId: string): Promise<number> {
@@ -104,16 +95,18 @@ export async function sendOrder(merchantId: string, authToken: AuthToken, input:
 
   const draft = await prisma.purchaseOrder.findUniqueOrThrow({ where: { id: prepared.id }, include: withLines });
   if (draft.lines.length === 0) throw new PurchaseOrderError('Sipariş listesi boş.', 422);
-  const label = orderLabel(draft.number) ?? '';
-  const name = channels.includes('email') || channels.includes('whatsapp') ? await storeName(authToken) : null;
-  const item = toOrderItem(draft);
+  const profile = channels.includes('email') || channels.includes('whatsapp') ? await fetchMerchantProfile(authToken) : null;
+  const name = profile?.storeName ?? null;
 
-  if (channels.includes('email') && contact?.email) {
-    await sendPurchaseOrderEmail(
-      contact.email,
-      { label, vendorName, storeName: name, expectedAt, lines: item.lines },
-      { currencyCode: settings.currencyCode, replyTo: settings.notificationEmail },
-    );
+  if (channels.includes('email') && contact?.email && profile) {
+    // Belge gönderim anının tarihini taşısın (taslakta sentAt yok).
+    const doc = await buildOrderDocument(merchantId, { ...toOrderItem(draft), sentAt: new Date().toISOString() }, profile);
+    // PDF üretilemezse e-posta eksiz gider — satırlar gövdede; gönderim durmasın.
+    const pdf = await renderPurchaseOrderPdf(doc).catch(error => {
+      logger.error('Purchase order PDF render failed', { orderId: draft.id, error });
+      return null;
+    });
+    await sendPurchaseOrderEmail(contact.email, doc, pdf);
   }
 
   const sent = await prisma.purchaseOrder.update({
@@ -132,6 +125,14 @@ export async function sendOrder(merchantId: string, authToken: AuthToken, input:
     whatsapp: channels.includes('whatsapp') && phone ? { phone, text: buildOrderText(order, name) } : null,
     skipped: prepared.skipped,
   };
+}
+
+/** Gönderilmiş siparişin belge modeli (PDF). Taslağın numarası olmadığı için belgesi yok. */
+export async function loadOrderPdfDocument(merchantId: string, authToken: AuthToken, orderId: string): Promise<PurchaseOrderDocument> {
+  const row = await prisma.purchaseOrder.findFirst({ where: { id: orderId, merchantId }, include: withLines });
+  if (!row) throw new PurchaseOrderError('Sipariş bulunamadı', 404);
+  if (row.status === 'draft' || row.number === null) throw new PurchaseOrderError('Taslak siparişin belgesi yok', 409);
+  return buildOrderDocument(merchantId, toOrderItem(row), await fetchMerchantProfile(authToken));
 }
 
 /** Açık siparişler (gönderilmiş / kısmi), en yeni gönderim önce. */
