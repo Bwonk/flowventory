@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
-import { AlertTriangle, Bell, CheckCheck, RotateCcw, X } from 'lucide-react';
+import { AlertTriangle, Bell, CheckCheck, RotateCcw } from 'lucide-react';
 import {
   Sheet,
   SheetClose,
@@ -18,6 +18,7 @@ import {
   useSidebar,
 } from '@/components/animate-ui/components/radix/sidebar';
 import type { SwipeableListValue } from '@/components/motion/swipeable-list';
+import { CloseButton } from '@/components/ui/close-button';
 import { SkeletonRows } from '@/components/shared/data-table/SkeletonRows';
 import { useNotifications } from '@/components/layout/notifications-context';
 import { NotificationSwipeList } from '@/components/layout/NotificationSwipeList';
@@ -188,9 +189,8 @@ export function NotificationDrawer() {
               <CheckCheck className="size-4" aria-hidden />
             </button>
           )}
-          <SheetClose className={ICON_BUTTON_CLASS}>
-            <X className="size-4" aria-hidden />
-            <span className="sr-only">Kapat</span>
+          <SheetClose asChild>
+            <CloseButton aria-label="Kapat" className="p-1 text-muted-foreground hover:bg-muted hover:text-foreground" />
           </SheetClose>
         </div>
       </div>

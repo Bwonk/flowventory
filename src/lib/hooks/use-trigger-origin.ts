@@ -1,15 +1,15 @@
 "use client";
 
-import { type AnimationEvent, useCallback, useRef } from "react";
+import { type Ref, useCallback } from "react";
 
 /**
  * Origin-aware animation: bir açılır yüzey (Dialog, Popover) kendi ortasından
  * değil, onu açan tetikleyicinin merkezinden büyür ve kapanışta oraya küçülür.
  *
- * Yüzeyin `onAnimationStart`'ına bağlanır; giriş (`data-state="open"`) ve çıkış
- * (`data-state="closed"`) animasyonu başlarken tetikleyicinin merkezini
- * yüzeyin dönüşümsüz kutusuna göre `transform-origin` olarak yazar. Ölçek ve
- * süre yüzeyin kendi sınıflarında kalır; bu hook yalnız kökü taşır.
+ * Giriş (`data-state="open"`) ve çıkış (`data-state="closed"`) animasyonundan
+ * önce tetikleyicinin merkezini yüzeyin dönüşümsüz kutusuna göre
+ * `transform-origin` olarak yazar. Ölçek ve süre yüzeyin kendi sınıflarında
+ * kalır; bu hook yalnız kökü taşır.
  */
 
 export interface Point {
@@ -104,31 +104,60 @@ function untransformedRect(el: HTMLElement): DOMRect {
   return rect;
 }
 
-export function useTriggerOrigin<T extends HTMLElement>(onAnimationStart?: (event: AnimationEvent<T>) => void) {
-  const trigger = useRef<TriggerSnapshot | null>(null);
+/**
+ * Yüzeyin ref'ine bağlanır. Köken, animasyon *başlamadan* yazılır: açılışta
+ * ref bağlanırken (Radix Popper konumlanana dek `animation: none` tutar —
+ * o zaman konumlandığı stil değişikliğinde), kapanışta `data-state="closed"`
+ * düştüğü anda. MutationObserver mikro görevi boyamadan önce çalışır; ilk
+ * kare de doğru kökten oynar. (`animationstart` bir-iki kare geç geliyordu:
+ * açılış önce kendi ortasından büyüyüp sonra tetikleyiciye kayıyordu.)
+ */
+export function useTriggerOrigin<T extends HTMLElement>(forwardedRef?: Ref<T>) {
+  return useCallback((surface: T | null) => {
+    const forwardedCleanup = assignRef(forwardedRef, surface);
+    if (!surface) return;
+    let trigger: TriggerSnapshot | null = null;
+    let resolved = false;
+    // Her faz (açılış/kapanış) için köken bir kez yazılır; kendi stil
+    // yazımlarımızın tetiklediği gözlem kaydı böylece döngüye girmez.
+    let appliedFor: string | null = null;
 
-  return useCallback(
-    (event: AnimationEvent<T>) => {
-      onAnimationStart?.(event);
-      // İçerideki öğelerin animasyonları da buraya kabarır.
-      if (event.target !== event.currentTarget) return;
-      const surface = event.currentTarget;
+    const sync = () => {
       const state = surface.dataset.state;
-
-      if (state === "open") trigger.current = resolveTrigger(surface);
-      else if (state !== "closed") return;
-
-      const snapshot = trigger.current;
+      if (state !== "open" && state !== "closed") return;
+      if (state === "open" && !resolved) {
+        trigger = resolveTrigger(surface);
+        resolved = true;
+      }
+      if (appliedFor === state) return;
+      // Radix Popper konumlanmadan ölçüm yanlış yeri verir.
+      if (surface.style.animationName === "none") return;
+      appliedFor = state;
+      const snapshot = trigger;
       if (!snapshot) {
         surface.style.removeProperty("transform-origin");
         return;
       }
-      // Kapanışta tetikleyici yerindeyse güncel merkezine (sayfa kaymış
-      // olabilir) döner; söküldüyse (menü öğesi) açılıştaki noktaya.
+      // Kapanışta tetikleyici yerindeyse güncel merkezine (sayfa kaymış ya da
+      // içerik büyümüş olabilir) döner; söküldüyse (menü öğesi) açılıştaki noktaya.
       const center = (snapshot.el.isConnected && centerOf(snapshot.el)) || snapshot.center;
       snapshot.center = center;
       surface.style.transformOrigin = transformOriginFor(center, untransformedRect(surface));
-    },
-    [onAnimationStart],
-  );
+    };
+
+    sync();
+    const observer = new MutationObserver(sync);
+    observer.observe(surface, { attributes: true, attributeFilter: ["data-state", "style"] });
+    return () => {
+      observer.disconnect();
+      if (typeof forwardedCleanup === "function") forwardedCleanup();
+      else assignRef(forwardedRef, null);
+    };
+  }, [forwardedRef]);
+}
+
+/** Tüketicinin verdiği ref'i de besler (callback ya da nesne). */
+function assignRef<T>(ref: Ref<T> | undefined, value: T | null) {
+  if (typeof ref === "function") return ref(value);
+  if (ref) ref.current = value;
 }

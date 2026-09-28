@@ -10,8 +10,7 @@ import {
 } from '@/lib/onboarding';
 import { useOnboardingDialog } from '@/components/onboarding/onboarding-dialog-context';
 import { ONBOARDING_SETUP_STEP } from '@/components/onboarding/OnboardingDialog';
-import { XMarkIcon } from '@/components/ui/icons/x-mark';
-import { useIconHover } from '@/components/ui/icons/use-icon-hover';
+import { CloseButton } from '@/components/ui/close-button';
 import { INSTANT, PRESS_FEEDBACK_CLASS, SPRING } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 
@@ -60,7 +59,6 @@ const DONE_BEAT_MS = 900;
 export function OnboardingCard() {
   const { steps, total, loading, retired, dismiss } = useOnboardingSteps();
   const { openOnboarding } = useOnboardingDialog();
-  const closeIcon = useIconHover();
   const prefersReducedMotion = useReducedMotion();
 
   // index + yön tek state'te: AnimatePresence custom'ı her geçişte tutarlı.
@@ -195,18 +193,12 @@ export function OnboardingCard() {
                 <p className="font-mono text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                   Başlarken
                 </p>
-                <button
-                  type="button"
+                <CloseButton
                   aria-label="Kurulum kartını kapat"
                   onClick={() => setClosing(true)}
-                  {...closeIcon.hoverProps}
-                  className={cn(
-                    '-mr-1 ml-auto rounded-md p-1 text-muted-foreground transition-colors duration-150 hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                    PRESS_FEEDBACK_CLASS,
-                  )}
-                >
-                  <XMarkIcon ref={closeIcon.ref} size={14} className="flex" aria-hidden />
-                </button>
+                  iconSize={14}
+                  className="-mr-1 ml-auto p-1 text-muted-foreground hover:bg-card hover:text-foreground"
+                />
               </div>
 
               {/* Slayt viewport'u — yükseklik aktif slaytın içeriğine spring

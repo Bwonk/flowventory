@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
-import { Search, X } from 'lucide-react';
+import { Search } from 'lucide-react';
+import { CloseButton } from '@/components/ui/close-button';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { PRESS_FEEDBACK_CLASS, springOrInstant } from '@/lib/motion';
 import { cn } from '@/lib/utils';
@@ -101,18 +102,16 @@ export function ExpandableSearch({
           // kompakt 14px. Yerel "×" gizli — temizleme kendi butonumuzda.
           className="h-full shrink-0 appearance-none bg-transparent text-base text-foreground placeholder:text-muted-foreground focus:outline-none pointer-fine:text-sm [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none"
         />
-        <button
-          type="button"
+        <CloseButton
           aria-label="Aramayı temizle"
           tabIndex={value !== '' ? 0 : -1}
           onClick={clear}
+          iconSize={12}
           className={cn(
-            'flex h-full w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-opacity duration-150 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+            'h-full w-7 text-muted-foreground hover:text-foreground',
             value === '' && 'pointer-events-none opacity-0',
           )}
-        >
-          <X className="size-3" aria-hidden />
-        </button>
+        />
       </motion.div>
     </div>
   );

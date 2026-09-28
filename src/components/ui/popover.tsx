@@ -23,10 +23,10 @@ function PopoverContent({
   align = "center",
   sideOffset = 4,
   container,
-  onAnimationStart,
+  ref,
   ...props
 }: React.ComponentProps<typeof PopoverPrimitive.Content> & { container?: HTMLElement | null }) {
-  const handleAnimationStart = useTriggerOrigin(onAnimationStart)
+  const originRef = useTriggerOrigin(ref)
   return (
     <PopoverPrimitive.Portal container={container}>
       <PopoverPrimitive.Content
@@ -41,7 +41,7 @@ function PopoverContent({
           "z-50 w-72 origin-(--radix-popover-content-transform-origin) rounded-md border bg-popover p-4 text-popover-foreground shadow-md outline-hidden ease-reveal data-[state=closed]:animate-out data-[state=closed]:duration-180 data-[state=closed]:fade-out-0 motion-safe:data-[state=closed]:zoom-out-90 data-[state=open]:animate-in data-[state=open]:duration-300 data-[state=open]:fade-in-0 motion-safe:data-[state=open]:zoom-in-90",
           className
         )}
-        onAnimationStart={handleAnimationStart}
+        ref={originRef}
         {...props}
       />
     </PopoverPrimitive.Portal>

@@ -638,7 +638,12 @@ kısa, bilgi yoğun, Türkçe; buton etiketleri emir kipinde ("Yenile",
   `Button` tabanında yerleşik, diğerlerinde `PRESS_FEEDBACK_CLASS` (`cn`'in
   sonuna) — `active:scale-[0.99]` (üst sınır), transform geçişli 150ms,
   reduced-motion'da ölçeksiz, `select-none` + iOS çağrı balonu kapalı.
-  Tarayıcının dokunma flaşı globalde kapalı (`-webkit-tap-highlight-color`),
+  **Çarpı (kapat/vazgeç/temizle) tek bileşendir:**
+  [CloseButton](src/components/ui/close-button.tsx) — hareketli `XMarkIcon`
+  (hover'da çizilir), küçük ikon-butonu olduğu için basınca `scale 0.9`
+  (0.99 üst sınırının istisnası), halka yalnız `focus-visible`'da (fareyle
+  basınca çerçeve yok). Radix `*Close` parçalarına `asChild` ile takılır;
+  lucide `X`/`XIcon` kullanma. Tarayıcının dokunma flaşı globalde kapalı (`-webkit-tap-highlight-color`),
   butonlar `touch-action: manipulation`.
 - **Durum ve geri bildirim:** mutasyon hatası asla sessiz değildir
   (`toast.error`, gerekirse geri alma ile). "Geri Al" toast'ı 10sn durur;

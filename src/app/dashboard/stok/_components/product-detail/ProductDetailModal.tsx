@@ -2,8 +2,8 @@
 
 import React from 'react';
 import { Dialog, DialogContent, DialogClose } from '@/components/ui/dialog';
-import { XIcon } from 'lucide-react';
 import type { AnalyticsApiResponse } from '@/app/api/ikas/analytics/route';
+import { CloseButton } from '@/components/ui/close-button';
 import { useStockThreshold } from '@/lib/stock-threshold';
 import type { Product } from '@/lib/products/types';
 import type { VariantStockChange } from '@/lib/products/product';
@@ -56,11 +56,8 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
             onVariantStockChange={onVariantStockChange}
           />
         )}
-        <DialogClose
-          className="absolute right-4 top-4 z-10 inline-flex size-10 items-center justify-center rounded-md opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-          aria-label="Kapat"
-        >
-          <XIcon className="size-4" />
+        <DialogClose asChild>
+          <CloseButton aria-label="Kapat" className="absolute right-4 top-4 z-10 size-10 opacity-70 hover:opacity-100" />
         </DialogClose>
       </DialogContent>
     </Dialog>

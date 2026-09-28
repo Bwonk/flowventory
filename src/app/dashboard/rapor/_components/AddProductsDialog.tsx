@@ -1,8 +1,8 @@
 'use client';
 
 import { logger } from '@/lib/logger';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { CSSProperties, ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
 import Image from 'next/image';
 import { Check } from 'lucide-react';
 import { toast } from 'sonner';
@@ -29,16 +29,6 @@ type ProductRow = NonNullable<ListProductsApiResponse['products']>[number];
 /** assign-vendor endpoint'inin istek başına ürün limiti. */
 const ASSIGN_BATCH_SIZE = 50;
 
-// tw-animate-css değişken override'ları: buton-kökenli büyüme okunaklı olsun
-// diye origin tetikleyicide kalır, zoom 0.95'ten başlar/biter; merkez-slide
-// (slide-in-from-bottom) iptal — origin'li zoom'la üst üste binince yörünge
-// eğriliyordu.
-const GROW_FROM_TRIGGER_STYLE = {
-  '--tw-enter-scale': '0.95',
-  '--tw-exit-scale': '0.95',
-  '--tw-enter-translate-y': '0',
-} as CSSProperties;
-
 interface AddProductsDialogProps {
   token: string;
   vendorName: string;
@@ -59,29 +49,6 @@ interface AddProductsDialogProps {
 export function AddProductsDialog({ token, vendorName, onAssigned, compact, trigger }: AddProductsDialogProps) {
   const { ref: plusRef, hoverProps } = useIconHover();
   const [open, setOpen] = useState(false);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const contentNodeRef = useRef<HTMLDivElement | null>(null);
-
-  // Zoom, dialog merkezinden değil tetikleyen butondan büyüsün/butona
-  // küçülsün. Origin buton merkezine göre iki anda yazılır: (1) content DOM'a
-  // bağlanırken (callback ref — animasyon ilk boyamada başladığı için rect'ler
-  // henüz transformsuz), (2) kapanış isteğinde — içerik yüklenince dialog
-  // boyutu değiştiğinden mount'taki origin exit için bayatlamış olabilir.
-  const applyGrowOrigin = useCallback((node: HTMLDivElement) => {
-    const trigger = triggerRef.current;
-    if (!trigger) return;
-    const t = trigger.getBoundingClientRect();
-    const c = node.getBoundingClientRect();
-    node.style.transformOrigin = `${t.left + t.width / 2 - c.left}px ${t.top + t.height / 2 - c.top}px`;
-  }, []);
-
-  const setContentNode = useCallback(
-    (node: HTMLDivElement | null) => {
-      contentNodeRef.current = node;
-      if (node) applyGrowOrigin(node);
-    },
-    [applyGrowOrigin],
-  );
   const [products, setProducts] = useState<ProductRow[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState('');
@@ -136,9 +103,7 @@ export function AddProductsDialog({ token, vendorName, onAssigned, compact, trig
     setSelected(new Set());
   };
 
-  /** Programatik kapanışlar da (Vazgeç, başarılı atama) origin'i tazelesin. */
   const closeDialog = () => {
-    if (contentNodeRef.current) applyGrowOrigin(contentNodeRef.current);
     setOpen(false);
   };
 
@@ -175,14 +140,11 @@ export function AddProductsDialog({ token, vendorName, onAssigned, compact, trig
       open={open}
       onOpenChange={next => {
         if (saving) return;
-        // Kapanış zoom'u güncel boyuta göre butona toplansın.
-        if (!next && contentNodeRef.current) applyGrowOrigin(contentNodeRef.current);
         setOpen(next);
         if (!next) reset();
       }}
     >
-      {/* ref DialogTrigger'da: asChild ile dış tetikleyiciye de biner (büyüme kökeni). */}
-      <DialogTrigger asChild ref={triggerRef}>
+      <DialogTrigger asChild>
         {trigger ?? (
           <Button
             // Kompakt hali tedarikçi işlem yolunda yaşar — yolun segment dili.
@@ -197,7 +159,7 @@ export function AddProductsDialog({ token, vendorName, onAssigned, compact, trig
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent ref={setContentNode} className="max-w-md" style={GROW_FROM_TRIGGER_STYLE}>
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Ürün ekle — {vendorName}</DialogTitle>
         </DialogHeader>

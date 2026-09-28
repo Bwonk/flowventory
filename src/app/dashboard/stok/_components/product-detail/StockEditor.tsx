@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Check, Loader2, Pencil, X } from 'lucide-react';
+import { Check, Loader2, Pencil } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
@@ -14,6 +14,7 @@ import { springOrInstant } from '@/lib/motion';
 import { AnimatedNumber } from '@/components/shared/AnimatedNumber';
 import { InfoTip } from '@/components/shared/InfoTip';
 import { NumberStepper } from '@/components/shared/NumberStepper';
+import { CloseButton } from '@/components/ui/close-button';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
@@ -235,15 +236,14 @@ const LocationRow: React.FC<{
               </div>
             </PopoverContent>
           </Popover>
-          <button
-            type="button"
+          <CloseButton
             onClick={stopEditing}
             disabled={saving}
             title="Vazgeç"
-            className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted disabled:opacity-50"
-          >
-            <X className="h-3.5 w-3.5" aria-hidden />
-          </button>
+            aria-label="Vazgeç"
+            iconSize={14}
+            className="h-6 w-6 border border-border text-muted-foreground hover:bg-muted"
+          />
         </>
       ) : (
         <>
